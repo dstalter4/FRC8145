@@ -58,10 +58,7 @@ namespace EastTechRobotAutonomous
     //static const bool       TEST_ENABLED                        = false;
 
     // Autonomous drive speed constants
-    static constexpr double DRIVE_SPEED_SLOW                    =  0.30;
-    static constexpr double DRIVE_SPEED_FAST                    =  0.50;
-    static constexpr double TURN_SPEED                          =  0.25;
-    static constexpr double COUNTERACT_COAST_MOTOR_SPEED        =  0.20;
+    // (none)
     
     // Autonomous angle constants
     static const int        FORTY_FIVE_DEGREES                  = 45;
@@ -71,13 +68,9 @@ namespace EastTechRobotAutonomous
     
     // Autonomous delay constants
     static constexpr units::second_t SWERVE_OP_STEP_TIME_S      =  0.10_s;
-    static constexpr units::second_t COUNTERACT_COAST_TIME_S    =  0.25_s;
     static constexpr units::second_t DELAY_SHORT_S              =  0.50_s;
     static constexpr units::second_t DELAY_MEDIUM_S             =  1.00_s;
     static constexpr units::second_t DELAY_LONG_S               =  2.00_s;
-    
-    // Autonomous misc constants
-    static const unsigned   I2C_THREAD_UPDATE_RATE_MS           = 20U;
     
 } // End namespace
 
@@ -94,66 +87,6 @@ namespace EastTechRobotAutonomous
 inline void EastTechRobot::AutonomousDelay(units::second_t time)
 {
     Wait(time);
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::AutonomousDriveSequence
-///
-/// Drives during autonomous for a specified amount of time
-/// using traditional differential drive.
-///
-////////////////////////////////////////////////////////////////
-inline void EastTechRobot::AutonomousDriveSequence(RobotDirection direction, double speed, units::second_t time)
-{
-    double leftSpeed = 0.0;
-    double rightSpeed = 0.0;
-
-    switch (direction)
-    {
-        case ROBOT_FORWARD:
-        {
-            leftSpeed = speed * LEFT_DRIVE_FORWARD_SCALAR;
-            rightSpeed = speed * RIGHT_DRIVE_FORWARD_SCALAR;
-            break;
-        }
-        case ROBOT_REVERSE:
-        {
-            leftSpeed = speed * LEFT_DRIVE_REVERSE_SCALAR;
-            rightSpeed = speed * RIGHT_DRIVE_REVERSE_SCALAR;
-            break;
-        }
-        case ROBOT_LEFT:
-        {
-            leftSpeed = speed * LEFT_DRIVE_REVERSE_SCALAR;
-            rightSpeed = speed * RIGHT_DRIVE_FORWARD_SCALAR;
-            break;
-        }
-        case ROBOT_RIGHT:
-        {
-            leftSpeed = speed * LEFT_DRIVE_FORWARD_SCALAR;
-            rightSpeed = speed * RIGHT_DRIVE_REVERSE_SCALAR;
-            break;
-        }
-        default:
-        {
-            leftSpeed = 0.0;
-            rightSpeed = 0.0;
-            break;
-        }
-    }
-
-    // First turn the motors on
-    m_pLeftDriveMotors->Set(leftSpeed);
-    m_pRightDriveMotors->Set(rightSpeed);
-
-    // Time it
-    AutonomousDelay(time);
-
-    // Motors back off
-    m_pLeftDriveMotors->Set(OFF);
-    m_pRightDriveMotors->Set(OFF);
 }
 
 
@@ -230,109 +163,6 @@ inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotDirection directio
 
     // Stop motion
     m_pSwerveDrive->SetModuleStates({0_m, 0_m}, 0.0, true, true);
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::AutonomousBackDrive
-///
-/// Back drives the motors to abruptly stop the robot.
-///
-////////////////////////////////////////////////////////////////
-inline void EastTechRobot::AutonomousBackDrive(RobotDirection currentDirection)
-{
-    double leftSpeed = EastTechRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
-    double rightSpeed = EastTechRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
-
-    switch (currentDirection)
-    {
-        // If we are currently going forward, back drive is reverse
-        case ROBOT_FORWARD:
-        {
-            leftSpeed *= LEFT_DRIVE_REVERSE_SCALAR;
-            rightSpeed *= RIGHT_DRIVE_REVERSE_SCALAR;
-            break;
-        }
-        // If we are currently going reverse, back drive is forward
-        case ROBOT_REVERSE:
-        {
-            leftSpeed *= LEFT_DRIVE_FORWARD_SCALAR;
-            rightSpeed *= RIGHT_DRIVE_FORWARD_SCALAR;
-            break;
-        }
-        default:
-        {
-            leftSpeed = 0.0;
-            rightSpeed = 0.0;
-            break;
-        }
-    }
-    
-    // Counteract coast
-    m_pLeftDriveMotors->Set(leftSpeed);
-    m_pRightDriveMotors->Set(rightSpeed);
-    
-    // Delay
-    AutonomousDelay(EastTechRobotAutonomous::COUNTERACT_COAST_TIME_S);
-    
-    // Motors off
-    m_pLeftDriveMotors->Set(OFF);
-    m_pRightDriveMotors->Set(OFF);
-    
-    m_pSafetyTimer->Reset();
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::AutonomousBackDriveTurn
-///
-/// Back drives the motors to abruptly stop the robot during
-/// a turn.
-///
-////////////////////////////////////////////////////////////////
-inline void EastTechRobot::AutonomousBackDriveTurn(RobotDirection currentDirection)
-{
-    double leftSpeed = EastTechRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
-    double rightSpeed = EastTechRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
-
-    switch (currentDirection)
-    {
-        // If the turn is left, counteract is right
-        case ROBOT_LEFT:
-        {
-            leftSpeed *= LEFT_DRIVE_FORWARD_SCALAR;
-            rightSpeed *= RIGHT_DRIVE_REVERSE_SCALAR;
-            break;
-        }
-        // If the turn is right, counteract is left
-        case ROBOT_RIGHT:
-        {
-            leftSpeed *= LEFT_DRIVE_REVERSE_SCALAR;
-            rightSpeed *= RIGHT_DRIVE_FORWARD_SCALAR;
-            break;
-        }
-        default:
-        {
-            leftSpeed = 0.0;
-            rightSpeed = 0.0;
-            break;
-        }
-    }
-    
-    // Counteract coast
-    m_pLeftDriveMotors->Set(leftSpeed);
-    m_pRightDriveMotors->Set(rightSpeed);
-    
-    // Delay
-    AutonomousDelay(EastTechRobotAutonomous::COUNTERACT_COAST_TIME_S);
-    
-    // Motors off
-    m_pLeftDriveMotors->Set(OFF);
-    m_pRightDriveMotors->Set(OFF);
-    
-    m_pSafetyTimer->Reset();
 }
 
 #endif // EASTTECHROBOTAUTONOMOUS_HPP

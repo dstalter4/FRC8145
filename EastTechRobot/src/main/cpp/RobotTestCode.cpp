@@ -13,15 +13,16 @@
 // <none>
 
 // C INCLUDES
-#include "rev/CANSparkMax.h"    // for interacting with spark max motor controllers
+#include "frc/BuiltInAccelerometer.h"   // for the built-in accelerometer
+#include "rev/CANSparkMax.h"            // for interacting with spark max motor controllers
 
 // C++ INCLUDES
-#include "RobotUtils.hpp"       // for DisplayMessage(), DisplayFormattedMessage()
-#include "EastTechRobot.hpp"         // for robot class declaration
+#include "RobotUtils.hpp"               // for DisplayMessage(), DisplayFormattedMessage()
+#include "EastTechRobot.hpp"            // for robot class declaration
 
 
 // Helper macro to get the robot object, only for use in test class code
-#define EastTech_ROBOT_OBJ() EastTechRobot::GetRobotInstance()
+#define EASTTECH_ROBOT_OBJ() EastTechRobot::GetRobotInstance()
 
 
 ////////////////////////////////////////////////////////////////
@@ -33,7 +34,7 @@
 /// routines.  Since it is separate from the 'product' robot
 /// code (in EastTechRobot), it cannot directly use the various
 /// member objects from that code.  Instead they can be accessed
-/// through the EastTech_ROBOT_OBJ() macro.
+/// through the EASTTECH_ROBOT_OBJ() macro.
 ///
 /// A second, but currently unused, test approach is also
 /// presented.  This approach attempts to mimic direct use of
@@ -67,7 +68,7 @@ private:
     // Singleton test object with members bound by reference to EastTechRobot member objects.
     /*
     EastTechRobotTest() :
-        m_pAccelerometer(EastTechRobot::GetRobotInstance()->m_pAccelerometer)
+        m_rpDebugOutput(EastTechRobot::GetRobotInstance()->m_pDebugOutput)
     {
     }
     static EastTechRobotTest * GetInstance() { return m_pRobotTestObj; }
@@ -77,7 +78,7 @@ private:
     }
 
     static EastTechRobotTest * m_pRobotTestObj;
-    BuiltInAccelerometer *& m_pAccelerometer;
+    DigitalOutput *& m_rpDebugOutput;
     */
 };
 
@@ -159,6 +160,8 @@ void EastTechRobotTest::InitializeCommonPointers()
 ////////////////////////////////////////////////////////////////
 void EastTechRobotTest::QuickTestCode()
 {
+    // Rev only allows creating one motor object with a CAN ID.
+    // Disable the actual swerve object creation.
     static CANSparkMax * m_pDriveSpark = new CANSparkMax(4, CANSparkLowLevel::MotorType::kBrushless);
     static CANSparkMax * m_pAngleSpark = new CANSparkMax(3, CANSparkLowLevel::MotorType::kBrushless);
     static SparkRelativeEncoder m_DriveSparkEncoder = m_pDriveSpark->GetEncoder(SparkRelativeEncoder::Type::kHallSensor);
@@ -173,9 +176,9 @@ void EastTechRobotTest::QuickTestCode()
         m_pAngleSpark->RestoreFactoryDefaults();
         m_pAngleSpark->SetSmartCurrentLimit(20);
         m_pAngleSpark->SetInverted(false);
-        m_pAngleSpark->SetIdleMode(CANSparkMax::IdleMode::kBrake);
+        m_pAngleSpark->SetIdleMode(CANSparkMax::IdleMode::kCoast);
         m_AngleSparkEncoder.SetPositionConversionFactor(360.0 / SwerveConfig::ANGLE_GEAR_RATIO);
-        m_AnglePidController.SetP(0.028);  //Angle PID Tuned 
+        m_AnglePidController.SetP(0.028);
         m_AnglePidController.SetI(0.000);
         m_AnglePidController.SetD(0.0015);
         m_AnglePidController.SetFF(0.000);
@@ -191,17 +194,18 @@ void EastTechRobotTest::QuickTestCode()
         m_pAngleCanCoder->ConfigAllSettings(canCoderConfig);
         
         bInit = true;
-        double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition() - 324.932;
+        double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition() - 144.932;
         SmartDashboard::PutNumber("Debug A", m_AngleSparkEncoder.GetPosition());
         SmartDashboard::PutNumber("Debug B", absolutePositionDelta);
         m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
         m_AnglePidController.SetReference(0.0, CANSparkMax::ControlType::kPosition);
     }
 
-    // FL: 5-6-3, 10.459
-    // FR: 3-4-2, 324.932
-    // BL: 7-8-4, 307.178
-    // BR: 1-2-1, 101.602
+    // 2024 Team 8145 Config (Bevels Right)
+    // FL: 5-6-3, 190.459
+    // FR: 3-4-2, 144.932
+    // BL: 7-8-4, 127.178
+    // BR: 1-2-1, 191.602
     SmartDashboard::PutNumber("Debug C", m_pAngleCanCoder->GetAbsolutePosition());
     SmartDashboard::PutNumber("Debug D", m_AngleSparkEncoder.GetPosition());
 }
@@ -271,10 +275,10 @@ void EastTechRobotTest::SuperstructureTest()
 ////////////////////////////////////////////////////////////////
 void EastTechRobotTest::CtreSpeedControllerTest()
 {
-    static TalonFX * pLeft1 = new TalonFX(EastTechRobot::LEFT_DRIVE_MOTORS_CAN_START_ID);
-    static TalonFX * pLeft2 = new TalonFX(EastTechRobot::LEFT_DRIVE_MOTORS_CAN_START_ID + 1);
-    static TalonFX * pRight1 = new TalonFX(EastTechRobot::RIGHT_DRIVE_MOTORS_CAN_START_ID);
-    static TalonFX * pRight2 = new TalonFX(EastTechRobot::RIGHT_DRIVE_MOTORS_CAN_START_ID + 1);
+    static TalonFX * pLeft1 = new TalonFX(1);
+    static TalonFX * pLeft2 = new TalonFX(2);
+    static TalonFX * pRight1 = new TalonFX(3);
+    static TalonFX * pRight2 = new TalonFX(4);
     
     while (m_pJoystick->GetRawButton(1))
     {
@@ -347,8 +351,10 @@ void EastTechRobotTest::RevSpeedControllerTest()
 ////////////////////////////////////////////////////////////////
 void EastTechRobotTest::TankDrive()
 {
-    EastTech_ROBOT_OBJ()->m_pLeftDriveMotors->Set(EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0);
-    EastTech_ROBOT_OBJ()->m_pRightDriveMotors->Set(EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(5) * -1.0);
+    static TalonFX * pLeftDrive = new TalonFX(1);
+    static TalonFX * pRightDrive = new TalonFX(2);
+    pLeftDrive->Set(ControlMode::PercentOutput, EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0);
+    pRightDrive->Set(ControlMode::PercentOutput, EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(5) * -1.0);
 }
 
 
@@ -361,31 +367,31 @@ void EastTechRobotTest::TankDrive()
 ////////////////////////////////////////////////////////////////
 void EastTechRobotTest::SwerveDriveTest()
 {
-    static SwerveDrive * pSwerveDrive = EastTech_ROBOT_OBJ()->m_pSwerveDrive;
+    static SwerveDrive * pSwerveDrive = EASTTECH_ROBOT_OBJ()->m_pSwerveDrive;
 
     // Tests returning modules to absolute reference angles
-    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(4))
+    if (EASTTECH_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(4))
     {
         // Not available yet
-        //EastTech_ROBOT_OBJ()->m_pSwerveDrive->HomeModules();
+        //EASTTECH_ROBOT_OBJ()->m_pSwerveDrive->HomeModules();
     }
 
     // Dynamically switch between field relative and robot centric
     static bool bFieldRelative = true;
-    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(5))
+    if (EASTTECH_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(5))
     {
         bFieldRelative = !bFieldRelative;
     }
 
     // Zero the gryo
-    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(6))
+    if (EASTTECH_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(6))
     {
         pSwerveDrive->ZeroGyroYaw();
     }
 
     // Dynamically switch between arcade and GTA drive controls
     static bool bGtaControls = false;
-    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(10))
+    if (EASTTECH_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(10))
     {
         bGtaControls = !bGtaControls;
     }
@@ -395,16 +401,16 @@ void EastTechRobotTest::SwerveDriveTest()
     double translationAxis = 0.0;
     if (bGtaControls)
     {
-        double lAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(2) * -1.0;
-        double rAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(3);
+        double lAxis = EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(2) * -1.0;
+        double rAxis = EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(3);
         translationAxis = lAxis + rAxis;
     }
     else
     {
-        translationAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0;
+        translationAxis = EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0;
     }
-    double strafeAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(0) * -1.0;
-    double rotationAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(4) * -1.0;
+    double strafeAxis = EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(0) * -1.0;
+    double rotationAxis = EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(4) * -1.0;
 
     strafeAxis = RobotUtils::Trim(strafeAxis, 0.10, -0.10);
     translationAxis = RobotUtils::Trim(translationAxis, 0.10, -0.10);
@@ -439,7 +445,7 @@ void EastTechRobotTest::PneumaticsTest()
     // when creating the object.  The test code either has to pick
     // channels not in use (likely 6/7) or grab a reference to some
     // solenoid object from the actual robot code.
-    //static DoubleSolenoid *& rpSolenoid = EastTech_ROBOT_OBJ()->m_pTalonCoolingSolenoid;
+    //static DoubleSolenoid *& rpSolenoid = EASTTECH_ROBOT_OBJ()->m_pTalonCoolingSolenoid;
     static DoubleSolenoid * pSolenoid = new DoubleSolenoid(PneumaticsModuleType::CTREPCM, 6, 7);
     
     if (m_pJoystick->GetRawButton(1))
@@ -500,7 +506,7 @@ void EastTechRobotTest::TimeTest()
 void EastTechRobotTest::ButtonChangeTest()
 {
     // Sample code for testing the detect trigger change code
-    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(1, EastTech::Controller::ButtonStateChanges::BUTTON_RELEASED))
+    if (EASTTECH_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(1, EastTech::Controller::ButtonStateChanges::BUTTON_RELEASED))
     {
         RobotUtils::DisplayMessage("Trigger change detected!");
     }
@@ -517,9 +523,10 @@ void EastTechRobotTest::ButtonChangeTest()
 void EastTechRobotTest::AccelerometerTest()
 {
     // Test code for reading the built in accelerometer
-    double x = EastTech_ROBOT_OBJ()->m_pAccelerometer->GetX();
-    double y = EastTech_ROBOT_OBJ()->m_pAccelerometer->GetY();
-    double z = EastTech_ROBOT_OBJ()->m_pAccelerometer->GetZ();
+    BuiltInAccelerometer * pAccelerometer = new BuiltInAccelerometer();
+    double x = pAccelerometer->GetX();
+    double y = pAccelerometer->GetY();
+    double z = pAccelerometer->GetZ();
     RobotUtils::DisplayFormattedMessage("x: %f, y: %f, z: %f\n", x, y, z);
 }
 

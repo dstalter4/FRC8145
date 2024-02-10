@@ -39,25 +39,13 @@ EastTechRobot::EastTechRobot() :
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
     m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, "canivore-8145")),
     m_pSwerveDrive                      (new SwerveDrive(m_pPigeon)),
-    m_pLeftDriveMotors                  (new TalonMotorGroup<TalonFX>("Left Drive", NUMBER_OF_LEFT_DRIVE_MOTORS, LEFT_DRIVE_MOTORS_CAN_START_ID, MotorGroupControlMode::FOLLOW, NeutralMode::Brake, FeedbackDevice::IntegratedSensor, true)),
-    m_pRightDriveMotors                 (new TalonMotorGroup<TalonFX>("Right Drive", NUMBER_OF_RIGHT_DRIVE_MOTORS, RIGHT_DRIVE_MOTORS_CAN_START_ID, MotorGroupControlMode::FOLLOW, NeutralMode::Brake, FeedbackDevice::IntegratedSensor, true)),
-    //m_pCandle                           (new CANdle(CANDLE_CAN_ID, "canivore-8145")),
-    //m_RainbowAnimation                  ({1, 0.5, 308}),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
-    m_pTalonCoolingSolenoid             (new DoubleSolenoid(PneumaticsModuleType::CTREPCM, TALON_COOLING_SOLENOID_FWD_CHANNEL, TALON_COOLING_SOLENOID_REV_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pMatchModeTimer                   (new Timer()),
     m_pSafetyTimer                      (new Timer()),
-    m_pAccelerometer                    (new BuiltInAccelerometer),
-    m_pAdxrs450Gyro                     (nullptr),
-    m_Bno055Angle                       (),
     m_CameraThread                      (RobotCamera::LimelightThread),
-    m_SerialPortBuffer                  (),
-    m_pSerialPort                       (new SerialPort(SERIAL_PORT_BAUD_RATE, SerialPort::kMXP, SERIAL_PORT_NUM_DATA_BITS, SerialPort::kParity_None, SerialPort::kStopBits_One)),
     m_RobotMode                         (ROBOT_MODE_NOT_SET),
-    m_RobotDriveState                   (MANUAL_CONTROL),
     m_AllianceColor                     (DriverStation::GetAlliance()),
-    m_bDriveSwap                        (false),
     m_HeartBeat                         (0U)
 {
     RobotUtils::DisplayMessage("Robot constructor.");
@@ -78,21 +66,6 @@ EastTechRobot::EastTechRobot() :
 
     ConfigureMotorControllers();
 
-    CANdleConfiguration candleConfig;
-    candleConfig.stripType = LEDStripType::RGB;
-    //m_pCandle->ConfigAllSettings(candleConfig);
-    //m_pCandle->Animate(m_RainbowAnimation);
-
-    // Construct the ADXRS450 gyro if configured
-    if (ADXRS450_GYRO_PRESENT)
-    {
-        m_pAdxrs450Gyro = new ADXRS450_Gyro();
-    }
-
-    // Reset the serial port and clear buffer
-    m_pSerialPort->Reset();
-    std::memset(&m_SerialPortBuffer, 0U, sizeof(m_SerialPortBuffer));
-    
     // Spawn the vision thread
     // @todo: Use a control variable to prevent the threads from executing too soon.
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
@@ -209,9 +182,6 @@ void EastTechRobot::InitialStateSetup()
     // First reset any member data
     ResetMemberData();
 
-    // Solenoids to known state
-    m_pTalonCoolingSolenoid->Set(TALON_COOLING_OFF_SOLENOID_VALUE);
-    
     // Stop/clear any timers, just in case
     // @todo: Make this a dedicated function.
     m_pMatchModeTimer->Stop();
@@ -222,17 +192,16 @@ void EastTechRobot::InitialStateSetup()
     // Just in case constructor was called before these were set (likely the case)
     m_AllianceColor = DriverStation::GetAlliance();
 
-    // Disable the rainbow animation
-    //m_pCandle->ClearAnimation(0);
-
-    // Set the LEDs to the alliance color
-    SetLedsToAllianceColor();
-    
     // Clear the debug output pin
     m_pDebugOutput->Set(false);
 
     // Reset the heartbeat
     m_HeartBeat = 0U;
+
+    // Set the swerve modules to a known angle.  This addresses an
+    // issue with the Neos where setting position during constructors
+    // doesn't take effect.
+    m_pSwerveDrive->HomeModules();
 }
 
 
@@ -259,11 +228,6 @@ void EastTechRobot::TeleopInit()
 
     // Start the mode timer for teleop
     m_pMatchModeTimer->Start();
-
-    // Set the swerve modules to a known angle.  This (somehow) mitigates
-    // the random spin when enabling teleop until it can be investigated.
-    //m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, 0.10, true, true);
-    m_pSwerveDrive->HomeModules();
 }
 
 
@@ -275,7 +239,6 @@ void EastTechRobot::TeleopInit()
 /// periodically while the robot is in teleop control.
 ///
 ////////////////////////////////////////////////////////////////
-extern double globalPos;
 void EastTechRobot::TeleopPeriodic()
 {
     // Log a mode change if one occurred
@@ -286,36 +249,11 @@ void EastTechRobot::TeleopPeriodic()
     if (EastTech::Drive::Config::USE_SWERVE_DRIVE)
     {
         SwerveDriveSequence();
-        /*
-        if (m_pDriveController->DetectButtonChange(6))
-        {
-            globalPos += 90.0;
-        }
-        else if (m_pDriveController->DetectButtonChange(5))
-        {
-            globalPos -= 90.0;
-        }
-        else
-        {
-        }
-        m_pSwerveDrive->UpdateSmartDashboard();
-        */
     }
-    else
-    {
-        //DriveControlSequence();
-    }
-
-    //SuperStructureSequence();
-    //CheckAndResetEncoderCounts();
 
     //PneumaticSequence();
-
-    //SerialPortSequence();
     
     //CameraSequence();
-
-    //LedSequence();
 
     UpdateSmartDashboard();
 }
@@ -338,185 +276,6 @@ void EastTechRobot::UpdateSmartDashboard()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::SuperStructureTestSequence
-///
-/// Quick super structure test.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::SuperStructureTestSequence()
-{
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::CheckAndResetEncoderCounts
-///
-/// Checks for driver input to rezero all encoder counts.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::CheckAndResetEncoderCounts()
-{
-    if (m_pDriveController->GetButtonState(DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.START) && m_pAuxController->GetButtonState(AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.START))
-    {
-        // Nothing to reset yet
-    }
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::LedSequence
-///
-/// This method contains the main workflow for controlling
-/// any LEDs on the robot.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::LedSequence()
-{
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::MarioKartLights
-///
-/// This method will generate LED behavior that mimicks
-/// drifting in Mario Kart.  It watches for non-zero rotational
-/// inputs while driving/strafing.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::MarioKartLights(double translation, double strafe, double rotate)
-{
-    /*
-    enum DriftState
-    {
-        DRIFT_OFF,
-        DRIFT_BLUE,
-        DRIFT_YELLOW,
-        DRIFT_PURPLE,
-        DRIFT_DISABLED,
-        NUM_DRIFT_STATES
-    };
-
-    static DriftState driftState = DRIFT_OFF;
-    static Timer * pDriftTimer = new Timer();
-    static units::second_t lastTimeStamp = 0.0_s;
-    static bool bLastDriftValue = false;
-    static const double MIN_TRANSLATION_OR_STRAFE_VALUE = 0.25;
-
-    // First check if the robot is moving in a way that qualifies for "drift"
-    bool bDrifting = false;
-    if (((std::abs(translation) > MIN_TRANSLATION_OR_STRAFE_VALUE) || (std::abs(strafe) > MIN_TRANSLATION_OR_STRAFE_VALUE)) && (std::abs(rotate) > 0.0))
-    {
-        bDrifting = true;
-    }
-
-    // See if there was a state change in drift status
-    if (bDrifting != bLastDriftValue)
-    {
-        // Now drifting, previously were not
-        if (bDrifting)
-        {
-            // Start the timer, clear the LEDs
-            pDriftTimer->Start();
-            lastTimeStamp = pDriftTimer->Get();
-            m_pCandle->SetLEDs(0, 0, 0, 0, 0, NUMBER_OF_LEDS);
-        }
-        // Not drifting, previously were
-        else
-        {
-            // Stop the timer, turn the LEDs back on
-            pDriftTimer->Stop();
-            pDriftTimer->Reset();
-            driftState = DRIFT_OFF;
-            SetLedsToAllianceColor();
-        }
-        bLastDriftValue = bDrifting;
-    }
-
-    // B: {132, 132, 255}
-    // Y: {255, 240, 0}
-    // P: {240, 73, 241}
-    const LedColors MARIO_KART_LED_COLORS[NUM_DRIFT_STATES] =
-    {
-        {   0,   0,   0,   0},
-        { 132, 132, 255,   0},
-        { 255, 240,   0,   0},
-        { 240,  73, 241,   0},
-        {   0,   0,   0,   0}
-    };
-
-    // Light up the LEDs based on state
-    if (bDrifting)
-    {
-        units::second_t currentTimeStamp = pDriftTimer->Get();
-        switch (driftState)
-        {
-            case DRIFT_OFF:
-            {
-                // Transition to blue (total time 0.5 seconds)
-                if ((currentTimeStamp - lastTimeStamp) > 0.5_s)
-                {
-                    m_pCandle->SetLEDs(MARIO_KART_LED_COLORS[DRIFT_BLUE].m_Red,
-                                       MARIO_KART_LED_COLORS[DRIFT_BLUE].m_Green,
-                                       MARIO_KART_LED_COLORS[DRIFT_BLUE].m_Blue,
-                                       MARIO_KART_LED_COLORS[DRIFT_BLUE].m_White,
-                                       0, NUMBER_OF_LEDS);
-                    driftState = DRIFT_BLUE;
-                    lastTimeStamp = currentTimeStamp;
-                }
-                break;
-            }
-            case DRIFT_BLUE:
-            {
-                // Transition to yellow (total time 1.5 seconds)
-                if ((currentTimeStamp - lastTimeStamp) > 1.0_s)
-                {
-                    m_pCandle->SetLEDs(MARIO_KART_LED_COLORS[DRIFT_YELLOW].m_Red,
-                                       MARIO_KART_LED_COLORS[DRIFT_YELLOW].m_Green,
-                                       MARIO_KART_LED_COLORS[DRIFT_YELLOW].m_Blue,
-                                       MARIO_KART_LED_COLORS[DRIFT_YELLOW].m_White,
-                                       0, NUMBER_OF_LEDS);
-                    driftState = DRIFT_YELLOW;
-                    lastTimeStamp = currentTimeStamp;
-                }
-                break;
-            }
-            case DRIFT_YELLOW:
-            {
-                // Transition to purple (total time 2.5 seconds)
-                if ((currentTimeStamp - lastTimeStamp) > 1.0_s)
-                {
-                    m_pCandle->SetLEDs(MARIO_KART_LED_COLORS[DRIFT_PURPLE].m_Red,
-                                       MARIO_KART_LED_COLORS[DRIFT_PURPLE].m_Green,
-                                       MARIO_KART_LED_COLORS[DRIFT_PURPLE].m_Blue,
-                                       MARIO_KART_LED_COLORS[DRIFT_PURPLE].m_White,
-                                       0, NUMBER_OF_LEDS);
-                    driftState = DRIFT_PURPLE;
-                    lastTimeStamp = currentTimeStamp;
-                }
-                break;
-            }
-            case DRIFT_PURPLE:
-            {
-                // @todo: Implement some kind of 'burst' pattern
-                driftState = DRIFT_DISABLED;
-                break;
-            }
-            case DRIFT_DISABLED:
-            default:
-            {
-                break;
-            }
-        }
-    }
-    */
-}
-
-
-
-////////////////////////////////////////////////////////////////
 /// @method EastTechRobot::PneumaticSequence
 ///
 /// This method contains the main workflow for updating the
@@ -527,50 +286,6 @@ void EastTechRobot::PneumaticSequence()
 {
     // @todo: Monitor other compressor API data?
     SmartDashboard::PutBoolean("Compressor status", m_pCompressor->IsEnabled());
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::SerialPortSequence
-///
-/// This method contains the main workflow for interaction with
-/// the serial port.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::SerialPortSequence()
-{
-    /*
-    // Check for any incoming transmissions, limit it to our read buffer size
-    int32_t bytesReceived = m_pSerialPort->GetBytesReceived();
-    bytesReceived = (bytesReceived > SERIAL_PORT_BUFFER_SIZE_BYTES) ? SERIAL_PORT_BUFFER_SIZE_BYTES : bytesReceived;
-
-    // If we got data, read it
-    if (bytesReceived > 0)
-    {
-        static_cast<void>(m_pSerialPort->Read(m_SerialPortBuffer, bytesReceived));
-
-        // See if its a packet intended for us
-        if (memcmp(m_SerialPortBuffer, SERIAL_PORT_PACKET_HEADER, SERIAL_PORT_PACKET_HEADER_SIZE_BYTES) == 0)
-        {
-            // Next character is the command.  Array indexing starts at zero, thus no +1 on the size bytes constant
-            int32_t command = static_cast<int32_t>(m_SerialPortBuffer[SERIAL_PORT_PACKET_HEADER_SIZE_BYTES]) - ASCII_0_OFFSET;
-
-            // Sanity check it
-            if (command >= 0 && command <= 9)
-            {
-                RobotUtils::DisplayFormattedMessage("Received a valid packet, command: %d\n", command);
-            }
-            else
-            {
-                RobotUtils::DisplayFormattedMessage("Invalid command received: %d\n", command);
-            }
-        }
-
-        RobotUtils::DisplayFormattedMessage(m_SerialPortBuffer);
-    }
-    m_SerialPortBuffer[0] = NULL_CHARACTER;
-    */
 }
 
 
@@ -613,52 +328,6 @@ void EastTechRobot::CameraSequence()
     if (m_pDriveController->DetectButtonChange(CAMERA_TOGGLE_PROCESSED_IMAGE_BUTTON))
     {
         RobotCamera::ToggleCameraProcessedImage();
-    }
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::DriveMotorsCool
-///
-/// This method controls active or passive cooling of the drive
-/// motors.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::DriveMotorsCool()
-{
-    static Timer * pDriveMotorCoolTimer = new Timer();
-    static units::second_t lastDriveMotorCoolTime = 0_s;
-    static constexpr units::second_t DRIVE_MOTOR_COOL_ON_TIME = 10_s;
-    static constexpr units::second_t DRIVE_MOTOR_COOL_OFF_TIME = 10_s;
-    static bool bTimerStarted = false;
-    static bool bCoolingDriveMotors = true;
-
-    // If the first time here, start the timer
-    if (!bTimerStarted)
-    {
-        pDriveMotorCoolTimer->Reset();
-        pDriveMotorCoolTimer->Start();
-        bTimerStarted = true;
-    }
-
-    // Put a status on the smart dashboard
-    SmartDashboard::PutBoolean("Drive motor cooling", bCoolingDriveMotors);
-
-    // Get the current time
-    units::second_t currentTime = pDriveMotorCoolTimer->Get();
-
-    // Set some values for the common logic based on whether or not cooling is currently active or passive
-    units::second_t timerLimit = bCoolingDriveMotors ? DRIVE_MOTOR_COOL_ON_TIME : DRIVE_MOTOR_COOL_OFF_TIME;
-    DoubleSolenoid::Value solenoidValue = bCoolingDriveMotors ? TALON_COOLING_OFF_SOLENOID_VALUE : TALON_COOLING_ON_SOLENOID_VALUE;
-
-    // If the time until the next state change has elapsed
-    if ((currentTime - lastDriveMotorCoolTime) > timerLimit)
-    {
-        // Change solenoid state, update control variables
-        m_pTalonCoolingSolenoid->Set(solenoidValue);
-        bCoolingDriveMotors = !bCoolingDriveMotors;
-        lastDriveMotorCoolTime = currentTime;
     }
 }
 
@@ -725,406 +394,9 @@ void EastTechRobot::SwerveDriveSequence()
 
     // Update the swerve module states
     m_pSwerveDrive->SetModuleStates(translation, rotationAxis, bFieldRelative, true);
-    //MarioKartLights(translationAxis, strafeAxis, rotationAxis);
 
     // Display some useful information
     m_pSwerveDrive->UpdateSmartDashboard();
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::DriveControlSequence
-///
-/// This method contains the main workflow for drive control.
-/// It will gather input from the drive joystick and then filter
-/// those values to ensure they are past a certain threshold and
-/// within range to send to the speed controllers.  Lastly it
-/// will actually set the speed values.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::DriveControlSequence()
-{
-    if (EastTech::Drive::Config::DRIVE_MOTOR_COOLING_ENABLED)
-    {
-        DriveMotorsCool();
-    }
-
-    if (EastTech::Drive::Config::DIRECTIONAL_ALIGN_ENABLED)
-    {
-        // Check for a directional align first
-        DirectionalAlign();
-        
-        // If an align is in progress, do not accept manual driver input
-        if (m_RobotDriveState == DIRECTIONAL_ALIGN)
-        {
-            return;
-        }
-    }
-
-    if (EastTech::Drive::Config::DIRECTIONAL_INCH_ENABLED)
-    {
-        // If a directional inch occurred, just return
-        if (DirectionalInch())
-        {
-            return;
-        }
-    }
-
-    if (EastTech::Drive::Config::DRIVE_SWAP_ENABLED)
-    {
-        CheckForDriveSwap();
-    }
-    
-    // Computes what the maximum drive speed could be
-    double throttleControl = (m_pDriveController->GetThrottleControl() * DRIVE_THROTTLE_VALUE_RANGE) + DRIVE_THROTTLE_VALUE_BASE;
-
-    // All the controllers are normalized
-    // to represent the x and y axes with
-    // the following values:
-    //   -1
-    //    |
-    // -1---+1
-    //    |
-    //   +1
-    
-    // Get driver X/Y inputs
-    double xAxisDrive = m_pDriveController->GetDriveXInput();
-    double yAxisDrive = m_pDriveController->GetDriveYInput();
-
-    if (RobotUtils::DEBUG_PRINTS)
-    {
-        SmartDashboard::PutNumber("x-axis input", xAxisDrive);
-        SmartDashboard::PutNumber("y-axis input", yAxisDrive);
-    }
-    
-    // Make sure axes inputs clear a certain threshold.  This will help to drive straight.
-    xAxisDrive = RobotUtils::Trim((xAxisDrive * throttleControl), JOYSTICK_TRIM_UPPER_LIMIT, JOYSTICK_TRIM_LOWER_LIMIT);
-    yAxisDrive = RobotUtils::Trim((yAxisDrive * throttleControl), JOYSTICK_TRIM_UPPER_LIMIT, JOYSTICK_TRIM_LOWER_LIMIT);
-
-    // If the swap direction button was pressed, negate y value
-    if (m_bDriveSwap)
-    {
-        yAxisDrive *= -1.0;
-    }
-
-    // By default, the drive equations cause the x-axis input
-    // to be flipped when going reverse.  Correct that here,
-    // if configured.  Remember, y-axis full forward is negative.
-    if ((!EastTech::Drive::Config::USE_INVERTED_REVERSE_CONTROLS) && (yAxisDrive > 0.0))
-    {
-        xAxisDrive *= -1.0;
-    }
-    
-    if (EastTech::Drive::Config::SLOW_DRIVE_ENABLED)
-    {
-        // Get the slow drive control joystick input
-        double xAxisSlowDrive = m_pDriveController->GetAxisValue(DRIVE_SLOW_X_AXIS);
-        xAxisSlowDrive = RobotUtils::Trim((xAxisSlowDrive * DRIVE_SLOW_THROTTLE_VALUE), JOYSTICK_TRIM_UPPER_LIMIT, JOYSTICK_TRIM_LOWER_LIMIT);
-        
-        // If the normal x-axis drive is non-zero, use it.  Otherwise use the slow drive input, which could also be zero.
-        xAxisDrive = (xAxisDrive != 0.0) ? xAxisDrive : xAxisSlowDrive;
-    }
-    
-    // Filter motor speeds
-    double leftSpeed = RobotUtils::Limit((LeftDriveEquation(xAxisDrive, yAxisDrive)), DRIVE_MOTOR_UPPER_LIMIT, DRIVE_MOTOR_LOWER_LIMIT);
-    double rightSpeed = RobotUtils::Limit(RightDriveEquation(xAxisDrive, yAxisDrive), DRIVE_MOTOR_UPPER_LIMIT, DRIVE_MOTOR_LOWER_LIMIT);
-    
-    // Set motor speed
-    m_pLeftDriveMotors->Set(leftSpeed);
-    m_pRightDriveMotors->Set(rightSpeed);
-
-    if (RobotUtils::DEBUG_PRINTS)
-    {
-        SmartDashboard::PutNumber("Left drive speed", leftSpeed);
-        SmartDashboard::PutNumber("Right drive speed", rightSpeed);
-    }
-
-    m_pLeftDriveMotors->DisplayStatusInformation();
-    m_pRightDriveMotors->DisplayStatusInformation();
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::DirectionalInch
-///
-/// This method contains the main workflow for drive directional
-/// inching.  Based on input direction, it will briefly move the
-/// robot a slight amount in that direction.
-///
-////////////////////////////////////////////////////////////////
-bool EastTechRobot::DirectionalInch()
-{
-    static Timer * pInchingDriveTimer = new Timer();
-    static constexpr units::second_t INCHING_DRIVE_DELAY_S = 0.10_s;
-    static constexpr double INCHING_DRIVE_SPEED = 0.25;
-
-    double leftSpeed = 0.0;
-    double rightSpeed = 0.0;
-
-    if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_UP)
-    {
-        leftSpeed = INCHING_DRIVE_SPEED * LEFT_DRIVE_FORWARD_SCALAR;
-        rightSpeed = INCHING_DRIVE_SPEED * RIGHT_DRIVE_FORWARD_SCALAR;
-    }
-    else if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_DOWN)
-    {
-        leftSpeed = INCHING_DRIVE_SPEED * LEFT_DRIVE_REVERSE_SCALAR;
-        rightSpeed = INCHING_DRIVE_SPEED * RIGHT_DRIVE_REVERSE_SCALAR;
-    }
-    else if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_LEFT)
-    {
-        leftSpeed = INCHING_DRIVE_SPEED * LEFT_DRIVE_REVERSE_SCALAR;
-        rightSpeed = INCHING_DRIVE_SPEED * RIGHT_DRIVE_FORWARD_SCALAR;
-    }
-    else if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_RIGHT)
-    {
-        leftSpeed = INCHING_DRIVE_SPEED * LEFT_DRIVE_FORWARD_SCALAR;
-        rightSpeed = INCHING_DRIVE_SPEED * RIGHT_DRIVE_REVERSE_SCALAR;
-    }
-    else
-    {
-    }
-    
-    if ((leftSpeed == 0.0) && (rightSpeed == 0.0))
-    {
-        // No directional inch input, just return
-        return false;
-    }
-    
-    // Start the timer
-    pInchingDriveTimer->Reset();
-    pInchingDriveTimer->Start();
-    
-    // Motors on
-    m_pLeftDriveMotors->Set(leftSpeed);
-    m_pRightDriveMotors->Set(rightSpeed);
-    
-    while (pInchingDriveTimer->Get() < INCHING_DRIVE_DELAY_S)
-    {
-    }
-    
-    // Motors back off
-    m_pLeftDriveMotors->Set(OFF);
-    m_pRightDriveMotors->Set(OFF);
-    
-    // Stop the timer
-    pInchingDriveTimer->Stop();
-    pInchingDriveTimer->Reset();
-
-    return true;
-}
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::DirectionalAlign
-///
-/// This method contains the main workflow for automatically
-/// aligning the robot to an angle based on input from the
-/// driver.  The angles are relative to the robot at the start
-/// of the match (when power is applied to the gyro and zero
-/// is set).  The robot angle is reported as follows:
-///
-///     0
-///     |
-/// 270---90
-///     |
-///    180
-///
-/// The POV input is used to pick the angle to align to.  The
-/// corresponding input on the d-pad maps 1:1 to the drawing.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::DirectionalAlign()
-{
-    static Timer * pDirectionalAlignTimer = new Timer();
-    static constexpr units::second_t DIRECTIONAL_ALIGN_MAX_TIME_S = 3.00_s;
-    static constexpr double DIRECTIONAL_ALIGN_DRIVE_SPEED = 0.55;
-
-    // Retain the last POV value between function invocations
-    static int lastPovValue = -1;
-    
-    // Indicate whether or not a change between align/no align is allowed
-    static bool bStateChangeAllowed = false;
-    
-    // Get the current POV value
-    int povValue = m_pDriveController->GetPovValue();
-    
-    // Check if it changed since last function call
-    if (povValue != lastPovValue)
-    {
-        // Something changed, figure out what
-        
-        // POV button was released
-        if (povValue == -1)
-        {
-            // State change not allowed until next button press
-            bStateChangeAllowed = false;
-        }
-        // POV button was pressed
-        else if (lastPovValue == -1)
-        {
-            // State change allowed since button is now pressed
-            bStateChangeAllowed = true;
-        }
-        // There was some change in the already pressed POV value, which doesn't matter
-        else
-        {
-        }
-    }
-    
-    const int POV_NORMALIZATION_ANGLE = 45;
-    
-    // Save off a new last POV value
-    lastPovValue = povValue;
-    
-    // This alignment uses the following from the POV input:
-    //
-    // ///////////////////////
-    // //   315      45     //
-    // //     \  up  /      //
-    // // left |    | right //
-    // //     / down \      //
-    // //   225      135    //
-    // ///////////////////////
-    //
-    // The input value (0 -> 360) will be normalized such that
-    // angle 315 is interpreted as zero.
-    static int destinationAngle = -1;
-    
-    switch (m_RobotDriveState)
-    {
-        case MANUAL_CONTROL:
-        {
-            // Only start an align if a state change is allowed
-            if (bStateChangeAllowed)
-            {                
-                // @todo: Switch this logic to use GetPovAsDirection()
-
-                // This gives a value between 45 -> 405
-                povValue += POV_NORMALIZATION_ANGLE;
-                
-                // Normalize between 0 -> 360 (maps 0:360 in to 45:360:0:45 out)
-                if (povValue >= ANGLE_360_DEGREES)
-                {
-                    povValue -= ANGLE_360_DEGREES;
-                }
-                
-                // Now at value between 0 -> 360, where:
-                // 0 -> 89 = align up
-                // 90 -> 179 = align right
-                // 180 -> 269 = align down
-                // 270 -> 359 = align left
-                // Get a scalar multiplier to find the destination angle.
-                // Making this volatile to prevent the compiler from trying
-                // to optimize the division followed by multliplication of
-                // the same constant.  Integer division is deliberate.
-                // This gives a scalar multiplier of 0 -> 3
-                volatile int degreeMultiplier = (povValue / ANGLE_90_DEGREES);
-                
-                // Find the destination angle.
-                // This gives a value of 0, 90, 180 or 270
-                destinationAngle = ANGLE_90_DEGREES * degreeMultiplier;
-                
-                // Read the starting angle
-                int startingAngle = static_cast<int>(GetGyroValue(ADXRS450));
-                
-                // Do some angle math to figure out which direction is faster to turn.
-                // Examples:
-                // Starting: 45, 180    Destination: 0, 90, 180, 270
-                // 45 - 0 = 45          180 - 0 = 180
-                // 45 - 90 = -45        180 - 90 = 90
-                // 45 - 180 = -135      180 - 180 = 0
-                // 45 - 270 = -225      180 - 270 = -90
-                int angleDistance = startingAngle - destinationAngle;
-                int absValueAngleDistance = std::abs(angleDistance);
-                
-                // Variables to indicate which way to turn
-                bool bTurnLeft = false;
-                bool bTurnRight = false;
-                
-                // Figure out which way to turn
-                if (angleDistance > 0)
-                {
-                    // Target is to the left of where we are
-                    bTurnLeft = true;
-                }
-                else
-                {
-                    // Target is to the right of where we are
-                    bTurnRight = true;
-                }
-
-                // If the target distance is more than halfway around, it's actually faster to turn the other way 
-                if (absValueAngleDistance > ANGLE_180_DEGREES)
-                {
-                    bTurnLeft = !bTurnLeft;
-                    bTurnRight = !bTurnRight;
-                }
-                
-                // The destination angle and direction is now known, time to do the move
-                if (bTurnLeft)
-                {
-                    m_pLeftDriveMotors->Set(DIRECTIONAL_ALIGN_DRIVE_SPEED * LEFT_DRIVE_REVERSE_SCALAR);
-                    m_pRightDriveMotors->Set(DIRECTIONAL_ALIGN_DRIVE_SPEED * RIGHT_DRIVE_FORWARD_SCALAR);
-                }
-                if (bTurnRight)
-                {
-                    m_pLeftDriveMotors->Set(DIRECTIONAL_ALIGN_DRIVE_SPEED * LEFT_DRIVE_FORWARD_SCALAR);
-                    m_pRightDriveMotors->Set(DIRECTIONAL_ALIGN_DRIVE_SPEED * RIGHT_DRIVE_REVERSE_SCALAR);
-                }
-                
-                // Start the safety timer
-                pDirectionalAlignTimer->Start();
-
-                // Indicate a state change is not allowed until POV release
-                bStateChangeAllowed = false;
-                
-                // Indicate a directional align is in process
-                m_RobotDriveState = DIRECTIONAL_ALIGN;
-            }
-            
-            break;
-        }
-        case DIRECTIONAL_ALIGN:
-        {   
-            // Three conditions for stopping the align:
-            // 1. Destination angle is reached
-            // 2. Safety timer expires
-            // 3. User cancels the operation
-            // @todo: Is it a problem that (destinationAngle - 1) can be negative when angle == zero?
-            int currentAngle = static_cast<int>(GetGyroValue(ADXRS450));
-            if (((currentAngle >= (destinationAngle - 1)) && (currentAngle <= (destinationAngle + 1))) ||
-                (pDirectionalAlignTimer->Get() > DIRECTIONAL_ALIGN_MAX_TIME_S) ||
-                (bStateChangeAllowed))
-            {
-                // Motors off
-                m_pLeftDriveMotors->Set(OFF);
-                m_pRightDriveMotors->Set(OFF);
-                
-                // Reset the safety timer
-                pDirectionalAlignTimer->Stop();
-                pDirectionalAlignTimer->Reset();
-                
-                // Clear this just to be safe
-                destinationAngle = -1;
-                
-                // Indicate a state change is not allowed until POV release
-                bStateChangeAllowed = false;
-                
-                // Align done, back to manual control
-                m_RobotDriveState = MANUAL_CONTROL;
-            }
-            
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
 }
 
 
@@ -1143,16 +415,6 @@ void EastTechRobot::DisabledInit()
     // @todo: Shut off the limelight LEDs?
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
     RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::ARRAY_OFF);
-    
-    // All motors off
-    m_pLeftDriveMotors->Set(OFF);
-    m_pRightDriveMotors->Set(OFF);
-
-    // Motor cooling off
-    m_pTalonCoolingSolenoid->Set(TALON_COOLING_OFF_SOLENOID_VALUE);
-
-    // Turn the rainbow animation back on    
-    //m_pCandle->Animate(m_RainbowAnimation);
 }
 
 

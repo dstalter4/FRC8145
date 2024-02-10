@@ -145,8 +145,7 @@ bool RobotCamera::AutonomousCamera::AlignToTarget(SeekDirection seekDirection, c
         if (bEnableMotors)
         {
             // Steer the robot
-            pRobotObj->m_pLeftDriveMotors->Set(-leftCommand);
-            pRobotObj->m_pRightDriveMotors->Set(rightCommand);
+            // @todo: Port and call a swerve drive motion command.
         }
 
         // Send useful information to smart dashboard.
@@ -157,8 +156,7 @@ bool RobotCamera::AutonomousCamera::AlignToTarget(SeekDirection seekDirection, c
     }
 
     // Motors off
-    pRobotObj->m_pLeftDriveMotors->Set(0.0);
-    pRobotObj->m_pRightDriveMotors->Set(0.0);
+    pRobotObj->m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, 0.0, true, false);
 
     // Clean up the timer
     m_AutoCameraTimer.Stop();
