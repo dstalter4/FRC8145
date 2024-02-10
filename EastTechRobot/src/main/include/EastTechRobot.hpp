@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaRobot.hpp
+/// @file   EastTechRobot.hpp
 /// @author David Stalter
 ///
 /// @details
@@ -9,11 +9,11 @@
 /// right time as controlled by the switches on the driver station or the field
 /// controls.
 ///
-/// Copyright (c) 2024 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef YTAROBOT_HPP
-#define YTAROBOT_HPP
+#ifndef EASTTECHROBOT_HPP
+#define EASTTECHROBOT_HPP
 
 // CTRE output is noisy this year, making it impossible to find real errors
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -48,23 +48,23 @@
 #include "RobotUtils.hpp"                       // for ASSERT, DEBUG_PRINTS
 #include "SwerveDrive.hpp"                      // for using swerve drive
 #include "TalonMotorGroup.hpp"                  // for Talon group motor control
-#include "YtaController.hpp"                    // for controller interaction
+#include "EastTechController.hpp"               // for controller interaction
 
 using namespace frc;
 
 
 ////////////////////////////////////////////////////////////////
-/// @class YtaRobot
+/// @class EastTechRobot
 ///
 /// Derived class from TimedRobot.  The object that will
 /// control all robot functionality.
 ///
 ////////////////////////////////////////////////////////////////
-class YtaRobot : public TimedRobot
+class EastTechRobot : public TimedRobot
 {
 public:
     friend class RobotCamera;
-    friend class YtaRobotTest;
+    friend class EastTechRobotTest;
 
     // MEMBER FUNCTIONS
     
@@ -89,19 +89,19 @@ public:
     virtual void DisabledPeriodic() override;
     
     // Constructor, destructor, copy, assignment
-    YtaRobot();
-    virtual ~YtaRobot() = default;
-    YtaRobot(YtaRobot&& rhs) = default;
-    YtaRobot& operator=(YtaRobot&& rhs) = default;
+    EastTechRobot();
+    virtual ~EastTechRobot() = default;
+    EastTechRobot(EastTechRobot&& rhs) = default;
+    EastTechRobot& operator=(EastTechRobot&& rhs) = default;
       
 private:
 
     // TYPEDEFS
-    typedef YtaTalon::MotorGroupControlMode MotorGroupControlMode;
-    typedef Yta::Controller::Config::Models ControllerModels;
-    typedef Yta::Controller::Config::Mappings ControllerMappings;
-    typedef YtaDriveController<YtaCustomController> DriveControllerType;
-    typedef YtaController<YtaCustomController> AuxControllerType;
+    typedef EastTechTalon::MotorGroupControlMode MotorGroupControlMode;
+    typedef EastTech::Controller::Config::Models ControllerModels;
+    typedef EastTech::Controller::Config::Mappings ControllerMappings;
+    typedef EastTechDriveController<EastTechCustomController> DriveControllerType;
+    typedef EastTechController<EastTechCustomController> AuxControllerType;
     
     // ENUMS
     enum RobotMode
@@ -157,10 +157,10 @@ private:
     // This makes retrieving the address difficult.  To work around this,
     // we'll allocate some static storage for a pointer to a robot object.
     // When RobotInit() is called, m_pThis will be filled out.  This works
-    // because only one YtaRobot object is ever constructed.
-    static YtaRobot * m_pThis;
+    // because only one EastTechRobot object is ever constructed.
+    static EastTechRobot * m_pThis;
     inline void SetStaticThisInstance() { m_pThis = this; }
-    inline static YtaRobot * GetRobotInstance() { return m_pThis; }
+    inline static EastTechRobot * GetRobotInstance() { return m_pThis; }
 
     // Increments a variable to indicate the robot code is successfully running
     inline void HeartBeat();
@@ -189,7 +189,7 @@ private:
     inline void AutonomousBackDriveTurn(RobotDirection currentDirection);
     
     // Autonomous routines
-    // @todo: Make YtaRobotAutonomous a friend and move these out (requires accessor to *this)!
+    // @todo: Make EastTechRobotAutonomous a friend and move these out (requires accessor to *this)!
     void AutonomousRoutine1();
     void AutonomousRoutine2();
     void AutonomousRoutine3();
@@ -329,8 +329,8 @@ private:
     //       necessary when changing these types!
     static const ControllerModels DRIVE_CONTROLLER_MODEL                        = ControllerModels::CUSTOM_XBOX;
     static const ControllerModels AUX_CONTROLLER_MODEL                          = ControllerModels::CUSTOM_XBOX;
-    static constexpr const ControllerMappings * const DRIVE_CONTROLLER_MAPPINGS = Yta::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL);
-    static constexpr const ControllerMappings * const AUX_CONTROLLER_MAPPINGS   = Yta::Controller::Config::GetControllerMapping(AUX_CONTROLLER_MODEL);
+    static constexpr const ControllerMappings * const DRIVE_CONTROLLER_MAPPINGS = EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL);
+    static constexpr const ControllerMappings * const AUX_CONTROLLER_MAPPINGS   = EastTech::Controller::Config::GetControllerMapping(AUX_CONTROLLER_MODEL);
     
     static const int                DRIVE_JOYSTICK_PORT                     = 0;
     static const int                AUX_JOYSTICK_PORT                       = 1;
@@ -362,8 +362,8 @@ private:
     //       types to be present.  When using swerve drive, IDs 1-8
     //       are used by the swerve modules (see the SwerveModuleConfigs
     //       in SwerveDrive.hpp).
-    static const unsigned           LEFT_DRIVE_MOTORS_CAN_START_ID          = Yta::Drive::Config::USE_SWERVE_DRIVE ? 64 : 1;
-    static const unsigned           RIGHT_DRIVE_MOTORS_CAN_START_ID         = Yta::Drive::Config::USE_SWERVE_DRIVE ? 66 : 3;
+    static const unsigned           LEFT_DRIVE_MOTORS_CAN_START_ID          = EastTech::Drive::Config::USE_SWERVE_DRIVE ? 64 : 1;
+    static const unsigned           RIGHT_DRIVE_MOTORS_CAN_START_ID         = EastTech::Drive::Config::USE_SWERVE_DRIVE ? 66 : 3;
 
     // CANivore Signals
     // Note: IDs 1-4 are used by the CANcoders (see the
@@ -511,12 +511,12 @@ private:
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::HeartBeat
+/// @method EastTechRobot::HeartBeat
 ///
 /// Increments the heartbeat counter.
 ///
 ////////////////////////////////////////////////////////////////
-inline void YtaRobot::HeartBeat()
+inline void EastTechRobot::HeartBeat()
 {
     m_HeartBeat++;
     SmartDashboard::PutNumber("Heartbeat", m_HeartBeat);
@@ -525,12 +525,12 @@ inline void YtaRobot::HeartBeat()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::CheckForDriveSwap
+/// @method EastTechRobot::CheckForDriveSwap
 ///
 /// Updates the drive control direction.
 ///
 ////////////////////////////////////////////////////////////////
-inline void YtaRobot::CheckForDriveSwap()
+inline void EastTechRobot::CheckForDriveSwap()
 {
     // Check if the driver pushed the button to have
     // forward be reverse and vice versa
@@ -544,12 +544,12 @@ inline void YtaRobot::CheckForDriveSwap()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::SetLedsToAllianceColor
+/// @method EastTechRobot::SetLedsToAllianceColor
 ///
 /// Sets the LEDs to the alliance color.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::SetLedsToAllianceColor()
+void EastTechRobot::SetLedsToAllianceColor()
 {
     /*
     switch (m_AllianceColor.value())
@@ -575,7 +575,7 @@ void YtaRobot::SetLedsToAllianceColor()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::GetGyroValue
+/// @method EastTechRobot::GetGyroValue
 ///
 /// This method is used to get a value from an analog gyro
 /// sensor.  There are three possible places a gyro could be
@@ -585,7 +585,7 @@ void YtaRobot::SetLedsToAllianceColor()
 /// in parameter.
 ///
 ////////////////////////////////////////////////////////////////
-inline double YtaRobot::GetGyroValue(GyroType gyroType, AnalogGyro * pSensor)
+inline double EastTechRobot::GetGyroValue(GyroType gyroType, AnalogGyro * pSensor)
 {
     double value = 0.0;
     
@@ -626,7 +626,7 @@ inline double YtaRobot::GetGyroValue(GyroType gyroType, AnalogGyro * pSensor)
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::GetSonarValue
+/// @method EastTechRobot::GetSonarValue
 ///
 /// This method is used to get a value from the sonar sensor.
 /// It is intended to be used to turn a sensor briefly on and
@@ -634,7 +634,7 @@ inline double YtaRobot::GetGyroValue(GyroType gyroType, AnalogGyro * pSensor)
 /// sensors that may need to get readings.
 ///
 ////////////////////////////////////////////////////////////////
-inline double YtaRobot::GetSonarValue(Ultrasonic * pSensor)
+inline double EastTechRobot::GetSonarValue(Ultrasonic * pSensor)
 {
     return 0.0;
     
@@ -649,13 +649,13 @@ inline double YtaRobot::GetSonarValue(Ultrasonic * pSensor)
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::CheckAndUpdateRobotMode
+/// @method EastTechRobot::CheckAndUpdateRobotMode
 ///
 /// Checks the current robot mode for a state change and updates
 /// accordingly, including displaying a message.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::CheckAndUpdateRobotMode(RobotMode robotMode)
+void EastTechRobot::CheckAndUpdateRobotMode(RobotMode robotMode)
 {
     // These array messages match the order of the RobotMode enum
     const char * MODE_CHANGE_ENTER_MESSAGES[] = 
@@ -686,4 +686,4 @@ void YtaRobot::CheckAndUpdateRobotMode(RobotMode robotMode)
     }
 }
 
-#endif // YTAROBOT_HPP
+#endif // EASTTECHROBOT_HPP

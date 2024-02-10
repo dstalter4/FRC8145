@@ -5,7 +5,7 @@
 /// @details
 /// A class designed to support camera functionality on the robot.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef ROBOTCAMERA_HPP

@@ -3,10 +3,10 @@
 /// @author David Stalter
 ///
 /// @details
-/// Implementation of the YtaRobot test functions.  This keeps official stable
-/// robot code isolated.
+/// Implementation of the EastTechRobot test functions.  This keeps official
+/// stable robot code isolated.
 ///
-/// Copyright (c) 2022 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -17,30 +17,30 @@
 
 // C++ INCLUDES
 #include "RobotUtils.hpp"       // for DisplayMessage(), DisplayFormattedMessage()
-#include "YtaRobot.hpp"         // for robot class declaration
+#include "EastTechRobot.hpp"         // for robot class declaration
 
 
 // Helper macro to get the robot object, only for use in test class code
-#define YTA_ROBOT_OBJ() YtaRobot::GetRobotInstance()
+#define EastTech_ROBOT_OBJ() EastTechRobot::GetRobotInstance()
 
 
 ////////////////////////////////////////////////////////////////
-/// @class YtaRobotTest
+/// @class EastTechRobotTest
 ///
 /// A class used to test robot functionality.  The intention of
 /// this class is to enable quick tests or rapid prototypes.
-/// It leverages the YtaRobot 'Test' mode functions to execute
+/// It leverages the EastTechRobot 'Test' mode functions to execute
 /// routines.  Since it is separate from the 'product' robot
-/// code (in YtaRobot), it cannot directly use the various
+/// code (in EastTechRobot), it cannot directly use the various
 /// member objects from that code.  Instead they can be accessed
-/// through the YTA_ROBOT_OBJ() macro.
+/// through the EastTech_ROBOT_OBJ() macro.
 ///
 /// A second, but currently unused, test approach is also
 /// presented.  This approach attempts to mimic direct use of
-/// the YtaRobot object members by binding references to them.
+/// the EastTechRobot object members by binding references to them.
 ///
 ////////////////////////////////////////////////////////////////
-class YtaRobotTest
+class EastTechRobotTest
 {
 public:
     static void InitializeCommonPointers();
@@ -64,81 +64,81 @@ private:
     static Joystick * m_pJoystick;
 
     // Alternate test approach (not currently used):
-    // Singleton test object with members bound by reference to YtaRobot member objects.
+    // Singleton test object with members bound by reference to EastTechRobot member objects.
     /*
-    YtaRobotTest() :
-        m_pAccelerometer(YtaRobot::GetRobotInstance()->m_pAccelerometer)
+    EastTechRobotTest() :
+        m_pAccelerometer(EastTechRobot::GetRobotInstance()->m_pAccelerometer)
     {
     }
-    static YtaRobotTest * GetInstance() { return m_pRobotTestObj; }
+    static EastTechRobotTest * GetInstance() { return m_pRobotTestObj; }
     static void CreateInstance()
     {
-        m_pRobotTestObj = new YtaRobotTest();
+        m_pRobotTestObj = new EastTechRobotTest();
     }
 
-    static YtaRobotTest * m_pRobotTestObj;
+    static EastTechRobotTest * m_pRobotTestObj;
     BuiltInAccelerometer *& m_pAccelerometer;
     */
 };
 
 // STATIC MEMBER DATA
-Joystick * YtaRobotTest::m_pJoystick = nullptr;
+Joystick * EastTechRobotTest::m_pJoystick = nullptr;
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::TestInit
+/// @method EastTechRobot::TestInit
 ///
 /// The test init method.  This method is called once each time
 /// the robot enters test mode.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::TestInit()
+void EastTechRobot::TestInit()
 {
     RobotUtils::DisplayMessage("TestInit called.");
 
-    YtaRobotTest::InitializeCommonPointers();
+    EastTechRobotTest::InitializeCommonPointers();
 }
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::TestPeriodic
+/// @method EastTechRobot::TestPeriodic
 ///
 /// The test control method.  This method is called
 /// periodically while the robot is in test mode.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::TestPeriodic()
+void EastTechRobot::TestPeriodic()
 {
     // Log a mode change if one occurred
     CheckAndUpdateRobotMode(ROBOT_MODE_TEST);
 
     // Enable or disable routines for testing
-    YtaRobotTest::QuickTestCode();
-    //YtaRobotTest::CtreSpeedControllerTest();
-    //YtaRobotTest::RevSpeedControllerTest();
-    //YtaRobotTest::TankDrive();
-    //YtaRobotTest::SwerveDriveTest();
-    //YtaRobotTest::PneumaticsTest();
-    //YtaRobotTest::SuperstructureTest();
-    //YtaRobotTest::TimeTest();
-    //YtaRobotTest::ButtonChangeTest();
-    //YtaRobotTest::AccelerometerTest();
-    //YtaRobotTest::CandleLedsTest();
-    //YtaRobotTest::RelayLedsTest();
+    EastTechRobotTest::QuickTestCode();
+    //EastTechRobotTest::CtreSpeedControllerTest();
+    //EastTechRobotTest::RevSpeedControllerTest();
+    //EastTechRobotTest::TankDrive();
+    //EastTechRobotTest::SwerveDriveTest();
+    //EastTechRobotTest::PneumaticsTest();
+    //EastTechRobotTest::SuperstructureTest();
+    //EastTechRobotTest::TimeTest();
+    //EastTechRobotTest::ButtonChangeTest();
+    //EastTechRobotTest::AccelerometerTest();
+    //EastTechRobotTest::CandleLedsTest();
+    //EastTechRobotTest::RelayLedsTest();
 }
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::InitializeCommonPointers
+/// @method EastTechRobotTest::InitializeCommonPointers
 ///
 /// Initializes any common test pointers by creating objects
 /// for them to use.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::InitializeCommonPointers()
+void EastTechRobotTest::InitializeCommonPointers()
 {
     static bool bPointersInitialized = false;
     if (!bPointersInitialized)
@@ -152,12 +152,12 @@ void YtaRobotTest::InitializeCommonPointers()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::QuickTestCode
+/// @method EastTechRobotTest::QuickTestCode
 ///
 /// Test code to try out for rapid prototyping.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::QuickTestCode()
+void EastTechRobotTest::QuickTestCode()
 {
     static CANSparkMax * m_pDriveSpark = new CANSparkMax(4, CANSparkLowLevel::MotorType::kBrushless);
     static CANSparkMax * m_pAngleSpark = new CANSparkMax(3, CANSparkLowLevel::MotorType::kBrushless);
@@ -209,12 +209,12 @@ void YtaRobotTest::QuickTestCode()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::SuperstructureTest
+/// @method EastTechRobotTest::SuperstructureTest
 ///
 /// Test code to try out functionality on the superstructure.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::SuperstructureTest()
+void EastTechRobotTest::SuperstructureTest()
 {
     static TalonFX * pTalonFx5 = new TalonFX(5);
     static TalonFX * pTalonFx6 = new TalonFX(6);
@@ -264,17 +264,17 @@ void YtaRobotTest::SuperstructureTest()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::CtreSpeedControllerTest
+/// @method EastTechRobotTest::CtreSpeedControllerTest
 ///
 /// Test code for CTRE speed controllers.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::CtreSpeedControllerTest()
+void EastTechRobotTest::CtreSpeedControllerTest()
 {
-    static TalonFX * pLeft1 = new TalonFX(YtaRobot::LEFT_DRIVE_MOTORS_CAN_START_ID);
-    static TalonFX * pLeft2 = new TalonFX(YtaRobot::LEFT_DRIVE_MOTORS_CAN_START_ID + 1);
-    static TalonFX * pRight1 = new TalonFX(YtaRobot::RIGHT_DRIVE_MOTORS_CAN_START_ID);
-    static TalonFX * pRight2 = new TalonFX(YtaRobot::RIGHT_DRIVE_MOTORS_CAN_START_ID + 1);
+    static TalonFX * pLeft1 = new TalonFX(EastTechRobot::LEFT_DRIVE_MOTORS_CAN_START_ID);
+    static TalonFX * pLeft2 = new TalonFX(EastTechRobot::LEFT_DRIVE_MOTORS_CAN_START_ID + 1);
+    static TalonFX * pRight1 = new TalonFX(EastTechRobot::RIGHT_DRIVE_MOTORS_CAN_START_ID);
+    static TalonFX * pRight2 = new TalonFX(EastTechRobot::RIGHT_DRIVE_MOTORS_CAN_START_ID + 1);
     
     while (m_pJoystick->GetRawButton(1))
     {
@@ -306,12 +306,12 @@ void YtaRobotTest::CtreSpeedControllerTest()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::RevSpeedControllerTest
+/// @method EastTechRobotTest::RevSpeedControllerTest
 ///
 /// Test code for REV speed controllers.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::RevSpeedControllerTest()
+void EastTechRobotTest::RevSpeedControllerTest()
 {
     static rev::CANSparkMax * pLeftNeo = new rev::CANSparkMax(1, rev::CANSparkLowLevel::MotorType::kBrushless);
     static rev::CANSparkMax * pRightNeo = new rev::CANSparkMax(2, rev::CANSparkLowLevel::MotorType::kBrushless);
@@ -340,52 +340,52 @@ void YtaRobotTest::RevSpeedControllerTest()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::TankDrive
+/// @method EastTechRobotTest::TankDrive
 ///
 /// Test code for tank drive of the robot.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::TankDrive()
+void EastTechRobotTest::TankDrive()
 {
-    YTA_ROBOT_OBJ()->m_pLeftDriveMotors->Set(YTA_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0);
-    YTA_ROBOT_OBJ()->m_pRightDriveMotors->Set(YTA_ROBOT_OBJ()->m_pDriveController->GetAxisValue(5) * -1.0);
+    EastTech_ROBOT_OBJ()->m_pLeftDriveMotors->Set(EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0);
+    EastTech_ROBOT_OBJ()->m_pRightDriveMotors->Set(EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(5) * -1.0);
 }
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::SwerveDriveTest
+/// @method EastTechRobotTest::SwerveDriveTest
 ///
 /// Test code for swerve drive of the robot.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::SwerveDriveTest()
+void EastTechRobotTest::SwerveDriveTest()
 {
-    static SwerveDrive * pSwerveDrive = YTA_ROBOT_OBJ()->m_pSwerveDrive;
+    static SwerveDrive * pSwerveDrive = EastTech_ROBOT_OBJ()->m_pSwerveDrive;
 
     // Tests returning modules to absolute reference angles
-    if (YTA_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(4))
+    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(4))
     {
         // Not available yet
-        //YTA_ROBOT_OBJ()->m_pSwerveDrive->HomeModules();
+        //EastTech_ROBOT_OBJ()->m_pSwerveDrive->HomeModules();
     }
 
     // Dynamically switch between field relative and robot centric
     static bool bFieldRelative = true;
-    if (YTA_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(5))
+    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(5))
     {
         bFieldRelative = !bFieldRelative;
     }
 
     // Zero the gryo
-    if (YTA_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(6))
+    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(6))
     {
         pSwerveDrive->ZeroGyroYaw();
     }
 
     // Dynamically switch between arcade and GTA drive controls
     static bool bGtaControls = false;
-    if (YTA_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(10))
+    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(10))
     {
         bGtaControls = !bGtaControls;
     }
@@ -395,16 +395,16 @@ void YtaRobotTest::SwerveDriveTest()
     double translationAxis = 0.0;
     if (bGtaControls)
     {
-        double lAxis = YTA_ROBOT_OBJ()->m_pDriveController->GetAxisValue(2) * -1.0;
-        double rAxis = YTA_ROBOT_OBJ()->m_pDriveController->GetAxisValue(3);
+        double lAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(2) * -1.0;
+        double rAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(3);
         translationAxis = lAxis + rAxis;
     }
     else
     {
-        translationAxis = YTA_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0;
+        translationAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0;
     }
-    double strafeAxis = YTA_ROBOT_OBJ()->m_pDriveController->GetAxisValue(0) * -1.0;
-    double rotationAxis = YTA_ROBOT_OBJ()->m_pDriveController->GetAxisValue(4) * -1.0;
+    double strafeAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(0) * -1.0;
+    double rotationAxis = EastTech_ROBOT_OBJ()->m_pDriveController->GetAxisValue(4) * -1.0;
 
     strafeAxis = RobotUtils::Trim(strafeAxis, 0.10, -0.10);
     translationAxis = RobotUtils::Trim(translationAxis, 0.10, -0.10);
@@ -428,18 +428,18 @@ void YtaRobotTest::SwerveDriveTest()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::PneumaticsTest
+/// @method EastTechRobotTest::PneumaticsTest
 ///
 /// Test code for validating pneumatics.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::PneumaticsTest()
+void EastTechRobotTest::PneumaticsTest()
 {
     // The pneumatics library checks if channels are already in use
     // when creating the object.  The test code either has to pick
     // channels not in use (likely 6/7) or grab a reference to some
     // solenoid object from the actual robot code.
-    //static DoubleSolenoid *& rpSolenoid = YTA_ROBOT_OBJ()->m_pTalonCoolingSolenoid;
+    //static DoubleSolenoid *& rpSolenoid = EastTech_ROBOT_OBJ()->m_pTalonCoolingSolenoid;
     static DoubleSolenoid * pSolenoid = new DoubleSolenoid(PneumaticsModuleType::CTREPCM, 6, 7);
     
     if (m_pJoystick->GetRawButton(1))
@@ -462,12 +462,12 @@ void YtaRobotTest::PneumaticsTest()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::TimeTest
+/// @method EastTechRobotTest::TimeTest
 ///
 /// Test code for manually managing timing (including threads).
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::TimeTest()
+void EastTechRobotTest::TimeTest()
 {
     // Example code using standard library delays and time tracking
     static std::chrono::time_point<std::chrono::high_resolution_clock> currentTime;
@@ -492,15 +492,15 @@ void YtaRobotTest::TimeTest()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::ButtonChangeTest
+/// @method EastTechRobotTest::ButtonChangeTest
 ///
 /// Test code to verify button state change detection works.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::ButtonChangeTest()
+void EastTechRobotTest::ButtonChangeTest()
 {
     // Sample code for testing the detect trigger change code
-    if (YTA_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(1, Yta::Controller::ButtonStateChanges::BUTTON_RELEASED))
+    if (EastTech_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(1, EastTech::Controller::ButtonStateChanges::BUTTON_RELEASED))
     {
         RobotUtils::DisplayMessage("Trigger change detected!");
     }
@@ -509,43 +509,43 @@ void YtaRobotTest::ButtonChangeTest()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::AccelerometerTest
+/// @method EastTechRobotTest::AccelerometerTest
 ///
 /// Test code to verify the built in accelerometer.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::AccelerometerTest()
+void EastTechRobotTest::AccelerometerTest()
 {
     // Test code for reading the built in accelerometer
-    double x = YTA_ROBOT_OBJ()->m_pAccelerometer->GetX();
-    double y = YTA_ROBOT_OBJ()->m_pAccelerometer->GetY();
-    double z = YTA_ROBOT_OBJ()->m_pAccelerometer->GetZ();
+    double x = EastTech_ROBOT_OBJ()->m_pAccelerometer->GetX();
+    double y = EastTech_ROBOT_OBJ()->m_pAccelerometer->GetY();
+    double z = EastTech_ROBOT_OBJ()->m_pAccelerometer->GetZ();
     RobotUtils::DisplayFormattedMessage("x: %f, y: %f, z: %f\n", x, y, z);
 }
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::CandleLedsTest
+/// @method EastTechRobotTest::CandleLedsTest
 ///
 /// Test code to verify functionality of CANdle controlled RGB
 // LED strips.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::CandleLedsTest()
+void EastTechRobotTest::CandleLedsTest()
 {
 }
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobotTest::RelayLedsTest
+/// @method EastTechRobotTest::RelayLedsTest
 ///
 /// Test code to verify functionality of relay controlled RGB
 /// LED strips.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobotTest::RelayLedsTest()
+void EastTechRobotTest::RelayLedsTest()
 {
     enum LedDisplayState
     {

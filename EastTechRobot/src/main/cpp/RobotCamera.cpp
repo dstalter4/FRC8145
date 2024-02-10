@@ -5,7 +5,7 @@
 /// @details
 /// A class designed to support camera functionality on the robot.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -20,7 +20,7 @@
 // C++ INCLUDES
 #include "RobotCamera.hpp"                      // for class declaration
 #include "RobotUtils.hpp"                       // for DisplayMessage(), DisplayFormattedMessage()
-#include "YtaRobot.hpp"                         // for GetRobotInstance()
+#include "EastTechRobot.hpp"                    // for GetRobotInstance()
 
 // STATIC MEMBER DATA
 std::shared_ptr<nt::NetworkTable>               RobotCamera::m_pLimelightNetworkTable;
@@ -61,7 +61,7 @@ double                                          RobotCamera::AutonomousCamera::m
 ////////////////////////////////////////////////////////////////
 bool RobotCamera::AutonomousCamera::AlignToTarget(SeekDirection seekDirection, const bool bEnableMotors)
 {
-    YtaRobot * pRobotObj = YtaRobot::GetRobotInstance();
+    EastTechRobot * pRobotObj = EastTechRobot::GetRobotInstance();
     bool bTargetFound = false;
     m_AutoCameraTimer.Start();
 
@@ -178,7 +178,7 @@ bool RobotCamera::AutonomousCamera::AlignToTarget(SeekDirection seekDirection, c
 ////////////////////////////////////////////////////////////////
 void RobotCamera::AutonomousCamera::AlignToTargetSwerve()
 {
-    YtaRobot * pRobotObj = YtaRobot::GetRobotInstance();
+    EastTechRobot * pRobotObj = EastTechRobot::GetRobotInstance();
 
     // Get the x-axis target value
     double targetX = m_pLimelightNetworkTable->GetNumber("tx", 0.0);

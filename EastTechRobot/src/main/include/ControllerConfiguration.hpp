@@ -7,7 +7,7 @@
 /// mappings.
 ///
 ///
-/// Copyright (c) 2022 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef CONTROLLERCONFIGURATION_HPP
@@ -24,13 +24,13 @@
 
 
 ////////////////////////////////////////////////////////////////
-/// @namespace Yta::Controller::Config
+/// @namespace EastTech::Controller::Config
 ///
-/// Provides generic declarations for information on YTA
+/// Provides generic declarations for information on East Tech
 /// controller configuration.
 ///
 ////////////////////////////////////////////////////////////////
-namespace Yta
+namespace EastTech
 {
 namespace Controller
 {

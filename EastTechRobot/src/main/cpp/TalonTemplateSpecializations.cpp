@@ -6,7 +6,7 @@
 /// A translation unit to build the required template specializations for the
 /// different types of talons used on the robot.
 ///
-/// Copyright (c) 2021 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // Indicate the template specializations should be built

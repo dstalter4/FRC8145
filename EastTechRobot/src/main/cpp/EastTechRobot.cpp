@@ -1,14 +1,14 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaRobot.cpp
+/// @file   EastTechRobot.cpp
 /// @author David Stalter
 ///
 /// @details
-/// Implementation of the YtaRobot class.  This file contains the functions for
-/// full robot operation in FRC.  It contains the autonomous and operator
+/// Implementation of the EastTechRobot class.  This file contains the functions
+/// for full robot operation in FRC.  It contains the autonomous and operator
 /// control routines as well as all necessary support for interacting with all
 /// motors, sensors and input/outputs on the robot.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -19,21 +19,21 @@
 // (none)
 
 // C++ INCLUDES
-#include "YtaRobot.hpp"                 // for class declaration (and other headers)
+#include "EastTechRobot.hpp"            // for class declaration (and other headers)
 #include "RobotCamera.hpp"              // for interacting with cameras
 #include "RobotUtils.hpp"               // for Trim(), Limit() and DisplayMessage()
 
 // STATIC MEMBER VARIABLES
-YtaRobot * YtaRobot::m_pThis;
+EastTechRobot * EastTechRobot::m_pThis;
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::YtaRobot
+/// @method EastTechRobot::EastTechRobot
 ///
 /// Constructor.  Instantiates all robot control objects.
 ///
 ////////////////////////////////////////////////////////////////
-YtaRobot::YtaRobot() :
+EastTechRobot::EastTechRobot() :
     m_AutonomousChooser                 (),
     m_pDriveController                  (new DriveControllerType(DRIVE_CONTROLLER_MODEL, DRIVE_JOYSTICK_PORT)),
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
@@ -72,9 +72,9 @@ YtaRobot::YtaRobot() :
     m_AutonomousChooser.AddOption(AUTO_TEST_ROUTINE_STRING, AUTO_TEST_ROUTINE_STRING);
     SmartDashboard::PutData("Autonomous Modes", &m_AutonomousChooser);
     
-    RobotUtils::DisplayFormattedMessage("The drive forward axis is: %d\n", Yta::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.RIGHT_TRIGGER);
-    RobotUtils::DisplayFormattedMessage("The drive reverse axis is: %d\n", Yta::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_TRIGGER);
-    RobotUtils::DisplayFormattedMessage("The drive left/right axis is: %d\n", Yta::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_X_AXIS);
+    RobotUtils::DisplayFormattedMessage("The drive forward axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.RIGHT_TRIGGER);
+    RobotUtils::DisplayFormattedMessage("The drive reverse axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_TRIGGER);
+    RobotUtils::DisplayFormattedMessage("The drive left/right axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_X_AXIS);
 
     ConfigureMotorControllers();
 
@@ -103,7 +103,7 @@ YtaRobot::YtaRobot() :
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::ResetMemberData
+/// @method EastTechRobot::ResetMemberData
 ///
 /// This method resets relevant member data variables.  Since
 /// the robot object is only constructed once, it may be
@@ -116,19 +116,19 @@ YtaRobot::YtaRobot() :
 /// once on program start up).
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::ResetMemberData()
+void EastTechRobot::ResetMemberData()
 {
 }
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::RobotInit
+/// @method EastTechRobot::RobotInit
 ///
 /// This method is run when initializing the robot.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::RobotInit()
+void EastTechRobot::RobotInit()
 {
     RobotUtils::DisplayMessage("RobotInit called.");
     SetStaticThisInstance();
@@ -137,13 +137,13 @@ void YtaRobot::RobotInit()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::RobotPeriodic
+/// @method EastTechRobot::RobotPeriodic
 ///
 /// This method is run in all robot states.  It is called each
 /// time a new packet is received from the driver station.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::RobotPeriodic()
+void EastTechRobot::RobotPeriodic()
 {
     static bool bRobotPeriodicStarted = false;
     if (!bRobotPeriodicStarted)
@@ -156,12 +156,12 @@ void YtaRobot::RobotPeriodic()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::ConfigureMotorControllers
+/// @method EastTechRobot::ConfigureMotorControllers
 ///
 /// Sets motor controller specific configuration information.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::ConfigureMotorControllers()
+void EastTechRobot::ConfigureMotorControllers()
 {
     // These are the defaults for the configuration (see TalonFX.h)
     //ctre::phoenix::sensors::AbsoluteSensorRange absoluteSensorRange = ctre::phoenix::sensors::AbsoluteSensorRange::Unsigned_0_to_360;
@@ -197,14 +197,14 @@ void YtaRobot::ConfigureMotorControllers()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::InitialStateSetup
+/// @method EastTechRobot::InitialStateSetup
 ///
 /// This method contains the work flow for putting motors,
 /// solenoids, etc. into a known state.  It is intended to be
 /// used by both autonomous and user control.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::InitialStateSetup()
+void EastTechRobot::InitialStateSetup()
 {
     // First reset any member data
     ResetMemberData();
@@ -238,13 +238,13 @@ void YtaRobot::InitialStateSetup()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::TeleopInit
+/// @method EastTechRobot::TeleopInit
 ///
 /// The teleop init method.  This method is called once each
 /// time the robot enters teleop control.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::TeleopInit()
+void EastTechRobot::TeleopInit()
 {
     RobotUtils::DisplayMessage("TeleopInit called.");
     
@@ -269,21 +269,21 @@ void YtaRobot::TeleopInit()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::TeleopPeriodic
+/// @method EastTechRobot::TeleopPeriodic
 ///
 /// The teleop control method.  This method is called
 /// periodically while the robot is in teleop control.
 ///
 ////////////////////////////////////////////////////////////////
 extern double globalPos;
-void YtaRobot::TeleopPeriodic()
+void EastTechRobot::TeleopPeriodic()
 {
     // Log a mode change if one occurred
     CheckAndUpdateRobotMode(ROBOT_MODE_TELEOP);
 
     HeartBeat();
 
-    if (Yta::Drive::Config::USE_SWERVE_DRIVE)
+    if (EastTech::Drive::Config::USE_SWERVE_DRIVE)
     {
         SwerveDriveSequence();
         /*
@@ -323,12 +323,12 @@ void YtaRobot::TeleopPeriodic()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::UpdateSmartDashboard
+/// @method EastTechRobot::UpdateSmartDashboard
 ///
 /// Updates values in the smart dashboard.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::UpdateSmartDashboard()
+void EastTechRobot::UpdateSmartDashboard()
 {
     // @todo: Check if RobotPeriodic() is called every 20ms and use static counter.
     // Give the drive team some state information
@@ -338,24 +338,24 @@ void YtaRobot::UpdateSmartDashboard()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::SuperStructureTestSequence
+/// @method EastTechRobot::SuperStructureTestSequence
 ///
 /// Quick super structure test.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::SuperStructureTestSequence()
+void EastTechRobot::SuperStructureTestSequence()
 {
 }
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::CheckAndResetEncoderCounts
+/// @method EastTechRobot::CheckAndResetEncoderCounts
 ///
 /// Checks for driver input to rezero all encoder counts.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::CheckAndResetEncoderCounts()
+void EastTechRobot::CheckAndResetEncoderCounts()
 {
     if (m_pDriveController->GetButtonState(DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.START) && m_pAuxController->GetButtonState(AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.START))
     {
@@ -366,27 +366,27 @@ void YtaRobot::CheckAndResetEncoderCounts()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::LedSequence
+/// @method EastTechRobot::LedSequence
 ///
 /// This method contains the main workflow for controlling
 /// any LEDs on the robot.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::LedSequence()
+void EastTechRobot::LedSequence()
 {
 }
 
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::MarioKartLights
+/// @method EastTechRobot::MarioKartLights
 ///
 /// This method will generate LED behavior that mimicks
 /// drifting in Mario Kart.  It watches for non-zero rotational
 /// inputs while driving/strafing.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::MarioKartLights(double translation, double strafe, double rotate)
+void EastTechRobot::MarioKartLights(double translation, double strafe, double rotate)
 {
     /*
     enum DriftState
@@ -517,13 +517,13 @@ void YtaRobot::MarioKartLights(double translation, double strafe, double rotate)
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::PneumaticSequence
+/// @method EastTechRobot::PneumaticSequence
 ///
 /// This method contains the main workflow for updating the
 /// state of the pnemuatics on the robot.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::PneumaticSequence()
+void EastTechRobot::PneumaticSequence()
 {
     // @todo: Monitor other compressor API data?
     SmartDashboard::PutBoolean("Compressor status", m_pCompressor->IsEnabled());
@@ -532,13 +532,13 @@ void YtaRobot::PneumaticSequence()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::SerialPortSequence
+/// @method EastTechRobot::SerialPortSequence
 ///
 /// This method contains the main workflow for interaction with
 /// the serial port.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::SerialPortSequence()
+void EastTechRobot::SerialPortSequence()
 {
     /*
     // Check for any incoming transmissions, limit it to our read buffer size
@@ -576,13 +576,13 @@ void YtaRobot::SerialPortSequence()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::CameraSequence
+/// @method EastTechRobot::CameraSequence
 ///
 /// This method handles camera related behavior.  See the
 /// RobotCamera class for full details.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::CameraSequence()
+void EastTechRobot::CameraSequence()
 {
     static bool bFullProcessing = false;
     
@@ -619,13 +619,13 @@ void YtaRobot::CameraSequence()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::DriveMotorsCool
+/// @method EastTechRobot::DriveMotorsCool
 ///
 /// This method controls active or passive cooling of the drive
 /// motors.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::DriveMotorsCool()
+void EastTechRobot::DriveMotorsCool()
 {
     static Timer * pDriveMotorCoolTimer = new Timer();
     static units::second_t lastDriveMotorCoolTime = 0_s;
@@ -665,7 +665,7 @@ void YtaRobot::DriveMotorsCool()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::SwerveDriveSequence
+/// @method EastTechRobot::SwerveDriveSequence
 ///
 /// This method contains the main workflow for swerve drive
 /// control.  It will gather input from the drive joystick and
@@ -674,7 +674,7 @@ void YtaRobot::DriveMotorsCool()
 /// on to the swerve drive system.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::SwerveDriveSequence()
+void EastTechRobot::SwerveDriveSequence()
 {
     // Check for a switch between field relative and robot centric
     static bool bFieldRelative = true;
@@ -695,13 +695,13 @@ void YtaRobot::SwerveDriveSequence()
     double rotationAxis = RobotUtils::Trim(m_pDriveController->GetDriveRotateInput() * -1.0, JOYSTICK_TRIM_UPPER_LIMIT, JOYSTICK_TRIM_LOWER_LIMIT);
 
     // Override normal control if a fine positioning request is made
-    if (m_pDriveController->GetPovAsDirection() == Yta::Controller::PovDirections::POV_LEFT)
+    if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_LEFT)
     {
         translationAxis = 0.0;
         strafeAxis = 0.0;
         rotationAxis = SWERVE_ROTATE_SLOW_SPEED;
     }
-    else if (m_pDriveController->GetPovAsDirection() == Yta::Controller::PovDirections::POV_RIGHT)
+    else if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_RIGHT)
     {
         translationAxis = 0.0;
         strafeAxis = 0.0;
@@ -734,7 +734,7 @@ void YtaRobot::SwerveDriveSequence()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::DriveControlSequence
+/// @method EastTechRobot::DriveControlSequence
 ///
 /// This method contains the main workflow for drive control.
 /// It will gather input from the drive joystick and then filter
@@ -743,14 +743,14 @@ void YtaRobot::SwerveDriveSequence()
 /// will actually set the speed values.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::DriveControlSequence()
+void EastTechRobot::DriveControlSequence()
 {
-    if (Yta::Drive::Config::DRIVE_MOTOR_COOLING_ENABLED)
+    if (EastTech::Drive::Config::DRIVE_MOTOR_COOLING_ENABLED)
     {
         DriveMotorsCool();
     }
 
-    if (Yta::Drive::Config::DIRECTIONAL_ALIGN_ENABLED)
+    if (EastTech::Drive::Config::DIRECTIONAL_ALIGN_ENABLED)
     {
         // Check for a directional align first
         DirectionalAlign();
@@ -762,7 +762,7 @@ void YtaRobot::DriveControlSequence()
         }
     }
 
-    if (Yta::Drive::Config::DIRECTIONAL_INCH_ENABLED)
+    if (EastTech::Drive::Config::DIRECTIONAL_INCH_ENABLED)
     {
         // If a directional inch occurred, just return
         if (DirectionalInch())
@@ -771,7 +771,7 @@ void YtaRobot::DriveControlSequence()
         }
     }
 
-    if (Yta::Drive::Config::DRIVE_SWAP_ENABLED)
+    if (EastTech::Drive::Config::DRIVE_SWAP_ENABLED)
     {
         CheckForDriveSwap();
     }
@@ -811,12 +811,12 @@ void YtaRobot::DriveControlSequence()
     // By default, the drive equations cause the x-axis input
     // to be flipped when going reverse.  Correct that here,
     // if configured.  Remember, y-axis full forward is negative.
-    if ((!Yta::Drive::Config::USE_INVERTED_REVERSE_CONTROLS) && (yAxisDrive > 0.0))
+    if ((!EastTech::Drive::Config::USE_INVERTED_REVERSE_CONTROLS) && (yAxisDrive > 0.0))
     {
         xAxisDrive *= -1.0;
     }
     
-    if (Yta::Drive::Config::SLOW_DRIVE_ENABLED)
+    if (EastTech::Drive::Config::SLOW_DRIVE_ENABLED)
     {
         // Get the slow drive control joystick input
         double xAxisSlowDrive = m_pDriveController->GetAxisValue(DRIVE_SLOW_X_AXIS);
@@ -847,14 +847,14 @@ void YtaRobot::DriveControlSequence()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::DirectionalInch
+/// @method EastTechRobot::DirectionalInch
 ///
 /// This method contains the main workflow for drive directional
 /// inching.  Based on input direction, it will briefly move the
 /// robot a slight amount in that direction.
 ///
 ////////////////////////////////////////////////////////////////
-bool YtaRobot::DirectionalInch()
+bool EastTechRobot::DirectionalInch()
 {
     static Timer * pInchingDriveTimer = new Timer();
     static constexpr units::second_t INCHING_DRIVE_DELAY_S = 0.10_s;
@@ -863,22 +863,22 @@ bool YtaRobot::DirectionalInch()
     double leftSpeed = 0.0;
     double rightSpeed = 0.0;
 
-    if (m_pDriveController->GetPovAsDirection() == Yta::Controller::PovDirections::POV_UP)
+    if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_UP)
     {
         leftSpeed = INCHING_DRIVE_SPEED * LEFT_DRIVE_FORWARD_SCALAR;
         rightSpeed = INCHING_DRIVE_SPEED * RIGHT_DRIVE_FORWARD_SCALAR;
     }
-    else if (m_pDriveController->GetPovAsDirection() == Yta::Controller::PovDirections::POV_DOWN)
+    else if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_DOWN)
     {
         leftSpeed = INCHING_DRIVE_SPEED * LEFT_DRIVE_REVERSE_SCALAR;
         rightSpeed = INCHING_DRIVE_SPEED * RIGHT_DRIVE_REVERSE_SCALAR;
     }
-    else if (m_pDriveController->GetPovAsDirection() == Yta::Controller::PovDirections::POV_LEFT)
+    else if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_LEFT)
     {
         leftSpeed = INCHING_DRIVE_SPEED * LEFT_DRIVE_REVERSE_SCALAR;
         rightSpeed = INCHING_DRIVE_SPEED * RIGHT_DRIVE_FORWARD_SCALAR;
     }
-    else if (m_pDriveController->GetPovAsDirection() == Yta::Controller::PovDirections::POV_RIGHT)
+    else if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_RIGHT)
     {
         leftSpeed = INCHING_DRIVE_SPEED * LEFT_DRIVE_FORWARD_SCALAR;
         rightSpeed = INCHING_DRIVE_SPEED * RIGHT_DRIVE_REVERSE_SCALAR;
@@ -919,7 +919,7 @@ bool YtaRobot::DirectionalInch()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::DirectionalAlign
+/// @method EastTechRobot::DirectionalAlign
 ///
 /// This method contains the main workflow for automatically
 /// aligning the robot to an angle based on input from the
@@ -937,7 +937,7 @@ bool YtaRobot::DirectionalInch()
 /// corresponding input on the d-pad maps 1:1 to the drawing.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::DirectionalAlign()
+void EastTechRobot::DirectionalAlign()
 {
     static Timer * pDirectionalAlignTimer = new Timer();
     static constexpr units::second_t DIRECTIONAL_ALIGN_MAX_TIME_S = 3.00_s;
@@ -1130,13 +1130,13 @@ void YtaRobot::DirectionalAlign()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::DisabledInit
+/// @method EastTechRobot::DisabledInit
 ///
 /// The disabled init method.  This method is called once each
 /// time the robot enters disabled mode.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::DisabledInit()
+void EastTechRobot::DisabledInit()
 {
     RobotUtils::DisplayMessage("DisabledInit called.");
 
@@ -1158,13 +1158,13 @@ void YtaRobot::DisabledInit()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::DisabledPeriodic
+/// @method EastTechRobot::DisabledPeriodic
 ///
 /// The disabled control method.  This method is called
 /// periodically while the robot is disabled.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::DisabledPeriodic()
+void EastTechRobot::DisabledPeriodic()
 {
     // Log a mode change if one occurred
     CheckAndUpdateRobotMode(ROBOT_MODE_DISABLED);
@@ -1181,6 +1181,6 @@ void YtaRobot::DisabledPeriodic()
 #ifndef RUNNING_FRC_TESTS
 int main()
 {
-    return frc::StartRobot<YtaRobot>();
+    return frc::StartRobot<EastTechRobot>();
 }
 #endif

@@ -1,17 +1,17 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaController.hpp
+/// @file   EastTechController.hpp
 /// @author David Stalter
 ///
 /// @details
 /// A class designed to interface to several controller types, such as a custom
-/// YTA controller implementation or the built-in FRC types.
+/// East Tech controller implementation or the built-in FRC types.
 ///
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef YTACONTROLLER_HPP
-#define YTACONTROLLER_HPP
+#ifndef EASTTECHCONTROLLER_HPP
+#define EASTTECHCONTROLLER_HPP
 
 // SYSTEM INCLUDES
 // <none>
@@ -24,19 +24,19 @@
 
 // C++ INCLUDES
 #include "ControllerConfiguration.hpp"  // for the controller axis/button mappings
-#include "YtaCustomController.hpp"      // for creating custom YTA controllers
+#include "EastTechCustomController.hpp" // for creating custom East Tech controllers
 
 using namespace frc;
 
 
 ////////////////////////////////////////////////////////////////
-/// @namespace Yta::Controller
+/// @namespace EastTech::Controller
 ///
-/// Provides generic declarations for YTA controller related
-/// functionality.
+/// Provides generic declarations for East Tech controller
+/// related functionality.
 ///
 ////////////////////////////////////////////////////////////////
-namespace Yta
+namespace EastTech
 {
 namespace Controller
 {
@@ -85,7 +85,7 @@ namespace Controller
 
 
 ////////////////////////////////////////////////////////////////
-/// @class YtaController<ControllerType>
+/// @class EastTechController<ControllerType>
 ///
 /// Template class that provides methods for interacting with a
 /// generic controller.  The theory behind this class is to
@@ -104,20 +104,20 @@ namespace Controller
 /// calling GenericHID base methods).  If non-common behavior
 /// is needed, the template method can be specialized.  The
 /// constructor for this class is an example of that.  Custom
-/// YTA controllers have a different constructor signature
+/// East Tech controllers have a different constructor signature
 /// than the GenericHID derived objects.  It is specialized to
 /// provide the necessary custom functionality.
 ///
 /// Examples of valid types to instantiate this class with:
-/// Joystick, PS4Controller, XboxController, YtaCustomController
+/// Joystick, PS4Controller, XboxController, EastTechCustomController
 ///
 ////////////////////////////////////////////////////////////////
 template <class ControllerType>
-class YtaController
+class EastTechController
 {
 public:
     // Constructor, which is specialized for some ControllerTypes
-    YtaController(Yta::Controller::Config::Models controllerModel, int controllerPort);
+    EastTechController(EastTech::Controller::Config::Models controllerModel, int controllerPort);
 
     ////////////////////////////////////////////////////////////////
     // Methods to get input from the controller (not currently specialized anywhere)
@@ -139,32 +139,32 @@ public:
     }
 
     ////////////////////////////////////////////////////////////////
-    // Methods to compute YTA specific parameters (may be specialized)
+    // Methods to compute East Tech specific parameters (may be specialized)
     ////////////////////////////////////////////////////////////////
 
     double GetThrottleControl();
 
     ////////////////////////////////////////////////////////////////
-    /// @method YtaController<ControllerType>::Rumble
+    /// @method EastTechController<ControllerType>::Rumble
     ///
     /// Turns on the controller's rumble feature.
     ///
     ////////////////////////////////////////////////////////////////
-    void Rumble(Yta::Controller::RumbleLocation location)
+    void Rumble(EastTech::Controller::RumbleLocation location)
     {
         switch (location)
         {
-            case Yta::Controller::RumbleLocation::RUMBLE_LEFT:
+            case EastTech::Controller::RumbleLocation::RUMBLE_LEFT:
             {
                 m_pController->SetRumble(GenericHID::RumbleType::kLeftRumble);
                 break;
             }
-            case Yta::Controller::RumbleLocation::RUMBLE_RIGHT:
+            case EastTech::Controller::RumbleLocation::RUMBLE_RIGHT:
             {
                 m_pController->SetRumble(GenericHID::RumbleType::kRightRumble);
                 break;
             }
-            case Yta::Controller::RumbleLocation::RUMBLE_BOTH:
+            case EastTech::Controller::RumbleLocation::RUMBLE_BOTH:
             {
                 m_pController->SetRumble(GenericHID::RumbleType::kLeftRumble);
                 m_pController->SetRumble(GenericHID::RumbleType::kRightRumble);
@@ -178,7 +178,7 @@ public:
     }
 
     ////////////////////////////////////////////////////////////////
-    /// @method YtaController<ControllerType>::GetPovAsDirection
+    /// @method EastTechController<ControllerType>::GetPovAsDirection
     ///
     /// Retrieves the POV value as a more easily usable enum value
     /// that represents a direction.
@@ -187,13 +187,13 @@ public:
     /// enum.  Use caution when modifying!
     ///
     ////////////////////////////////////////////////////////////////
-    inline Yta::Controller::PovDirections GetPovAsDirection()
+    inline EastTech::Controller::PovDirections GetPovAsDirection()
     {
         const int POV_NORMALIZATION_ANGLE = 45;
         const int ANGLE_90_DEGREES = 90;
         const int ANGLE_360_DEGREES = 360;
 
-        Yta::Controller::PovDirections povDirection = Yta::Controller::PovDirections::POV_NOT_PRESSED;
+        EastTech::Controller::PovDirections povDirection = EastTech::Controller::PovDirections::POV_NOT_PRESSED;
 
         int povValue = GetPovValue();
         
@@ -213,14 +213,14 @@ public:
             // Use integer division to get a single value that represents the
             // entire range, which can then be directly converted to the enum type.
             // This cast is risky, but the enum was deliberately crafted to support it.
-            povDirection = static_cast<Yta::Controller::PovDirections>(povValue / ANGLE_90_DEGREES);
+            povDirection = static_cast<EastTech::Controller::PovDirections>(povValue / ANGLE_90_DEGREES);
         }
 
         return povDirection;
     }
 
     ////////////////////////////////////////////////////////////////
-    /// @method YtaController<ControllerType>::DetectButtonChange
+    /// @method EastTechController<ControllerType>::DetectButtonChange
     ///
     /// This method is used to check if a button has undergone a
     /// state change.  The same button can be used to reverse state
@@ -237,7 +237,7 @@ public:
     /// is detected (press or release).
     ///
     ////////////////////////////////////////////////////////////////
-    inline bool DetectButtonChange(int buttonNumber, Yta::Controller::ButtonStateChanges::Transitions transition = Yta::Controller::ButtonStateChanges::BUTTON_PRESSED)
+    inline bool DetectButtonChange(int buttonNumber, EastTech::Controller::ButtonStateChanges::Transitions transition = EastTech::Controller::ButtonStateChanges::BUTTON_PRESSED)
     {   
         // Create the mask to the bit position for this button
         const uint32_t BUTTON_BIT_POSITION_MASK = 1U << buttonNumber;
@@ -264,11 +264,11 @@ public:
         if ((currentMaskedBit ^ previousMaskedBit) != 0U)
         {
             // Also make sure the transition is to the correct edge
-            if ((transition == Yta::Controller::ButtonStateChanges::BUTTON_PRESSED) && (currentMaskedBit != 0U))
+            if ((transition == EastTech::Controller::ButtonStateChanges::BUTTON_PRESSED) && (currentMaskedBit != 0U))
             {
                 bTriggerChanged = true;
             }
-            else if ((transition == Yta::Controller::ButtonStateChanges::BUTTON_RELEASED) && (currentMaskedBit == 0U))
+            else if ((transition == EastTech::Controller::ButtonStateChanges::BUTTON_RELEASED) && (currentMaskedBit == 0U))
             {
                 bTriggerChanged = true;
             }
@@ -288,23 +288,23 @@ protected:
     ControllerType * m_pController;
 
     // The model of controller being instantiated
-    Yta::Controller::Config::Models m_ControllerModel;
+    EastTech::Controller::Config::Models m_ControllerModel;
 
 private:
     // Tracks the state of the buttons (pressed/released)
-    Yta::Controller::ButtonStateChanges m_ButtonStateChanges;
+    EastTech::Controller::ButtonStateChanges m_ButtonStateChanges;
 
     // Prevent copying/assignment
-    YtaController(const YtaController&) = delete;
-    YtaController& operator=(const YtaController&) = delete;
+    EastTechController(const EastTechController&) = delete;
+    EastTechController& operator=(const EastTechController&) = delete;
 };
 
 
 ////////////////////////////////////////////////////////////////
-/// @class YtaDriveController<DriveControllerType>
+/// @class EastTechDriveController<DriveControllerType>
 ///
 /// Template class specifically for a drive controller.  It
-/// derives from the previously declared YtaController template
+/// derives from the previously declared EastTechController template
 /// class and behaves the same way, other than to provide some
 /// additional methods that are specific to drive controllers
 /// only (such as getting drive inputs as complex combinations
@@ -313,10 +313,10 @@ private:
 ///
 ////////////////////////////////////////////////////////////////
 template <class DriveControllerType>
-class YtaDriveController : public YtaController<DriveControllerType>
+class EastTechDriveController : public EastTechController<DriveControllerType>
 {
 public:
-    YtaDriveController(Yta::Controller::Config::Models controllerModel, int controllerPort) : YtaController<DriveControllerType>(controllerModel, controllerPort)
+    EastTechDriveController(EastTech::Controller::Config::Models controllerModel, int controllerPort) : EastTechController<DriveControllerType>(controllerModel, controllerPort)
     {
     }
 
@@ -329,8 +329,8 @@ public:
 
 private:
     // Prevent copying/assignment
-    YtaDriveController(const YtaDriveController&) = delete;
-    YtaDriveController& operator=(const YtaDriveController&) = delete;
+    EastTechDriveController(const EastTechDriveController&) = delete;
+    EastTechDriveController& operator=(const EastTechDriveController&) = delete;
 };
 
 
@@ -350,25 +350,25 @@ private:
 ///
 ////////////////////////////////////////////////////////////////
 
-// Specialization of the constructor for YtaCustomController type
+// Specialization of the constructor for EastTechCustomController type
 template <>
-YtaController<YtaCustomController>::YtaController(Yta::Controller::Config::Models controllerModel, int controllerPort);
+EastTechController<EastTechCustomController>::EastTechController(EastTech::Controller::Config::Models controllerModel, int controllerPort);
 
-// Specialization of GetThrottleControl() for YtaCustomController type
+// Specialization of GetThrottleControl() for EastTechCustomController type
 template <>
-double YtaController<YtaCustomController>::GetThrottleControl();
+double EastTechController<EastTechCustomController>::GetThrottleControl();
 
-// Specialization of GetDriveXInput() for YtaCustomController type
+// Specialization of GetDriveXInput() for EastTechCustomController type
 template <>
-double YtaDriveController<YtaCustomController>::GetDriveXInput();
+double EastTechDriveController<EastTechCustomController>::GetDriveXInput();
 
-// Specialization of GetDriveYInput() for YtaCustomController type
+// Specialization of GetDriveYInput() for EastTechCustomController type
 template <>
-double YtaDriveController<YtaCustomController>::GetDriveYInput();
+double EastTechDriveController<EastTechCustomController>::GetDriveYInput();
 
-// Specialization of GetDriveRotateInput() for YtaCustomController type
+// Specialization of GetDriveRotateInput() for EastTechCustomController type
 template <>
-double YtaDriveController<YtaCustomController>::GetDriveRotateInput();
+double EastTechDriveController<EastTechCustomController>::GetDriveRotateInput();
 
 
 ////////////////////////////////////////////////////////////////
@@ -377,18 +377,18 @@ double YtaDriveController<YtaCustomController>::GetDriveRotateInput();
 ////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaController<ControllerType>::YtaCustomController
+/// @method EastTechController<ControllerType>::EastTechCustomController
 ///
 /// Constructor.  Instantiates the actual controller object that
 /// receives input.
 ///
 ////////////////////////////////////////////////////////////////
 template <class ControllerType>
-YtaController<ControllerType>::YtaController(Yta::Controller::Config::Models controllerModel, int controllerPort) :
+EastTechController<ControllerType>::EastTechController(EastTech::Controller::Config::Models controllerModel, int controllerPort) :
     m_pController(new ControllerType(controllerPort)),
     m_ControllerModel(controllerModel),
     m_ButtonStateChanges()
 {
 }
 
-#endif // YTACONTROLLER_HPP
+#endif // EASTTECHCONTROLLER_HPP

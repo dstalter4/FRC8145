@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaRobotAutonomous3.cpp
+/// @file   EastTechRobotAutonomous3.cpp
 /// @author David Stalter
 ///
 /// @details
-/// Implementation of autonomous routine 3 for YtaRobot.
+/// Implementation of autonomous routine 3 for EastTechRobot.
 ///
-/// Copyright (c) 2021 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -16,17 +16,17 @@
 
 // C++ INCLUDES
 #include "RobotUtils.hpp"               // for DisplayMessage()
-#include "YtaRobot.hpp"                 // for robot class declaration
-#include "YtaRobotAutonomous.hpp"       // for autonomous declarations
+#include "EastTechRobot.hpp"            // for robot class declaration
+#include "EastTechRobotAutonomous.hpp"  // for autonomous declarations
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousRoutine3
+/// @method EastTechRobot::AutonomousRoutine3
 ///
 /// Autonomous routine 3.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousRoutine3()
+void EastTechRobot::AutonomousRoutine3()
 {
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto routine 3 done.");

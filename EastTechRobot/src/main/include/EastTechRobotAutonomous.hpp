@@ -1,16 +1,16 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaRobotAutonomous.hpp
+/// @file   EastTechRobotAutonomous.hpp
 /// @author David Stalter
 ///
 /// @details
 /// Contains the declarations for the autonomous portions of code ran in an FRC
 /// robot.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef YTAROBOTAUTONOMOUS_HPP
-#define YTAROBOTAUTONOMOUS_HPP
+#ifndef EASTTECHROBOTAUTONOMOUS_HPP
+#define EASTTECHROBOTAUTONOMOUS_HPP
 
 // SYSTEM INCLUDES
 // <none>
@@ -19,18 +19,18 @@
 // (none)
 
 // C++ INCLUDES
-#include "YtaRobot.hpp"             // for inline autonomous function declarations
+#include "EastTechRobot.hpp"            // for inline autonomous function declarations
 
 using namespace frc;
 
 ////////////////////////////////////////////////////////////////
-/// @namespace YtaRobotAutonomous
+/// @namespace EastTechRobotAutonomous
 ///
 /// Namespace that contains robot autonomous variable and
 /// function declarations.
 ///
 ////////////////////////////////////////////////////////////////
-namespace YtaRobotAutonomous
+namespace EastTechRobotAutonomous
 {
     // TYPEDEFS
     // (none)
@@ -47,7 +47,7 @@ namespace YtaRobotAutonomous
     // CONSTS
     
     // Autonomous Mode Constants
-    // @todo: Convert to class and make a friend in YtaRobot
+    // @todo: Convert to class and make a friend in EastTechRobot
     
     // Note: Only enable one autonomous routine!
     // Note: Autonomous routines are currently controlled by
@@ -84,14 +84,14 @@ namespace YtaRobotAutonomous
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousDelay
+/// @method EastTechRobot::AutonomousDelay
 ///
 /// Waits for a specified amount of time in autonomous.  Used
 /// while an operation is ongoing but not yet complete, and
 /// nothing else needs to occur.
 ///
 ////////////////////////////////////////////////////////////////
-inline void YtaRobot::AutonomousDelay(units::second_t time)
+inline void EastTechRobot::AutonomousDelay(units::second_t time)
 {
     Wait(time);
 }
@@ -99,13 +99,13 @@ inline void YtaRobot::AutonomousDelay(units::second_t time)
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousDriveSequence
+/// @method EastTechRobot::AutonomousDriveSequence
 ///
 /// Drives during autonomous for a specified amount of time
 /// using traditional differential drive.
 ///
 ////////////////////////////////////////////////////////////////
-inline void YtaRobot::AutonomousDriveSequence(RobotDirection direction, double speed, units::second_t time)
+inline void EastTechRobot::AutonomousDriveSequence(RobotDirection direction, double speed, units::second_t time)
 {
     double leftSpeed = 0.0;
     double rightSpeed = 0.0;
@@ -159,13 +159,13 @@ inline void YtaRobot::AutonomousDriveSequence(RobotDirection direction, double s
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousSwerveDriveSequence
+/// @method EastTechRobot::AutonomousSwerveDriveSequence
 ///
 /// Drives during autonomous for a specified amount of time
 /// using swerve drive modules.
 ///
 ////////////////////////////////////////////////////////////////
-inline void YtaRobot::AutonomousSwerveDriveSequence(RobotDirection direction, RobotRotate rotate, double speed, double rotateSpeed, units::second_t time, bool bFieldRelative)
+inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotDirection direction, RobotRotate rotate, double speed, double rotateSpeed, units::second_t time, bool bFieldRelative)
 {
     units::meter_t translation = 0.0_m;
     units::meter_t strafe = 0.0_m;
@@ -224,8 +224,8 @@ inline void YtaRobot::AutonomousSwerveDriveSequence(RobotDirection direction, Ro
     while (duration < time)
     {
         m_pSwerveDrive->SetModuleStates(translation2d, rotateSpeed, bFieldRelative, true);
-        AutonomousDelay(YtaRobotAutonomous::SWERVE_OP_STEP_TIME_S);
-        duration += YtaRobotAutonomous::SWERVE_OP_STEP_TIME_S;
+        AutonomousDelay(EastTechRobotAutonomous::SWERVE_OP_STEP_TIME_S);
+        duration += EastTechRobotAutonomous::SWERVE_OP_STEP_TIME_S;
     }
 
     // Stop motion
@@ -235,15 +235,15 @@ inline void YtaRobot::AutonomousSwerveDriveSequence(RobotDirection direction, Ro
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousBackDrive
+/// @method EastTechRobot::AutonomousBackDrive
 ///
 /// Back drives the motors to abruptly stop the robot.
 ///
 ////////////////////////////////////////////////////////////////
-inline void YtaRobot::AutonomousBackDrive(RobotDirection currentDirection)
+inline void EastTechRobot::AutonomousBackDrive(RobotDirection currentDirection)
 {
-    double leftSpeed = YtaRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
-    double rightSpeed = YtaRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
+    double leftSpeed = EastTechRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
+    double rightSpeed = EastTechRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
 
     switch (currentDirection)
     {
@@ -274,7 +274,7 @@ inline void YtaRobot::AutonomousBackDrive(RobotDirection currentDirection)
     m_pRightDriveMotors->Set(rightSpeed);
     
     // Delay
-    AutonomousDelay(YtaRobotAutonomous::COUNTERACT_COAST_TIME_S);
+    AutonomousDelay(EastTechRobotAutonomous::COUNTERACT_COAST_TIME_S);
     
     // Motors off
     m_pLeftDriveMotors->Set(OFF);
@@ -286,16 +286,16 @@ inline void YtaRobot::AutonomousBackDrive(RobotDirection currentDirection)
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousBackDriveTurn
+/// @method EastTechRobot::AutonomousBackDriveTurn
 ///
 /// Back drives the motors to abruptly stop the robot during
 /// a turn.
 ///
 ////////////////////////////////////////////////////////////////
-inline void YtaRobot::AutonomousBackDriveTurn(RobotDirection currentDirection)
+inline void EastTechRobot::AutonomousBackDriveTurn(RobotDirection currentDirection)
 {
-    double leftSpeed = YtaRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
-    double rightSpeed = YtaRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
+    double leftSpeed = EastTechRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
+    double rightSpeed = EastTechRobotAutonomous::COUNTERACT_COAST_MOTOR_SPEED;
 
     switch (currentDirection)
     {
@@ -326,7 +326,7 @@ inline void YtaRobot::AutonomousBackDriveTurn(RobotDirection currentDirection)
     m_pRightDriveMotors->Set(rightSpeed);
     
     // Delay
-    AutonomousDelay(YtaRobotAutonomous::COUNTERACT_COAST_TIME_S);
+    AutonomousDelay(EastTechRobotAutonomous::COUNTERACT_COAST_TIME_S);
     
     // Motors off
     m_pLeftDriveMotors->Set(OFF);
@@ -335,4 +335,4 @@ inline void YtaRobot::AutonomousBackDriveTurn(RobotDirection currentDirection)
     m_pSafetyTimer->Reset();
 }
 
-#endif // YTAROBOTAUTONOMOUS_HPP
+#endif // EASTTECHROBOTAUTONOMOUS_HPP

@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaCustomController.hpp
+/// @file   EastTechCustomController.hpp
 /// @author David Stalter
 ///
 /// @details
@@ -7,11 +7,11 @@
 /// Xbox GameSir, PS4, etc.) with custom responses.
 ///
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef YTACUSTOMCONTROLLER_HPP
-#define YTACUSTOMCONTROLLER_HPP
+#ifndef EASTTECHCUSTOMCONTROLLER_HPP
+#define EASTTECHCUSTOMCONTROLLER_HPP
 
 // SYSTEM INCLUDES
 // <none>
@@ -20,26 +20,26 @@
 #include "frc/GenericHID.h"             // for base class declaration
 
 // C++ INCLUDES
-#include "ControllerConfiguration.hpp"  // for Yta::Controller::Config::Styles
+#include "ControllerConfiguration.hpp"  // for EastTech::Controller::Config::Styles
 
 using namespace frc;
 
 
 ////////////////////////////////////////////////////////////////
-/// @class YtaCustomController
+/// @class EastTechCustomController
 ///
 /// Class that provides methods for interacting with a generic
 /// controller.  It is derived from GenericHID and can support
 /// several different types of controllers.
 ///
 ////////////////////////////////////////////////////////////////
-class YtaCustomController : public GenericHID
+class EastTechCustomController : public GenericHID
 {
 public:
     
     // Constructor/destructor
-    explicit YtaCustomController(Yta::Controller::Config::Models controllerModel, int port);
-    virtual ~YtaCustomController() = default;
+    explicit EastTechCustomController(EastTech::Controller::Config::Models controllerModel, int port);
+    virtual ~EastTechCustomController() = default;
     
     double GetDriveX() const;
     double GetDriveY() const;
@@ -49,7 +49,7 @@ public:
 private:
     
     ////////////////////////////////////////////////////////////////
-    /// @method YtaController::NormalizeTriggers
+    /// @method EastTechController::NormalizeTriggers
     ///
     /// Function to normalize the trigger inputs to expected output
     /// ranges.  The controller logic wants the left trigger to be
@@ -63,8 +63,8 @@ private:
     {
         switch (CONTROLLER_MODEL)
         {
-            case Yta::Controller::Config::Models::CUSTOM_LOGITECH:
-            case Yta::Controller::Config::Models::CUSTOM_XBOX:
+            case EastTech::Controller::Config::Models::CUSTOM_LOGITECH:
+            case EastTech::Controller::Config::Models::CUSTOM_XBOX:
             {
                 // Logitech and Xbox joystick axes inputs are:
                 // LT: 0->+1, RT: 0->+1
@@ -75,7 +75,7 @@ private:
                 rRightTrigger *= -1.0;
                 break;
             }
-            case Yta::Controller::Config::Models::CUSTOM_PLAY_STATION:
+            case EastTech::Controller::Config::Models::CUSTOM_PLAY_STATION:
             {
                 // PlayStation joystick axes inputs are:
                 // L2: -1->+1, R2: +1->-1
@@ -94,16 +94,16 @@ private:
         }
     }
     
-    const Yta::Controller::Config::Models CONTROLLER_MODEL;
-    const Yta::Controller::Config::Mappings * const CONTROLLER_MAPPINGS;
+    const EastTech::Controller::Config::Models CONTROLLER_MODEL;
+    const EastTech::Controller::Config::Mappings * const CONTROLLER_MAPPINGS;
     double m_ThrottleValue;
     
     static constexpr double X_AXIS_DRIVE_SENSITIVITY_SCALING = 1.00;
     static constexpr double Y_AXIS_DRIVE_SENSITIVITY_SCALING = 1.00;
     
     // Prevent copying/assignment
-    YtaCustomController(const YtaCustomController&) = delete;
-    YtaCustomController& operator=(const YtaCustomController&) = delete;
+    EastTechCustomController(const EastTechCustomController&) = delete;
+    EastTechCustomController& operator=(const EastTechCustomController&) = delete;
 };
 
-#endif // YTACUSTOMCONTROLLER_HPP
+#endif // EASTTECHCUSTOMCONTROLLER_HPP

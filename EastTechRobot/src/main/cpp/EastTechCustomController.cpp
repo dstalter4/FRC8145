@@ -1,12 +1,12 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaController.cpp
+/// @file   EastTechController.cpp
 /// @author David Stalter
 ///
 /// @details
 /// A class designed to interface to several controller types (Logitech Gamepad,
 /// Xbox GameSir, PS4, etc.) with custom responses.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -18,19 +18,19 @@
 // C++ INCLUDES
 #include "DriveConfiguration.hpp"               // for DRIVE_STYLE
 #include "RobotUtils.hpp"                       // for ASSERT, DEBUG_PRINTS
-#include "YtaController.hpp"                    // for class declaration
+#include "EastTechController.hpp"               // for class declaration
 
 // STATIC MEMBER DATA
 // (none)
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaCustomController::YtaCustomController
+/// @method EastTechCustomController::EastTechCustomController
 ///
 /// Constructor.
 ///
 ////////////////////////////////////////////////////////////////
-YtaCustomController::YtaCustomController(Yta::Controller::Config::Models controllerModel, int controllerPort)
+EastTechCustomController::EastTechCustomController(EastTech::Controller::Config::Models controllerModel, int controllerPort)
 : GenericHID(controllerPort)
 , CONTROLLER_MODEL(controllerModel)
 , CONTROLLER_MAPPINGS(GetControllerMapping(controllerModel))
@@ -42,12 +42,12 @@ YtaCustomController::YtaCustomController(Yta::Controller::Config::Models control
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaCustomController::GetDriveX
+/// @method EastTechCustomController::GetDriveX
 ///
 /// Returns x-axis drive input.
 ///
 ////////////////////////////////////////////////////////////////
-double YtaCustomController::GetDriveX() const
+double EastTechCustomController::GetDriveX() const
 {
     double xAxisValue = GenericHID::GetRawAxis(CONTROLLER_MAPPINGS->AXIS_MAPPINGS.LEFT_X_AXIS);
  
@@ -60,23 +60,23 @@ double YtaCustomController::GetDriveX() const
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaCustomController::GetDriveY
+/// @method EastTechCustomController::GetDriveY
 ///
 /// Returns y-axis drive input.
 ///
 ////////////////////////////////////////////////////////////////
-double YtaCustomController::GetDriveY() const
+double EastTechCustomController::GetDriveY() const
 {
     double yAxisValue = 0.0;
 
-    switch (Yta::Drive::Config::DRIVE_STYLE)
+    switch (EastTech::Drive::Config::DRIVE_STYLE)
     {
-        case Yta::Drive::Config::DriveStyle::ARCADE_DRIVE:
+        case EastTech::Drive::Config::DriveStyle::ARCADE_DRIVE:
         {
             yAxisValue = GenericHID::GetRawAxis(CONTROLLER_MAPPINGS->AXIS_MAPPINGS.LEFT_Y_AXIS);
             break;
         }
-        case Yta::Drive::Config::DriveStyle::GTA_DRIVE:
+        case EastTech::Drive::Config::DriveStyle::GTA_DRIVE:
         {
             // In order to keep the drive logic the same across
             // all controller models, full forward is represented
@@ -116,7 +116,7 @@ double YtaCustomController::GetDriveY() const
 
             break;
         }
-        case Yta::Drive::Config::DriveStyle::TANK_DRIVE:
+        case EastTech::Drive::Config::DriveStyle::TANK_DRIVE:
         default:
         {
             ASSERT(false);
@@ -130,12 +130,12 @@ double YtaCustomController::GetDriveY() const
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaCustomController::GetDriveRotate
+/// @method EastTechCustomController::GetDriveRotate
 ///
 /// Returns the rotate drive input.
 ///
 ////////////////////////////////////////////////////////////////
-double YtaCustomController::GetDriveRotate() const
+double EastTechCustomController::GetDriveRotate() const
 {
     return GetRawAxis(CONTROLLER_MAPPINGS->AXIS_MAPPINGS.RIGHT_X_AXIS);
 }
@@ -143,7 +143,7 @@ double YtaCustomController::GetDriveRotate() const
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaCustomController::GetThrottle
+/// @method EastTechCustomController::GetThrottle
 ///
 /// Returns throttle control.  Most controllers do not have an
 /// axis that retains its position when not being manipulated by
@@ -151,7 +151,7 @@ double YtaCustomController::GetDriveRotate() const
 /// and remembered in software.
 ///
 ////////////////////////////////////////////////////////////////
-double YtaCustomController::GetThrottle() const
+double EastTechCustomController::GetThrottle() const
 {
     // Not implemented yet, just return the default value
     return m_ThrottleValue;

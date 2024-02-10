@@ -29,13 +29,13 @@ using namespace frc;
 
 
 ////////////////////////////////////////////////////////////////
-/// @namespace YtaTalon
+/// @namespace EastTechTalon
 ///
 /// Namespace that contains declarations for interacting with
-/// Talon speed controllers specific to YTA.
+/// Talon speed controllers specific to East Tech.
 ///
 ////////////////////////////////////////////////////////////////
-namespace YtaTalon
+namespace EastTechTalon
 {
     // Represents how a motor will be controlled
     enum MotorGroupControlMode
@@ -67,7 +67,7 @@ class TalonMotorGroup
 {
 public:
 
-    typedef YtaTalon::MotorGroupControlMode MotorGroupControlMode;
+    typedef EastTechTalon::MotorGroupControlMode MotorGroupControlMode;
     
     // Constructor
     TalonMotorGroup(
@@ -140,13 +140,13 @@ private:
         {
             m_pTalon->SetNeutralMode(neutralMode);
 
-            if (controlMode == YtaTalon::FOLLOW_INVERSE)
+            if (controlMode == EastTechTalon::FOLLOW_INVERSE)
             {
                 m_pTalon->SetInverted(true);
             }
 
             // @todo: Move in sensor too?
-            if (YtaTalon::CURRENT_LIMITING_ENABLED && bIsDriveMotor)
+            if (EastTechTalon::CURRENT_LIMITING_ENABLED && bIsDriveMotor)
             {
                 // Limits were 40.0, 55.0, 0.1
                 const StatorCurrentLimitConfiguration DRIVE_MOTOR_STATOR_CURRENT_LIMIT_CONFIG = {true, 55.0, 60.0, 0.1};
@@ -260,7 +260,7 @@ TalonMotorGroup<TalonType>::TalonMotorGroup(const char * pName, unsigned numMoto
         if (i == 0U)
         {
             // Create it
-            m_pMotorsInfo[i] = new MotorInfo(pName, YtaTalon::MASTER, neutralMode, masterCanId, groupId, bIsDriveMotor);
+            m_pMotorsInfo[i] = new MotorInfo(pName, EastTechTalon::MASTER, neutralMode, masterCanId, groupId, bIsDriveMotor);
             
             // This assumes only the first controller in a group has a sensor
             if (sensor != FeedbackDevice::None)
@@ -278,7 +278,7 @@ TalonMotorGroup<TalonType>::TalonMotorGroup(const char * pName, unsigned numMoto
             // Only set follow for Talon groups that will be configured as
             // such.  The CTRE Phoenix library now passes the control mode in
             // the Set() method, so we only need to set the followers here.
-            if ((nonMasterControlMode == YtaTalon::FOLLOW) || (nonMasterControlMode == YtaTalon::FOLLOW_INVERSE))
+            if ((nonMasterControlMode == EastTechTalon::FOLLOW) || (nonMasterControlMode == EastTechTalon::FOLLOW_INVERSE))
             {
                 m_pMotorsInfo[i]->SetAsFollower(masterCanId);
             }
@@ -310,7 +310,7 @@ bool TalonMotorGroup<TalonType>::AddMotorToGroup(MotorGroupControlMode controlMo
         m_pMotorsInfo[m_NumMotors] = new MotorInfo(m_pMotorsInfo[0]->m_pName, controlMode, newMotorCanId, (m_NumMotors + 1), bIsDriveMotor);
         
         // If this Talon will be a follower, be sure to call Set() to enable it
-        if ((controlMode == YtaTalon::FOLLOW) || (controlMode == YtaTalon::FOLLOW_INVERSE))
+        if ((controlMode == EastTechTalon::FOLLOW) || (controlMode == EastTechTalon::FOLLOW_INVERSE))
         {
             m_pMotorsInfo[m_NumMotors]->SetAsFollower(m_MasterCanId);
         }
@@ -348,7 +348,7 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
             m_pMotorsInfo[i]->m_ControlMode = controlMode;
 
             // If this Talon will be a follower, be sure to call Set() to enable it
-            if ((controlMode == YtaTalon::FOLLOW) || (controlMode == YtaTalon::FOLLOW_INVERSE))
+            if ((controlMode == EastTechTalon::FOLLOW) || (controlMode == EastTechTalon::FOLLOW_INVERSE))
             {
                 m_pMotorsInfo[i]->SetAsFollower(m_MasterCanId);
             }
@@ -362,7 +362,7 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
             }
 
             // Update the inverted status.  Only FOLLOW_INVERSE uses the built-in invert.
-            if (controlMode == YtaTalon::FOLLOW_INVERSE)
+            if (controlMode == EastTechTalon::FOLLOW_INVERSE)
             {
                 m_pMotorsInfo[i]->m_pTalon->SetInverted(true);
             }
@@ -486,34 +486,34 @@ void TalonMotorGroup<TalonType>::Set(double value, double offset)
         // as if they need to drive in different directions).
         switch (m_pMotorsInfo[i]->m_ControlMode)
         {
-            case YtaTalon::MASTER:
-            case YtaTalon::INDEPENDENT:
+            case EastTechTalon::MASTER:
+            case EastTechTalon::INDEPENDENT:
             {
                 // The master always gets set via percent voltage, as do
                 // motors that are independently controlled (not follow or inverse).
                 valueToSet = value;
                 break;
             }
-            case YtaTalon::FOLLOW:
-            case YtaTalon::FOLLOW_INVERSE:
+            case EastTechTalon::FOLLOW:
+            case EastTechTalon::FOLLOW_INVERSE:
             {
                 // Nothing to do, motor had Set() called during object construction
                 bCallSet = false;
                 break;
             }
-            case YtaTalon::INVERSE:
+            case EastTechTalon::INVERSE:
             {
                 // Motor is attached to drive in opposite direction of master
                 valueToSet = -value;
                 break;
             }
-            case YtaTalon::INDEPENDENT_OFFSET:
+            case EastTechTalon::INDEPENDENT_OFFSET:
             {
                 // The non-master motor has a different value in this case
                 valueToSet = value + offset;
                 break;
             }
-            case YtaTalon::INVERSE_OFFSET:
+            case EastTechTalon::INVERSE_OFFSET:
             {
                 // The non-master motor has a different value in this case
                 valueToSet = -(value + offset);

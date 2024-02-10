@@ -5,7 +5,7 @@
 /// @details
 /// Swerve drive configuration and constants.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SWERVECONFIG_HPP

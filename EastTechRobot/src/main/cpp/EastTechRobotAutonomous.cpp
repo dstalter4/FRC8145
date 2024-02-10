@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaRobotAutonomous.cpp
+/// @file   EastTechRobotAutonomous.cpp
 /// @author David Stalter
 ///
 /// @details
-/// Implementation of autonomous routines for YtaRobot.
+/// Implementation of autonomous routines for EastTechRobot.
 ///
-/// Copyright (c) 2022 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -15,22 +15,22 @@
 // (none)
 
 // C++ INCLUDES
-#include "YtaRobot.hpp"                 // for robot class declaration
-#include "YtaRobotAutonomous.hpp"       // for autonomous declarations
+#include "EastTechRobot.hpp"            // for robot class declaration
+#include "EastTechRobotAutonomous.hpp"  // for autonomous declarations
 #include "RobotCamera.hpp"              // for interacting with cameras
 
 // NAMESPACE DATA
-bool YtaRobotAutonomous::bAutonomousExecutionComplete;
+bool EastTechRobotAutonomous::bAutonomousExecutionComplete;
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousInit
+/// @method EastTechRobot::AutonomousInit
 ///
 /// The autonomous init method.  This method is called once each
 /// time the robot enters autonomous control.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousInit()
+void EastTechRobot::AutonomousInit()
 {
     RobotUtils::DisplayMessage("AutonomousInit called.");
     
@@ -38,7 +38,7 @@ void YtaRobot::AutonomousInit()
     InitialStateSetup();
     
     // Indicate the autonomous routine has not executed yet
-    YtaRobotAutonomous::bAutonomousExecutionComplete = false;
+    EastTechRobotAutonomous::bAutonomousExecutionComplete = false;
     
     m_pSafetyTimer->Stop();
     m_pSafetyTimer->Reset();
@@ -52,7 +52,7 @@ void YtaRobot::AutonomousInit()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousPeriodic
+/// @method EastTechRobot::AutonomousPeriodic
 ///
 /// The autonomous control method.  This method is called
 /// periodically while the robot is in autonomous control.
@@ -62,12 +62,12 @@ void YtaRobot::AutonomousInit()
 /// machine flow.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousPeriodic()
+void EastTechRobot::AutonomousPeriodic()
 {
     // Log a mode change if one occurred
     CheckAndUpdateRobotMode(ROBOT_MODE_AUTONOMOUS);
     
-    if (YtaRobotAutonomous::bAutonomousExecutionComplete)
+    if (EastTechRobotAutonomous::bAutonomousExecutionComplete)
     {
         return;
     }
@@ -82,7 +82,7 @@ void YtaRobot::AutonomousPeriodic()
     std::string selectedAutoRoutineString = m_AutonomousChooser.GetSelected();
     
     // Auto routine 1
-    //if ( YtaRobotAutonomous::ROUTINE_1 )
+    //if ( EastTechRobotAutonomous::ROUTINE_1 )
     if (selectedAutoRoutineString == AUTO_ROUTINE_1_STRING)
     {
         RobotUtils::DisplayMessage("Auto routine 1.");
@@ -90,7 +90,7 @@ void YtaRobot::AutonomousPeriodic()
     }
     
     // Auto routine 2
-    //else if ( YtaRobotAutonomous::ROUTINE_2 )
+    //else if ( EastTechRobotAutonomous::ROUTINE_2 )
     else if (selectedAutoRoutineString == AUTO_ROUTINE_2_STRING)
     {
         RobotUtils::DisplayMessage("Auto routine 2.");
@@ -98,7 +98,7 @@ void YtaRobot::AutonomousPeriodic()
     }
     
     // Auto routine 3
-    //else if ( YtaRobotAutonomous::ROUTINE_3 )
+    //else if ( EastTechRobotAutonomous::ROUTINE_3 )
     else if (selectedAutoRoutineString == AUTO_ROUTINE_3_STRING)
     {
         RobotUtils::DisplayMessage("Auto routine 3.");
@@ -107,7 +107,7 @@ void YtaRobot::AutonomousPeriodic()
 
     /* !!! ONLY ENABLE TEST AUTONOMOUS CODE WHEN TESTING
            SELECT A FUNCTIONING ROUTINE FOR ACTUAL MATCHES !!! */
-    //else if ( YtaRobotAutonomous::TEST_ENABLED )
+    //else if ( EastTechRobotAutonomous::TEST_ENABLED )
     else if (selectedAutoRoutineString == AUTO_TEST_ROUTINE_STRING)
     {
         RobotUtils::DisplayMessage("Auto test code.");
@@ -121,7 +121,7 @@ void YtaRobot::AutonomousPeriodic()
     }
     
     // One shot through autonomous is over, indicate as such.
-    YtaRobotAutonomous::bAutonomousExecutionComplete = true;
+    EastTechRobotAutonomous::bAutonomousExecutionComplete = true;
     
     /*
     // Idle until auto is terminated
@@ -135,14 +135,14 @@ void YtaRobot::AutonomousPeriodic()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousCommon
+/// @method EastTechRobot::AutonomousCommon
 ///
 /// Common autonomous behavior.  It moves away from the alliance
 /// wall and to the fuel loading station.  The variance is
 /// whether it shoots at the start or at the end.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousCommon()
+void EastTechRobot::AutonomousCommon()
 {
 
     if (m_AllianceColor == DriverStation::Alliance::kRed)
@@ -161,12 +161,12 @@ void YtaRobot::AutonomousCommon()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousCommonRed
+/// @method EastTechRobot::AutonomousCommonRed
 ///
 /// Common autonomous behavior when on the red alliance.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousCommonRed()
+void EastTechRobot::AutonomousCommonRed()
 {
 }
 
@@ -187,11 +187,11 @@ void YtaRobot::AutonomousCommonRed()
 
 
 ////////////////////////////////////////////////////////////////
-// @method YtaRobot::AutonomousCommonBlue
+// @method EastTechRobot::AutonomousCommonBlue
 ///
 /// Common autonomous behavior when on the blue alliance.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousCommonBlue()
+void EastTechRobot::AutonomousCommonBlue()
 {
 }

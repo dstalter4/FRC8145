@@ -5,7 +5,7 @@
 /// @details
 /// Utility routines for swerve drive conversions.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SWERVECONVERSIONS_HPP

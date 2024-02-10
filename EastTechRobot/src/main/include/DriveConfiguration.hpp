@@ -5,7 +5,7 @@
 /// @details
 /// Declarations describing the drive configuration.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef DRIVECONFIGURATION_HPP
@@ -22,12 +22,12 @@
 
 
 ////////////////////////////////////////////////////////////////
-/// @namespace Yta::Drive::Config
+/// @namespace EastTech::Drive::Config
 ///
 /// Provides configuration information about the drive system.
 ///
 ////////////////////////////////////////////////////////////////
-namespace Yta
+namespace EastTech
 {
 namespace Drive
 {

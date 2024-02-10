@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   YtaRobotAutonomousTest.cpp
+/// @file   EastTechRobotAutonomousTest.cpp
 /// @author David Stalter
 ///
 /// @details
-/// Implementation of an autonomous test routines for YtaRobot.
+/// Implementation of an autonomous test routines for EastTechRobot.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -21,17 +21,17 @@
 
 // C++ INCLUDES
 #include "RobotUtils.hpp"                           // for DisplayMessage()
-#include "YtaRobot.hpp"                             // for robot class declaration
-#include "YtaRobotAutonomous.hpp"                   // for autonomous declarations
+#include "EastTechRobot.hpp"                        // for robot class declaration
+#include "EastTechRobotAutonomous.hpp"              // for autonomous declarations
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousTestRoutine
+/// @method EastTechRobot::AutonomousTestRoutine
 ///
 /// Autonomous test routine.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousTestRoutine()
+void EastTechRobot::AutonomousTestRoutine()
 {
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto test routine done.");
@@ -39,12 +39,12 @@ void YtaRobot::AutonomousTestRoutine()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousTestSwerveRoutine
+/// @method EastTechRobot::AutonomousTestSwerveRoutine
 ///
 /// Autonomous swerve test routine.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousTestSwerveRoutine()
+void EastTechRobot::AutonomousTestSwerveRoutine()
 {
     // Simple demonstration of directional movements
     AutonomousSwerveDriveSequence(ROBOT_FORWARD, ROBOT_NO_ROTATE, 0.10, 0.0, 1.0_s, true);
@@ -61,12 +61,12 @@ void YtaRobot::AutonomousTestSwerveRoutine()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method YtaRobot::AutonomousTestTrajectoryRoutine
+/// @method EastTechRobot::AutonomousTestTrajectoryRoutine
 ///
 /// Autonomous swerve test routine.
 ///
 ////////////////////////////////////////////////////////////////
-void YtaRobot::AutonomousTestTrajectoryRoutine()
+void EastTechRobot::AutonomousTestTrajectoryRoutine()
 {
     // Swerve trajectory routine, but requires switching to command based robot.
 

@@ -5,7 +5,7 @@
 /// @details
 /// Contains declarations of utility macros/routines for the robot code.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef ROBOTUTILS_HPP
