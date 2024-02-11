@@ -90,6 +90,8 @@ private:
         static const unsigned MAX_MODULE_DISPLAY_STRING_LENGTH = 64U;
         char m_CancoderAngleString[MAX_MODULE_DISPLAY_STRING_LENGTH];
         char m_NeoEncoderAngleString[MAX_MODULE_DISPLAY_STRING_LENGTH];
+        char m_DriveNeoTemp[MAX_MODULE_DISPLAY_STRING_LENGTH];
+        char m_AngleNeoTemp[MAX_MODULE_DISPLAY_STRING_LENGTH];
     };
     DisplayStrings m_DisplayStrings;
     static uint32_t m_DetailedModuleDisplayIndex;
