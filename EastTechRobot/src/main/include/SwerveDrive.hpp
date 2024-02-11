@@ -52,6 +52,7 @@ public:
     // Updates each swerve module based on the inputs
     void SetModuleStates(Translation2d translation, double rotation, bool bFieldRelative, bool bIsOpenLoop);
 
+    // Points each swerve module to zero degrees (forward)
     void HomeModules()
     {
         for (uint32_t i = 0U; i < SwerveConfig::NUM_SWERVE_DRIVE_MODULES; i++)
@@ -81,24 +82,26 @@ private:
 
     static constexpr const SwerveModulePosition INITIAL_SWERVE_MODULE_POSITION = {0_m, 0_deg};
 
-    // Config information on each swerve module.
-    // Fields are: Name, Position, Drive TalonFX CAN ID, Angle TalonFX CAN ID, CANCoder ID, Angle Offset    
-    // 8145 Bevels Left
+    // 2024 Team 8145 Config (Bevels Left)
     // FL: 5-6-3, 10.459
     // FR: 3-4-2, 324.932
     // BL: 7-8-4, 307.178
-    // BR: 1-2-1, 101.602
-    #if 1
+    // BR: 1-2-1, 101.60
+
+    // 2024 Team 8145 Config (Bevels Right)     <-- Use this.
+    // FL: 5-6-3, 190.459
+    // FR: 3-4-2, 144.932
+    // BL: 7-8-4, 127.178
+    // BR: 1-2-1, 191.602
+
+    // Note: If using the RobotTestCode routines, these objects have to be disabled (or use different CAN IDs).
+
+    // Config information on each swerve module.
+    // Fields are: Name, Position, Drive TalonFX CAN ID, Angle TalonFX CAN ID, CANCoder ID, Angle Offset
     static constexpr const SwerveModuleConfig FRONT_LEFT_MODULE_CONFIG = {"Front left", SwerveModule::FRONT_LEFT, 6, 5, 3, 190.459_deg};
     static constexpr const SwerveModuleConfig FRONT_RIGHT_MODULE_CONFIG = {"Front right", SwerveModule::FRONT_RIGHT, 4, 3, 2, 144.932_deg};  //Only one actually setting correctly  
     static constexpr const SwerveModuleConfig BACK_LEFT_MODULE_CONFIG = {"Back left", SwerveModule::BACK_LEFT, 8, 7, 4, 127.178_deg};   
     static constexpr const SwerveModuleConfig BACK_RIGHT_MODULE_CONFIG = {"Back right", SwerveModule::BACK_RIGHT, 2, 1, 1, 281.602_deg};
-    #else
-    static constexpr const SwerveModuleConfig FRONT_LEFT_MODULE_CONFIG = {"Front left", SwerveModule::FRONT_LEFT, 20, 21, 22, 10.459_deg};
-    static constexpr const SwerveModuleConfig FRONT_RIGHT_MODULE_CONFIG = {"Front right", SwerveModule::FRONT_RIGHT, 30, 31, 32, 324.932_deg};  //Only one actually setting correctly  
-    static constexpr const SwerveModuleConfig BACK_LEFT_MODULE_CONFIG = {"Back left", SwerveModule::BACK_LEFT, 40, 41, 42, 307.178_deg};   
-    static constexpr const SwerveModuleConfig BACK_RIGHT_MODULE_CONFIG = {"Back right", SwerveModule::BACK_RIGHT, 50, 51, 52, 101.602_deg};
-    #endif
 
     SwerveDrive(const SwerveDrive &) = delete;
     SwerveDrive & operator=(const SwerveDrive &) = delete;

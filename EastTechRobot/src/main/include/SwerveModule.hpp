@@ -68,9 +68,11 @@ private:
     // Constructor
     SwerveModule(SwerveModuleConfig config);
 
+    // Point the module to zero degrees (forward)
+    void HomeModule();
+
     // Update a swerve module to the desired state
     void SetDesiredState(SwerveModuleState desiredState, bool bIsOpenLoop);
-    void HomeModule();
 
     // Optimizes the desired swerve module state
     SwerveModuleState Optimize(SwerveModuleState desiredState, Rotation2d currentAngle);
@@ -87,16 +89,12 @@ private:
     {
         static const unsigned MAX_MODULE_DISPLAY_STRING_LENGTH = 64U;
         char m_CancoderAngleString[MAX_MODULE_DISPLAY_STRING_LENGTH];
-        char m_FxEncoderAngleString[MAX_MODULE_DISPLAY_STRING_LENGTH];
-        char m_DriveTalonTemp[MAX_MODULE_DISPLAY_STRING_LENGTH];
-        char m_AngleTalonTemp[MAX_MODULE_DISPLAY_STRING_LENGTH];
+        char m_NeoEncoderAngleString[MAX_MODULE_DISPLAY_STRING_LENGTH];
     };
     DisplayStrings m_DisplayStrings;
     static uint32_t m_DetailedModuleDisplayIndex;
 
     ModulePosition m_MotorGroupPosition;
-    //TalonFX * m_pDriveTalon;
-    //TalonFX * m_pAngleTalon;
     CANSparkMax * m_pDriveSpark;
     CANSparkMax * m_pAngleSpark;
     SparkRelativeEncoder m_DriveSparkEncoder;
