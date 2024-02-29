@@ -5,20 +5,16 @@
 /// @details
 /// Implements functionality for a swerve drive robot base.
 ///
-/// Copyright (c) 2024 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SWERVEDRIVE_HPP
 #define SWERVEDRIVE_HPP
 
-// CTRE output is noisy this year, making it impossible to find real errors
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 // SYSTEM INCLUDES
 // <none>
 
 // C INCLUDES
-#include "ctre/phoenix/sensors/Pigeon2.h"               // for PigeonIMU
 #include "frc/geometry/Translation2d.h"                 // for class declaration
 #include "frc/kinematics/SwerveDriveOdometry.h"         // for class declaration
 #include "frc/kinematics/SwerveModulePosition.h"        // for struct declaration
@@ -67,7 +63,7 @@ public:
     // Sets the gyro yaw back to zero degrees
     inline void ZeroGyroYaw()
     {
-        m_pPigeon->SetYaw(0.0);
+        m_pPigeon->SetYaw(0.0_deg);
     }
 
 private:

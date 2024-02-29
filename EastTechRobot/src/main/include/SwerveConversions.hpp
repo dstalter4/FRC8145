@@ -88,172 +88,63 @@ namespace SwerveConversions
     }
 
     ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::CanCoderToDegrees
+    /// @method SwerveConversions::RpsToMps
     ///
-    /// Converts the CANCoder position count to an angle in degrees.
+    /// Converts rotations per second to meters per second.
     ///
-    /// @param positionCounts CANCoder Position Counts
-    /// @param gearRatio Gear Ratio between CANCoder and Mechanism
-    /// @return Degrees of Rotation of Mechanism
+    /// @param wheelRps Wheel rotations per second
+    /// @param circumference Circumference of wheel
+    /// @return Meters per second
     ///
     ////////////////////////////////////////////////////////////////
-    inline static double CanCoderToDegrees(double positionCounts, double gearRatio)
+    inline static double RpsToMps(double wheelRps, double circumference)
     {
-        return positionCounts * (360.0 / (gearRatio * 4096.0));
+        return wheelRps * circumference;
     }
 
     ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::DegreesToCanCoder
+    /// @method SwerveConversions::MpsToRps
     ///
-    /// Converts an angle in degrees to a CANCoder position count.
+    /// Converts meters per second to rotations per second.
     ///
-    /// @param degrees Degrees of rotation of Mechanism
-    /// @param gearRatio Gear Ratio between CANCoder and Mechanism
-    /// @return CANCoder Position Counts
+    /// @param wheelMps Wheel meters per second
+    /// @param circumference Circumference of wheel
+    /// @return Rotations per second
     ///
     ////////////////////////////////////////////////////////////////
-    inline static double DegreesToCanCoder(double degrees, double gearRatio)
+    inline static double MpsToRps(double wheelMps, double circumference)
     {
-        return degrees / (360.0 / (gearRatio * 4096.0));
+        return wheelMps / circumference;
     }
 
     ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::FalconToDegrees
+    /// @method SwerveConversions::RotationsToMeters
     ///
-    /// Converts the TalonFX built-in encoder position count to an
-    /// angle in degrees.
+    /// Converts rotations per second to meters per second.
     ///
-    /// @param counts Falcon Position Counts
-    /// @param gearRatio Gear Ratio between Falcon and Mechanism
-    /// @return Degrees of Rotation of Mechanism
-    ///
-    ////////////////////////////////////////////////////////////////
-    inline static double FalconToDegrees(double positionCounts, double gearRatio)
-    {
-        return positionCounts * (360.0 / (gearRatio * 2048.0));
-    }
-
-    ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::DegreesToFalcon
-    ///
-    /// Converts an angle in degrees to a TalonFX built-in encoder
-    /// position count.
-    ///
-    /// @param degrees Degrees of rotation of Mechanism
-    /// @param gearRatio Gear Ratio between Falcon and Mechanism
-    /// @return Falcon Position Counts
-    ///
-    ////////////////////////////////////////////////////////////////
-    inline static double DegreesToFalcon(double degrees, double gearRatio)
-    {
-        return degrees / (360.0 / (gearRatio * 2048.0));
-    }
-
-    ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::FalconToRpm
-    ///
-    /// Converts the TalonFX built-in sensor velocity counts to a
-    /// RPM value.
-    ///
-    /// @param velocityCounts Falcon Velocity Counts
-    /// @param gearRatio Gear Ratio between Falcon and Mechanism (set to 1 for Falcon RPM)
-    /// @return RPM of Mechanism
-    ///
-    ////////////////////////////////////////////////////////////////
-    inline static double FalconToRpm(double velocityCounts, double gearRatio)
-    {
-        double motorRPM = velocityCounts * (600.0 / 2048.0);        
-        double mechRPM = motorRPM / gearRatio;
-        return mechRPM;
-    }
-
-    ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::RpmToFalcon
-    ///
-    /// Converts a RPM value to TalonFX built-in sensor velocity
-    /// counts.
-    ///
-    /// @param rpm RPM of mechanism
-    /// @param gearRatio Gear Ratio between Falcon and Mechanism (set to 1 for Falcon RPM)
-    /// @return RPM of Mechanism
-    ///
-    ////////////////////////////////////////////////////////////////
-    inline static double RpmToFalcon(double rpm, double gearRatio)
-    {
-        double motorRpm = rpm * gearRatio;
-        double sensorCounts = motorRpm * (2048.0 / 600.0);
-        return sensorCounts;
-    }
-
-    ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::FalconToMps
-    ///
-    /// Converts the TalonFX built-in sensor velocity counts to
-    /// meters per second.
-    ///
-    /// @param velocitycounts Falcon Velocity Counts
-    /// @param circumference Circumference of Wheel
-    /// @param gearRatio Gear Ratio between Falcon and Mechanism (set to 1 for Falcon MPS)
-    /// @return Falcon Velocity Counts
-    ///
-    ////////////////////////////////////////////////////////////////
-    inline static double FalconToMps(double velocitycounts, double circumference, double gearRatio)
-    {
-        double wheelRpm = FalconToRpm(velocitycounts, gearRatio);
-        double wheelMps = (wheelRpm * circumference) / 60;
-        return wheelMps;
-    }
-
-    ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::MpsToFalcon
-    ///
-    /// Converts meters per second to TalonFX built-in sensor
-    /// velocity counts.
-    ///
-    /// @param velocity Velocity MPS
-    /// @param circumference Circumference of Wheel
-    /// @param gearRatio Gear Ratio between Falcon and Mechanism (set to 1 for Falcon MPS)
-    /// @return Falcon Velocity Counts
-    ///
-    ////////////////////////////////////////////////////////////////
-    inline static double MpsToFalcon(double velocity, double circumference, double gearRatio)
-    {
-        double wheelRpm = ((velocity * 60) / circumference);
-        double wheelVelocity = RpmToFalcon(wheelRpm, gearRatio);
-        return wheelVelocity;
-    }
-
-    ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::FalconToMeters
-    ///
-    /// Converts the TalonFX built-in encoder position counts to
-    /// meters.
-    ///
-    /// @param positionCounts Falcon Position Counts
-    /// @param circumference Circumference of Wheel
-    /// @param gearRatio Gear Ratio between Falcon and Wheel
+    /// @param wheelRotations Wheel rotations
+    /// @param circumference Circumference of wheel
     /// @return Meters
     ///
     ////////////////////////////////////////////////////////////////
-    inline static double FalconToMeters(double positionCounts, double circumference, double gearRatio)
+    inline static double RotationsToMeters(double wheelRotations, double circumference)
     {
-        return positionCounts * (circumference / (gearRatio * 2048.0));
+        return wheelRotations * circumference;
     }
 
     ////////////////////////////////////////////////////////////////
-    /// @method SwerveConversions::MetersToFalcon
+    /// @method SwerveConversions::MetersToRotations
     ///
-    /// Converts meters to TalonFX built-in encoder position counts.
+    /// Converts rotations per second to meters per second.
     ///
-    /// @param meters Meters
-    /// @param circumference Circumference of Wheel
-    /// @param gearRatio Gear Ratio between Falcon and Wheel
-    /// @return Falcon Position Counts
+    /// @param wheelMeters Meters
+    /// @param circumference Circumference of wheel
+    /// @return Wheel rotations
     ///
     ////////////////////////////////////////////////////////////////
-    inline static double MetersToFalcon(double meters, double circumference, double gearRatio)
+    inline static double MetersToRotations(double wheelMeters, double circumference)
     {
-        return meters / (circumference / (gearRatio * 2048.0));
+        return wheelMeters / circumference;
     }
 }
 

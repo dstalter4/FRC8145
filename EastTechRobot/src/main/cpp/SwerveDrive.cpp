@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a swerve drive robot base.
 ///
-/// Copyright (c) 2023 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -40,8 +40,7 @@ SwerveDrive::SwerveDrive(Pigeon2 * pPigeon) :
     m_SwerveModules{FRONT_LEFT_MODULE_CONFIG, FRONT_RIGHT_MODULE_CONFIG, BACK_LEFT_MODULE_CONFIG, BACK_RIGHT_MODULE_CONFIG},
     m_Odometry(SwerveConfig::Kinematics, Rotation2d(units::degree_t(0)), {INITIAL_SWERVE_MODULE_POSITION, INITIAL_SWERVE_MODULE_POSITION, INITIAL_SWERVE_MODULE_POSITION, INITIAL_SWERVE_MODULE_POSITION})
 {
-    m_pPigeon->ConfigFactoryDefault();
-    m_pPigeon->SetYaw(0.0);
+    m_pPigeon->SetYaw(0.0_deg);
 }
 
 
@@ -72,7 +71,7 @@ void SwerveDrive::SetModuleStates(Translation2d translation, double rotation, bo
     ChassisSpeeds chassisSpeeds;
     if (bFieldRelative)
     {
-        chassisSpeeds = ChassisSpeeds::FromFieldRelativeSpeeds(xMps, yMps, rotationRadPerSec, units::angle::degree_t(m_pPigeon->GetYaw()));
+        chassisSpeeds = ChassisSpeeds::FromFieldRelativeSpeeds(xMps, yMps, rotationRadPerSec, units::angle::degree_t(m_pPigeon->GetYaw().GetValue()));
     }
     else
     {
@@ -103,9 +102,9 @@ void SwerveDrive::UpdateSmartDashboard()
 {
     // Reference code calls update odometry here on m_Odometry, but it doesn't appear to be used anywhere.
 
-    SmartDashboard::PutNumber("Pigeon yaw", m_pPigeon->GetYaw());
-    SmartDashboard::PutNumber("Pigeon pitch", m_pPigeon->GetPitch());
-    SmartDashboard::PutNumber("Pigeon roll", m_pPigeon->GetRoll());
+    SmartDashboard::PutNumber("Pigeon yaw", m_pPigeon->GetYaw().GetValueAsDouble());
+    SmartDashboard::PutNumber("Pigeon pitch", m_pPigeon->GetPitch().GetValueAsDouble());
+    SmartDashboard::PutNumber("Pigeon roll", m_pPigeon->GetRoll().GetValueAsDouble());
 
     for (uint32_t i = 0U; i < SwerveConfig::NUM_SWERVE_DRIVE_MODULES; i++)
     {

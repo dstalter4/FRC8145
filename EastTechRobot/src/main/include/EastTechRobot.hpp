@@ -15,15 +15,11 @@
 #ifndef EASTTECHROBOT_HPP
 #define EASTTECHROBOT_HPP
 
-// CTRE output is noisy this year, making it impossible to find real errors
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-
 // SYSTEM INCLUDES
 #include <cmath>                                // for M_PI
 #include <thread>                               // for std::thread
 
 // C INCLUDES
-#include "ctre/phoenix/sensors/Pigeon2.h"       // for PigeonIMU
 #include "frc/Compressor.h"                     // for retrieving info on the compressor
 #include "frc/DigitalInput.h"                   // for DigitalInput type
 #include "frc/DigitalOutput.h"                  // for DigitalOutput type
@@ -42,6 +38,7 @@
 #include "RobotUtils.hpp"                       // for ASSERT, DEBUG_PRINTS
 #include "SwerveDrive.hpp"                      // for using swerve drive
 #include "TalonMotorGroup.hpp"                  // for Talon group motor control
+#include "ctre/phoenix6/Pigeon2.hpp"            // for PigeonIMU
 
 using namespace frc;
 
