@@ -24,6 +24,8 @@
 // Helper macro to get the robot object, only for use in test class code
 #define EASTTECH_ROBOT_OBJ() EastTechRobot::GetRobotInstance()
 
+using namespace rev;
+
 
 ////////////////////////////////////////////////////////////////
 /// @class EastTechRobotTest
@@ -168,7 +170,7 @@ void EastTechRobotTest::QuickTestCode()
     static SparkRelativeEncoder m_AngleSparkEncoder = m_pAngleSpark->GetEncoder(SparkRelativeEncoder::Type::kHallSensor);
     static SparkPIDController m_DrivePidController = m_pDriveSpark->GetPIDController();
     static SparkPIDController m_AnglePidController = m_pAngleSpark->GetPIDController();
-    static CANCoder * m_pAngleCanCoder = new CANCoder(2, "canivore-8145");
+    static CANcoder * m_pAngleCanCoder = new CANcoder(2, "canivore-8145");
     static bool bInit = false;
     
     if (!bInit)
@@ -185,28 +187,25 @@ void EastTechRobotTest::QuickTestCode()
         m_pAngleSpark->EnableVoltageCompensation(12.0);
         m_pAngleSpark->BurnFlash();
 
-        CANCoderConfiguration canCoderConfig;
-        canCoderConfig.absoluteSensorRange = AbsoluteSensorRange::Unsigned_0_to_360;
-        canCoderConfig.sensorDirection = false;
-        canCoderConfig.initializationStrategy = SensorInitializationStrategy::BootToAbsolutePosition;
-        canCoderConfig.sensorTimeBase = SensorTimeBase::PerSecond;
-        m_pAngleCanCoder->ConfigFactoryDefault();
-        m_pAngleCanCoder->ConfigAllSettings(canCoderConfig);
+        CANcoderConfiguration canCoderConfig;
+        canCoderConfig.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue::Unsigned_0To1;
+        canCoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue::CounterClockwise_Positive;
+        (void)m_pAngleCanCoder->GetConfigurator().Apply(canCoderConfig);
         
         bInit = true;
-        double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition() - 144.932;
+        double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - 144.932;
         SmartDashboard::PutNumber("Debug A", m_AngleSparkEncoder.GetPosition());
         SmartDashboard::PutNumber("Debug B", absolutePositionDelta);
         m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
         m_AnglePidController.SetReference(0.0, CANSparkMax::ControlType::kPosition);
     }
 
-    // 2024 Team 8145 Config (Bevels Right)
+    // 2024 Team 8145 Neo Config (Bevels Right)
     // FL: 5-6-3, 190.459
     // FR: 3-4-2, 144.932
     // BL: 7-8-4, 127.178
     // BR: 1-2-1, 191.602
-    SmartDashboard::PutNumber("Debug C", m_pAngleCanCoder->GetAbsolutePosition());
+    SmartDashboard::PutNumber("Debug C", m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble());
     SmartDashboard::PutNumber("Debug D", m_AngleSparkEncoder.GetPosition());
 }
 
@@ -229,40 +228,40 @@ void EastTechRobotTest::SuperstructureTest()
     
     while (m_pJoystick->GetRawButton(1))
     {
-        pTalonFx5->Set(ControlMode::PercentOutput, 0.3);
-        pTalonFx6->Set(ControlMode::PercentOutput, 0.3);
+        pTalonFx5->Set(0.3);
+        pTalonFx6->Set(0.3);
     }
-    pTalonFx5->Set(ControlMode::PercentOutput, 0.0);
-    pTalonFx6->Set(ControlMode::PercentOutput, 0.0);
+    pTalonFx5->Set(0.0);
+    pTalonFx6->Set(0.0);
     while (m_pJoystick->GetRawButton(2))
     {
-        pTalonFx7->Set(ControlMode::PercentOutput, 0.3);
-        pTalonFx8->Set(ControlMode::PercentOutput, 0.3);
+        pTalonFx7->Set(0.3);
+        pTalonFx8->Set(0.3);
     }
-    pTalonFx7->Set(ControlMode::PercentOutput, 0.0);
-    pTalonFx8->Set(ControlMode::PercentOutput, 0.0);
+    pTalonFx7->Set(0.0);
+    pTalonFx8->Set(0.0);
     while (m_pJoystick->GetRawButton(3))
     {
-        pTalonFx9->Set(ControlMode::PercentOutput, 0.3);
-        pTalonFx10->Set(ControlMode::PercentOutput, 0.3);
+        pTalonFx9->Set(0.3);
+        pTalonFx10->Set(0.3);
     }
-    pTalonFx9->Set(ControlMode::PercentOutput, 0.0);
-    pTalonFx10->Set(ControlMode::PercentOutput, 0.0);
+    pTalonFx9->Set(0.0);
+    pTalonFx10->Set(0.0);
     while (m_pJoystick->GetRawButton(4))
     {
-        pTalonFx5->Set(ControlMode::PercentOutput, 0.3);
-        pTalonFx5->Set(ControlMode::PercentOutput, 0.3);
-        pTalonFx7->Set(ControlMode::PercentOutput, 0.5);
-        pTalonFx8->Set(ControlMode::PercentOutput, 0.5);
-        pTalonFx9->Set(ControlMode::PercentOutput, 1.0);
-        pTalonFx10->Set(ControlMode::PercentOutput, 1.0);
+        pTalonFx5->Set(0.3);
+        pTalonFx5->Set(0.3);
+        pTalonFx7->Set(0.5);
+        pTalonFx8->Set(0.5);
+        pTalonFx9->Set(1.0);
+        pTalonFx10->Set(1.0);
     }
-    pTalonFx5->Set(ControlMode::PercentOutput, 0.0);
-    pTalonFx6->Set(ControlMode::PercentOutput, 0.0);
-    pTalonFx7->Set(ControlMode::PercentOutput, 0.0);
-    pTalonFx8->Set(ControlMode::PercentOutput, 0.0);
-    pTalonFx9->Set(ControlMode::PercentOutput, 0.0);
-    pTalonFx10->Set(ControlMode::PercentOutput, 0.0);
+    pTalonFx5->Set(0.0);
+    pTalonFx6->Set(0.0);
+    pTalonFx7->Set(0.0);
+    pTalonFx8->Set(0.0);
+    pTalonFx9->Set(0.0);
+    pTalonFx10->Set(0.0);
 }
 
 
@@ -282,29 +281,29 @@ void EastTechRobotTest::CtreSpeedControllerTest()
     
     while (m_pJoystick->GetRawButton(1))
     {
-        pLeft1->Set(ControlMode::PercentOutput, 1.0);
-        pLeft2->Set(ControlMode::PercentOutput, 1.0);
+        pLeft1->Set(1.0);
+        pLeft2->Set(1.0);
     }
     while (m_pJoystick->GetRawButton(2))
     {
-        pLeft1->Set(ControlMode::PercentOutput, -1.0);
-        pLeft2->Set(ControlMode::PercentOutput, -1.0);
+        pLeft1->Set(-1.0);
+        pLeft2->Set(-1.0);
     }
     while (m_pJoystick->GetRawButton(3))
     {
-        pRight1->Set(ControlMode::PercentOutput, 1.0);
-        pRight2->Set(ControlMode::PercentOutput, 1.0);
+        pRight1->Set(1.0);
+        pRight2->Set(1.0);
     }
     while (m_pJoystick->GetRawButton(4))
     {
-        pRight1->Set(ControlMode::PercentOutput, -1.0);
-        pRight2->Set(ControlMode::PercentOutput, -1.0);
+        pRight1->Set(-1.0);
+        pRight2->Set(-1.0);
     }
     
-    pLeft1->Set(ControlMode::PercentOutput, 0.0);
-    pLeft2->Set(ControlMode::PercentOutput, 0.0);
-    pRight1->Set(ControlMode::PercentOutput, 0.0);
-    pRight2->Set(ControlMode::PercentOutput, 0.0);
+    pLeft1->Set(0.0);
+    pLeft2->Set(0.0);
+    pRight1->Set(0.0);
+    pRight2->Set(0.0);
 }
 
 
@@ -353,8 +352,8 @@ void EastTechRobotTest::TankDrive()
 {
     static TalonFX * pLeftDrive = new TalonFX(1);
     static TalonFX * pRightDrive = new TalonFX(2);
-    pLeftDrive->Set(ControlMode::PercentOutput, EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0);
-    pRightDrive->Set(ControlMode::PercentOutput, EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(5) * -1.0);
+    pLeftDrive->Set(EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(1) * -1.0);
+    pRightDrive->Set(EASTTECH_ROBOT_OBJ()->m_pDriveController->GetAxisValue(5) * -1.0);
 }
 
 
