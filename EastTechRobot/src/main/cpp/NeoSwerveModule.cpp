@@ -1,9 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   SwerveModule.cpp
+/// @file   NeoSwerveModule.cpp
 /// @author David Stalter
 ///
 /// @details
-/// Implements functionality for a swerve module on a swerve drive robot.
+/// Implements functionality for a Neo swerve module on a swerve drive robot.
 ///
 /// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
@@ -17,18 +17,18 @@
 #include "units/length.h"                           // for units::meters
 
 // C++ INCLUDES
+#include "NeoSwerveModule.hpp"                      // for class declaration
 #include "RobotUtils.hpp"                           // for ConvertCelsiusToFahrenheit
 #include "SwerveConfig.hpp"                         // for swerve configuration and constants
 #include "SwerveConversions.hpp"                    // for conversion functions
-#include "SwerveModule.hpp"                         // for class declaration
 
 using namespace frc;
 
-uint32_t SwerveModule::m_DetailedModuleDisplayIndex = 0U;
+uint32_t NeoSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 
 
 ////////////////////////////////////////////////////////////////
-/// @method SwerveModule::SwerveModule
+/// @method NeoSwerveModule::NeoSwerveModule
 ///
 /// Constructs a swerve module object.  This will configure the
 /// settings for each SparkMax (PID values, current limiting,
@@ -40,7 +40,7 @@ uint32_t SwerveModule::m_DetailedModuleDisplayIndex = 0U;
 /// 2024: Bevels facing right is 1.0 forward on the Neos.
 ///
 ////////////////////////////////////////////////////////////////
-SwerveModule::SwerveModule(SwerveModuleConfig config) :
+NeoSwerveModule::NeoSwerveModule(SwerveModuleConfig config) :
     m_MotorGroupPosition(config.m_Position),
     m_pDriveSpark(new CANSparkMax(config.m_DriveMotorCanId, CANSparkLowLevel::MotorType::kBrushless)),
     m_pAngleSpark(new CANSparkMax(config.m_AngleMotorCanId, CANSparkLowLevel::MotorType::kBrushless)),
@@ -48,7 +48,7 @@ SwerveModule::SwerveModule(SwerveModuleConfig config) :
     m_AngleSparkEncoder(m_pAngleSpark->GetEncoder(SparkRelativeEncoder::Type::kHallSensor)),
     m_DrivePidController(m_pDriveSpark->GetPIDController()),
     m_AnglePidController(m_pAngleSpark->GetPIDController()),
-    m_pAngleCanCoder(new CANCoder(config.m_CanCoderId, "canivore-8145")),
+    m_pAngleCanCoder(new CANcoder(config.m_CanCoderId, "canivore-8145")),
     m_AngleOffset(config.m_AngleOffset),
     m_LastAngle(),
     m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA))
@@ -95,13 +95,10 @@ SwerveModule::SwerveModule(SwerveModuleConfig config) :
     //m_pAngleSpark->SetPeriodicFramePeriod(CANSparkMax::PeriodicFrame::kStatus3, 500);
 
     // Configure CANCoder
-    CANCoderConfiguration canCoderConfig;
-    canCoderConfig.absoluteSensorRange = AbsoluteSensorRange::Unsigned_0_to_360;
-    canCoderConfig.sensorDirection = false;
-    canCoderConfig.initializationStrategy = SensorInitializationStrategy::BootToAbsolutePosition;
-    canCoderConfig.sensorTimeBase = SensorTimeBase::PerSecond;
-    m_pAngleCanCoder->ConfigFactoryDefault();
-    m_pAngleCanCoder->ConfigAllSettings(canCoderConfig);
+    CANcoderConfiguration canCoderConfig;
+    canCoderConfig.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue::Unsigned_0To1;
+    canCoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue::CounterClockwise_Positive;
+    (void)m_pAngleCanCoder->GetConfigurator().Apply(canCoderConfig);
     //m_pAngleCanCoder->SetStatusFramePeriod(CANCoderStatusFrame_SensorData, 100);
     //m_pAngleCanCoder->SetStatusFramePeriod(CANCoderStatusFrame_VbatAndFaults, 100);
 
@@ -116,7 +113,7 @@ SwerveModule::SwerveModule(SwerveModuleConfig config) :
     // commands while the robot is not in an enabled, which is the case
     // when constructors run.  Calling SetReference() here won't do anything.
 
-    double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition() - m_AngleOffset.Degrees().value();
+    double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - m_AngleOffset.Degrees().value();
     m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
 
     // Save off the initial angle
@@ -125,14 +122,14 @@ SwerveModule::SwerveModule(SwerveModuleConfig config) :
 
 
 ////////////////////////////////////////////////////////////////
-/// @method SwerveModule::HomeModule
+/// @method NeoSwerveModule::HomeModule
 ///
 /// Points the swerve module straight forward (zero degrees).
 ///
 ////////////////////////////////////////////////////////////////
-void SwerveModule::HomeModule()
+void NeoSwerveModule::HomeModule()
 {
-    double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition() - m_AngleOffset.Degrees().value();
+    double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - m_AngleOffset.Degrees().value();
     m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
     m_AnglePidController.SetReference(0.0, CANSparkMax::ControlType::kPosition);
     m_LastAngle = 0.0_deg;
@@ -140,7 +137,7 @@ void SwerveModule::HomeModule()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method SwerveModule::Optimize
+/// @method NeoSwerveModule::Optimize
 ///
 /// Optimizes a swerve module state for use with setting a
 /// desired state.  This finds the shortest way to move to a
@@ -148,7 +145,7 @@ void SwerveModule::HomeModule()
 /// the target speed, if necessary).
 ///
 ////////////////////////////////////////////////////////////////
-SwerveModuleState SwerveModule::Optimize(SwerveModuleState desiredState, Rotation2d currentAngle)
+SwerveModuleState NeoSwerveModule::Optimize(SwerveModuleState desiredState, Rotation2d currentAngle)
 {
     // This is a custom optimize function, since default WPILib optimize assumes continuous controller which CTRE and Rev onboard is not
     double targetAngle = SwerveConversions::AdjustAngleScope(currentAngle.Degrees().value(), desiredState.angle.Degrees().value());
@@ -173,14 +170,14 @@ SwerveModuleState SwerveModule::Optimize(SwerveModuleState desiredState, Rotatio
 
 
 ////////////////////////////////////////////////////////////////
-/// @method SwerveModule::SetDesiredState
+/// @method NeoSwerveModule::SetDesiredState
 ///
 /// Sets a swerve module to the input state.  It computes the
 /// target velocity and angle and updates the motor controllers
 /// as appropriate.
 ///
 ////////////////////////////////////////////////////////////////
-void SwerveModule::SetDesiredState(SwerveModuleState desiredState, bool bIsOpenLoop)
+void NeoSwerveModule::SetDesiredState(SwerveModuleState desiredState, bool bIsOpenLoop)
 {
     // Custom optimize command, since default WPILib optimize assumes continuous controller which CTRE is not
     desiredState = Optimize(desiredState, GetSwerveModuleState().angle);
@@ -216,13 +213,13 @@ void SwerveModule::SetDesiredState(SwerveModuleState desiredState, bool bIsOpenL
 
 
 ////////////////////////////////////////////////////////////////
-/// @method SwerveModule::GetSwerveModuleState
+/// @method NeoSwerveModule::GetSwerveModuleState
 ///
 /// Returns a swerve module state based on information from the
 /// motor controllers and sensors.
 ///
 ////////////////////////////////////////////////////////////////
-SwerveModuleState SwerveModule::GetSwerveModuleState()
+SwerveModuleState NeoSwerveModule::GetSwerveModuleState()
 {
     // Get the current velocity
     units::velocity::meters_per_second_t velocity(m_DriveSparkEncoder.GetVelocity());
@@ -235,13 +232,13 @@ SwerveModuleState SwerveModule::GetSwerveModuleState()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method SwerveModule::GetSwerveModulePosition
+/// @method NeoSwerveModule::GetSwerveModulePosition
 ///
 /// Returns a swerve module position based on information from
 /// the motor controllers and sensors.
 ///
 ////////////////////////////////////////////////////////////////
-SwerveModulePosition SwerveModule::GetSwerveModulePosition()
+SwerveModulePosition NeoSwerveModule::GetSwerveModulePosition()
 {
     // Get the current distance
     units::meter_t distance(m_DriveSparkEncoder.GetPosition());
@@ -254,15 +251,15 @@ SwerveModulePosition SwerveModule::GetSwerveModulePosition()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method SwerveModule::UpdateSmartDashboard
+/// @method NeoSwerveModule::UpdateSmartDashboard
 ///
 /// Support routine to put useful information on the dashboard.
 ///
 ////////////////////////////////////////////////////////////////
-void SwerveModule::UpdateSmartDashboard()
+void NeoSwerveModule::UpdateSmartDashboard()
 {
     // Print the encoder values every time
-    SmartDashboard::PutNumber(m_DisplayStrings.m_CancoderAngleString, m_pAngleCanCoder->GetAbsolutePosition());
+    SmartDashboard::PutNumber(m_DisplayStrings.m_CancoderAngleString, m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble());
     SmartDashboard::PutNumber(m_DisplayStrings.m_NeoEncoderAngleString, m_AngleSparkEncoder.GetPosition());
 
     // Create and start a timer the first time through

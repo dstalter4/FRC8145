@@ -1,25 +1,21 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   SwerveModule.hpp
+/// @file   NeoSwerveModule.hpp
 /// @author David Stalter
 ///
 /// @details
-/// Implements functionality for a swerve module on a swerve drive robot.
+/// Implements functionality for a Neo swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2024 Youth Technology Academy
+/// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef SWERVEMODULE_HPP
-#define SWERVEMODULE_HPP
-
-// CTRE output is noisy this year, making it impossible to find real errors
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#ifndef NEOSWERVEMODULE_HPP
+#define NEOSWERVEMODULE_HPP
 
 // SYSTEM INCLUDES
 #include <cmath>                                        // for M_PI
 
 // C INCLUDES
-//#include "ctre/Phoenix.h"                               // for CTRE library interfaces
-#include "ctre/phoenix/sensors/CANCoder.h"              // for CANCoder
+#include "ctre/phoenix6/CANcoder.hpp"                   // for CTRE CANcoder API
 #include "frc/controller/SimpleMotorFeedForward.h"      // for feedforward control
 #include "frc/kinematics/SwerveModulePosition.h"        // for struct declaration
 #include "frc/kinematics/SwerveModuleState.h"           // for struct declaration
@@ -31,18 +27,21 @@
 // C++ INCLUDES
 // (none)
 
-using namespace ctre::phoenix::sensors;
+using namespace ctre::phoenix6::configs;
+using namespace ctre::phoenix6::controls;
+using namespace ctre::phoenix6::hardware;
+using namespace ctre::phoenix6::signals;
 using namespace frc;
 using namespace rev;
 
 
 ////////////////////////////////////////////////////////////////
-/// @class SwerveModule
+/// @class NeoSwerveModule
 ///
 /// Declarations for a swerve module object.
 ///
 ////////////////////////////////////////////////////////////////
-class SwerveModule
+class NeoSwerveModule
 {
     friend class SwerveDrive;
 
@@ -66,7 +65,7 @@ private:
     };
 
     // Constructor
-    SwerveModule(SwerveModuleConfig config);
+    NeoSwerveModule(SwerveModuleConfig config);
 
     // Point the module to zero degrees (forward)
     void HomeModule();
@@ -103,7 +102,7 @@ private:
     SparkRelativeEncoder m_AngleSparkEncoder;
     SparkPIDController m_DrivePidController;
     SparkPIDController m_AnglePidController;
-    CANCoder * m_pAngleCanCoder;
+    CANcoder * m_pAngleCanCoder;
     Rotation2d m_AngleOffset;
     Rotation2d m_LastAngle;
     SimpleMotorFeedforward<units::meters> * m_pFeedForward;
@@ -122,8 +121,8 @@ private:
     static constexpr double OPEN_LOOP_RAMP = 0.25;
     static constexpr double CLOSED_LOOP_RAMP = 0.0;
 
-    SwerveModule(const SwerveModule &) = delete;
-    SwerveModule & operator=(const SwerveModule &) = delete;
+    NeoSwerveModule(const NeoSwerveModule &) = delete;
+    NeoSwerveModule & operator=(const NeoSwerveModule &) = delete;
 };
 
-#endif // SWERVEMODULE_HPP
+#endif // NEOSWERVEMODULE_HPP
