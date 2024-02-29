@@ -25,10 +25,17 @@
 
 // C++ INCLUDES
 #include "SwerveConfig.hpp"                             // for swerve configuration and constants
-#include "SwerveModule.hpp"                             // for interacting with a swerve module
+#ifdef USE_NEO_SWERVE
+  #include "NeoSwerveModule.hpp"                        // for interacting with a Neo swerve module
+  typedef NeoSwerveModule SwerveModule;
+#endif
+#ifdef USE_TALONFX_SWERVE
+  #include "TalonFxSwerveModule.hpp"                    // for interacting with a TalonFX swerve module
+  typedef TalonFxSwerveModule SwerveModule;
+#endif
+#include "ctre/phoenix6/Pigeon2.hpp"                    // for PigeonIMU
 
 using namespace frc;
-using namespace ctre::phoenix::sensors;
 
 
 ////////////////////////////////////////////////////////////////
@@ -78,13 +85,13 @@ private:
 
     static constexpr const SwerveModulePosition INITIAL_SWERVE_MODULE_POSITION = {0_m, 0_deg};
 
-    // 2024 Team 8145 Config (Bevels Left)
+    // 2024 Team 8145 Neo Config (Bevels Left)
     // FL: 5-6-3, 10.459
     // FR: 3-4-2, 324.932
     // BL: 7-8-4, 307.178
     // BR: 1-2-1, 101.60
 
-    // 2024 Team 8145 Config (Bevels Right)     <-- Use this.
+    // 2024 Team 8145 Neo Config (Bevels Right)     <-- Use this.
     // FL: 5-6-3, 190.459
     // FR: 3-4-2, 144.932
     // BL: 7-8-4, 127.178

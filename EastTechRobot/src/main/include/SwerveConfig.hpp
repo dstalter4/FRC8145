@@ -22,6 +22,11 @@
 // C++ INCLUDES
 // (none)
 
+// Selects between using a Neo or TalonFX swerve module.
+// Only enable one define.
+//#define USE_NEO_SWERVE
+#define USE_TALONFX_SWERVE
+
 using namespace frc;
 
 
