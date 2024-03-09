@@ -201,7 +201,10 @@ void EastTechRobot::InitialStateSetup()
     // Set the swerve modules to a known angle.  This addresses an
     // issue with the Neos where setting position during constructors
     // doesn't take effect.
+    #ifdef USE_NEO_SWERVE
+    // @todo: Check this on TalonFX
     m_pSwerveDrive->HomeModules();
+    #endif
 }
 
 

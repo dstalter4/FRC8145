@@ -44,7 +44,7 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
     m_MotorGroupPosition(config.m_Position),
     m_pDriveTalon(new TalonFX(config.m_DriveMotorCanId)),
     m_pAngleTalon(new TalonFX(config.m_AngleMotorCanId)),
-    m_pAngleCanCoder(new CANcoder(config.m_CanCoderId, "canivore-120")),
+    m_pAngleCanCoder(new CANcoder(config.m_CanCoderId, "canivore-8145")),
     m_LastAngle(),
     m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA)),
     m_DriveDutyCycleOut(0.0),
