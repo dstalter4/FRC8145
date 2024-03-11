@@ -35,9 +35,9 @@
 // C++ INCLUDES
 #include "DriveConfiguration.hpp"               // for information on the drive config
 #include "EastTechController.hpp"               // for controller interaction
+#include "EastTechTalon.hpp"                    // for custom Talon control
 #include "RobotUtils.hpp"                       // for ASSERT, DEBUG_PRINTS
 #include "SwerveDrive.hpp"                      // for using swerve drive
-#include "TalonMotorGroup.hpp"                  // for Talon group motor control
 #include "ctre/phoenix6/Pigeon2.hpp"            // for PigeonIMU
 
 using namespace frc;
@@ -87,7 +87,8 @@ public:
 private:
 
     // TYPEDEFS
-    typedef EastTechTalon::MotorGroupControlMode MotorGroupControlMode;
+    typedef EastTech::Talon::MotorGroupControlMode MotorGroupControlMode;
+    typedef EastTech::Talon::TalonFxMotorController TalonFxMotorController;
     typedef EastTech::Controller::Config::Models ControllerModels;
     typedef EastTech::Controller::Config::Mappings ControllerMappings;
     typedef EastTechDriveController<EastTechCustomController> DriveControllerType;

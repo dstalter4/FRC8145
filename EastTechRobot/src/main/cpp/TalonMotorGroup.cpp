@@ -32,7 +32,7 @@
 // (none)
 
 // C++ INCLUDES
-#include "TalonMotorGroup.hpp"      // for class declaration
+#include "EastTechTalon.hpp"        // for class declaration
 
 // STATIC MEMBER DATA
 // (none)

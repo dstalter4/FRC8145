@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// @file   TalonMotorGroup.hpp
+/// @file   EastTechTalon.hpp
 /// @author David Stalter
 ///
 /// @details
@@ -9,8 +9,8 @@
 /// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef TALONMOTORGROUP_HPP
-#define TALONMOTORGROUP_HPP
+#ifndef EASTTECHTALON_HPP
+#define EASTTECHTALON_HPP
 
 // SYSTEM INCLUDES
 #include <cstdio>                               // for std::snprintf
@@ -36,7 +36,9 @@ using namespace ctre::phoenix6::signals;
 /// Talon speed controllers specific to East Tech.
 ///
 ////////////////////////////////////////////////////////////////
-namespace EastTechTalon
+namespace EastTech
+{
+namespace Talon
 {
     // Represents how a motor will be controlled
     enum MotorGroupControlMode
@@ -51,7 +53,40 @@ namespace EastTechTalon
         CUSTOM                  // Motor needs to be set later to an option above
     };
 
+    // Represents a combination of objects to use with a TalonFX motor controller
+    struct TalonFxMotorController
+    {
+        // The Phoenix 6 API requires using different objects with SetControl()
+        // function calls.  Create different possible objects to the main robot
+        // code doesn't have to worry about it.
+        TalonFX * m_pTalonFx;
+        DutyCycleOut m_DutyCycleOut;
+        PositionVoltage m_PositionVoltage;
+
+        // Constructor
+        TalonFxMotorController(int canId) :
+            m_pTalonFx(new TalonFX(canId)),
+            m_DutyCycleOut(0.0),
+            m_PositionVoltage(0.0_tr)
+        {}
+
+        // Set the output using duty cycle
+        void SetDutyCycle(double dutyCycle)
+        {
+            (void)m_pTalonFx->SetControl(m_DutyCycleOut.WithOutput(dutyCycle));
+        }
+
+        // Set the output to hold a specified position
+        void SetPositionVoltage(double angle)
+        {
+            units::angle::degree_t degrees(angle);
+            units::angle::turn_t turns(degrees);
+            (void)m_pTalonFx->SetControl(m_PositionVoltage.WithPosition(turns));
+        }
+    };
+
     static const bool CURRENT_LIMITING_ENABLED = false;
+}
 }
 
 
@@ -62,13 +97,15 @@ namespace EastTechTalon
 /// Class that provides methods for interacting with a group of
 /// Talon speed controllers.
 ///
+/// @todo: Remove template.
+///
 ////////////////////////////////////////////////////////////////
 template <class TalonType>
 class TalonMotorGroup
 {
 public:
 
-    typedef EastTechTalon::MotorGroupControlMode MotorGroupControlMode;
+    typedef EastTech::Talon::MotorGroupControlMode MotorGroupControlMode;
     
     // Constructor
     TalonMotorGroup(
@@ -88,6 +125,9 @@ public:
     
     // Function to set the speed of each motor in the group
     void Set(double value, double offset = 0.0);
+    
+    // Function to set the motor group output to hold specified angle
+    void SetAngle(double angle);
     
     // Sets the control mode of a motor in a group (intended for use with the CUSTOM group control mode)
     bool SetMotorInGroupControlMode(unsigned canId, MotorGroupControlMode controlMode);
@@ -119,6 +159,8 @@ private:
 
         // Member data
         TalonType * m_pTalon;
+        DutyCycleOut m_DutyCycleOut;
+        PositionVoltage m_PositionVoltage;
         const char * m_pName;
         MotorGroupControlMode m_ControlMode;
         unsigned m_CanId;
@@ -130,6 +172,8 @@ private:
         
         MotorInfo(const char * pName, MotorGroupControlMode controlMode, NeutralModeValue neutralMode, unsigned canId, unsigned groupNumber, bool bIsDriveMotor = false) :
             m_pTalon(new TalonType(static_cast<int>(canId))),
+            m_DutyCycleOut(0.0),
+            m_PositionVoltage(0.0_tr),
             m_pName(pName),
             m_ControlMode(controlMode),
             m_CanId(canId),
@@ -140,13 +184,13 @@ private:
         {
             m_pTalon->SetNeutralMode(neutralMode);
 
-            if (controlMode == EastTechTalon::FOLLOW_INVERSE)
+            if (controlMode == EastTech::Talon::FOLLOW_INVERSE)
             {
                 m_pTalon->SetInverted(true);
             }
 
             // @todo: Move in sensor too?
-            if (EastTechTalon::CURRENT_LIMITING_ENABLED && bIsDriveMotor)
+            if (EastTech::Talon::CURRENT_LIMITING_ENABLED && bIsDriveMotor)
             {
                 // Limits were 40.0, 55.0, 0.1
                 CurrentLimitsConfigs driveMotorCurrentLimits;
@@ -164,11 +208,11 @@ private:
         }
 
         // Helper routine for configuring some settings on follower talons
-        void SetAsFollower(unsigned leaderCanId)
+        void SetAsFollower(unsigned leaderCanId, bool bInvert)
         {
-            // Set it as a strict follower (use Follower type to allow invert control)
-            StrictFollower strictFollower(leaderCanId);
-            (void)m_pTalon->SetControl(strictFollower);
+            // Follower will honor invert control, StrictFollower ignores invert control
+            Follower follower(leaderCanId, bInvert);
+            (void)m_pTalon->SetControl(follower);
 
             // Phoenix 6 Example: Get the StatusSignal objects and call SetUpdateFrequency() on them.
             //(void)m_pTalon->GetDeviceTemp().SetUpdateFrequency(100_Hz);
@@ -258,7 +302,7 @@ TalonMotorGroup<TalonType>::TalonMotorGroup(const char * pName, unsigned numMoto
         if (i == 0U)
         {
             // Create it
-            m_pMotorsInfo[i] = new MotorInfo(pName, EastTechTalon::LEADER, neutralMode, leaderCanId, groupId, bIsDriveMotor);
+            m_pMotorsInfo[i] = new MotorInfo(pName, EastTech::Talon::LEADER, neutralMode, leaderCanId, groupId, bIsDriveMotor);
         }
         // Non-leader Talons
         else
@@ -269,9 +313,10 @@ TalonMotorGroup<TalonType>::TalonMotorGroup(const char * pName, unsigned numMoto
             // Only set follow for Talon groups that will be configured as
             // such.  The CTRE Phoenix library now passes the control mode in
             // the Set() method, so we only need to set the followers here.
-            if ((nonLeaderControlMode == EastTechTalon::FOLLOW) || (nonLeaderControlMode == EastTechTalon::FOLLOW_INVERSE))
+            if ((nonLeaderControlMode == EastTech::Talon::FOLLOW) || (nonLeaderControlMode == EastTech::Talon::FOLLOW_INVERSE))
             {
-                m_pMotorsInfo[i]->SetAsFollower(leaderCanId);
+                bool bInvert = (nonLeaderControlMode == EastTech::Talon::FOLLOW) ? false : true;
+                m_pMotorsInfo[i]->SetAsFollower(leaderCanId, bInvert);
             }
         }
     }
@@ -301,9 +346,10 @@ bool TalonMotorGroup<TalonType>::AddMotorToGroup(MotorGroupControlMode controlMo
         m_pMotorsInfo[m_NumMotors] = new MotorInfo(m_pMotorsInfo[0]->m_pName, controlMode, newMotorCanId, (m_NumMotors + 1), bIsDriveMotor);
         
         // If this Talon will be a follower, be sure to call Set() to enable it
-        if ((controlMode == EastTechTalon::FOLLOW) || (controlMode == EastTechTalon::FOLLOW_INVERSE))
+        if ((controlMode == EastTech::Talon::FOLLOW) || (controlMode == EastTech::Talon::FOLLOW_INVERSE))
         {
-            m_pMotorsInfo[m_NumMotors]->SetAsFollower(m_LeaderCanId);
+            bool bInvert = (controlMode == EastTech::Talon::FOLLOW) ? false : true;
+            m_pMotorsInfo[m_NumMotors]->SetAsFollower(m_LeaderCanId, bInvert);
         }
 
         // Increase the number of motors
@@ -339,9 +385,10 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
             m_pMotorsInfo[i]->m_ControlMode = controlMode;
 
             // If this Talon will be a follower, be sure to call Set() to enable it
-            if ((controlMode == EastTechTalon::FOLLOW) || (controlMode == EastTechTalon::FOLLOW_INVERSE))
+            if ((controlMode == EastTech::Talon::FOLLOW) || (controlMode == EastTech::Talon::FOLLOW_INVERSE))
             {
-                m_pMotorsInfo[i]->SetAsFollower(m_LeaderCanId);
+                bool bInvert = (controlMode == EastTech::Talon::FOLLOW) ? false : true;
+                m_pMotorsInfo[i]->SetAsFollower(m_LeaderCanId, bInvert);
             }
             else
             {
@@ -351,7 +398,7 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
             }
 
             // Update the inverted status.  Only FOLLOW_INVERSE uses the built-in invert.
-            if (controlMode == EastTechTalon::FOLLOW_INVERSE)
+            if (controlMode == EastTech::Talon::FOLLOW_INVERSE)
             {
                 m_pMotorsInfo[i]->m_pTalon->SetInverted(true);
             }
@@ -433,34 +480,34 @@ void TalonMotorGroup<TalonType>::Set(double value, double offset)
         // as if they need to drive in different directions).
         switch (m_pMotorsInfo[i]->m_ControlMode)
         {
-            case EastTechTalon::LEADER:
-            case EastTechTalon::INDEPENDENT:
+            case EastTech::Talon::LEADER:
+            case EastTech::Talon::INDEPENDENT:
             {
-                // The leader always gets set via percent voltage, as do
-                // motors that are independently controlled (not follow or inverse).
+                // The leader always gets set via duty cycle, as do motors
+                // that are independently controlled (not follow or inverse).
                 valueToSet = value;
                 break;
             }
-            case EastTechTalon::FOLLOW:
-            case EastTechTalon::FOLLOW_INVERSE:
+            case EastTech::Talon::FOLLOW:
+            case EastTech::Talon::FOLLOW_INVERSE:
             {
-                // Nothing to do, motor had Set() called during object construction
+                // Nothing to do, motor had SetControl() called during object construction
                 bCallSet = false;
                 break;
             }
-            case EastTechTalon::INVERSE:
+            case EastTech::Talon::INVERSE:
             {
                 // Motor is attached to drive in opposite direction of leader
                 valueToSet = -value;
                 break;
             }
-            case EastTechTalon::INDEPENDENT_OFFSET:
+            case EastTech::Talon::INDEPENDENT_OFFSET:
             {
                 // The non-leader motor has a different value in this case
                 valueToSet = value + offset;
                 break;
             }
-            case EastTechTalon::INVERSE_OFFSET:
+            case EastTech::Talon::INVERSE_OFFSET:
             {
                 // The non-leader motor has a different value in this case
                 valueToSet = -(value + offset);
@@ -477,9 +524,36 @@ void TalonMotorGroup<TalonType>::Set(double value, double offset)
         if (bCallSet)
         {
             // Set the value in the Talon
-            m_pMotorsInfo[i]->m_pTalon->Set(valueToSet);
+            m_pMotorsInfo[i]->m_pTalon->SetControl(m_pMotorsInfo[i]->m_DutyCycleOut.WithOutput(valueToSet));
         }
     }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method TalonMotorGroup::SetAngle
+///
+/// Method to set the output of a motor to hold a specified
+/// angle.
+///
+////////////////////////////////////////////////////////////////
+template <class TalonType>
+void TalonMotorGroup<TalonType>::SetAngle(double angle)
+{
+    // The first entry in the motor info array should always
+    // be a leader, so that one will be the only one updated.
+    // When holding position, we don't want to have to manage
+    // the target angles for multiple motors since it would
+    // require tracking different set points based on the
+    // encoders.  For a motor group to successfully hold
+    // position, one of them needs to be a follower.
+    // @todo: Check that this configuration is only applied to follower groups.
+
+    // Set the control output
+    units::angle::degree_t degrees(angle);
+    units::angle::turn_t turns(degrees);
+    m_pMotorsInfo[0]->m_pTalon->SetControl(m_pMotorsInfo[0]->m_PositionVoltage.WithPosition(turns));
 }
 
 
@@ -510,4 +584,4 @@ void TalonMotorGroup<TalonType>::DisplayStatusInformation()
     }
 }
 
-#endif // TALONMOTORGROUP_HPP
+#endif // EASTTECHTALON_HPP
