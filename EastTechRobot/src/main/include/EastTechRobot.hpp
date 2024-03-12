@@ -178,6 +178,17 @@ private:
     
     // Main sequence for vision processing
     void CameraSequence();
+
+    // Main sequence for intake control
+    void IntakeSequence();
+
+    // Main sequence for superstructure mechanism pivot control
+    void PivotSequence();
+
+    // Main sequence for shoot control
+    void ShootSequence();
+    void ShootSpeaker();
+    void ShootAmp();
     
     // MEMBER VARIABLES
     
@@ -193,7 +204,10 @@ private:
     SwerveDrive *                   m_pSwerveDrive;                         // Swerve drive control
     
     // Motors
-    // (none)
+    TalonFxMotorController *        m_pIntakeMotor;                         // Intake motor control
+    TalonFxMotorController *        m_pFeederMotor;                         // Feeder motor control
+    TalonMotorGroup<TalonFX> *      m_pShooterMotors;                       // Shooter motors control
+    TalonMotorGroup<TalonFX> *      m_pPivotMotors;                         // Pivot motors control
 
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
@@ -223,6 +237,8 @@ private:
     RobotMode                       m_RobotMode;                            // Keep track of the current robot state
     std::optional
     <DriverStation::Alliance>       m_AllianceColor;                        // Color reported by driver station during a match
+    bool                            m_bShootSpeaker;                        // Differentiates between shooting at the speaker or the amp
+    bool                            m_bShotInProgress;                      // Indicates whether a shot is in progress or not
     uint32_t                        m_HeartBeat;                            // Incremental counter to indicate the robot code is executing
     
     // CONSTS
@@ -247,12 +263,21 @@ private:
     static const int                SELECT_BACK_CAMERA_BUTTON               = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     
     // Aux inputs
-    static const int                AUX_TOGGLE_LEDS_BUTTON                  = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
     static const int                ESTOP_BUTTON                            = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
+    static const int                AUX_INTAKE_BUTTON                       = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
+    static const int                AUX_INTAKE_OUT_AXIS                     = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.LEFT_TRIGGER;
+    static const int                AUX_SHOOT_AXIS                          = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.RIGHT_TRIGGER;
+    static const int                AUX_PIVOT_TO_SHOOT_BUTTON               = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
+    static const int                AUX_PIVOT_TO_ZERO_BUTTON                = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
+    static const int                AUX_TOGGLE_SPEAKER_AMP_SHOOT_BUTTON     = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
+    static const int                AUX_TARE_PIVOT_ANGLE                    = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.START;
 
     // CAN Signals
     // Note: Remember to check the CAN IDs in use in SwerveDrive.hpp.
-    // (none)
+    static const unsigned           SHOOTER_MOTORS_CAN_START_ID             = 9;
+    static const unsigned           INTAKE_MOTOR_CAN_ID                     = 11;
+    static const unsigned           FEEDER_MOTOR_CAN_ID                     = 12;
+    static const unsigned           PIVOT_MOTORS_CAN_START_ID               = 13;
 
     // CANivore Signals
     // Note: IDs 1-4 are used by the CANcoders (see the
@@ -276,6 +301,13 @@ private:
 
     // Solenoids
     // (none)
+
+    // Motor speeds
+    static constexpr double         INTAKE_MOTOR_SPEED                      = -1.0;
+    static constexpr double         FEEDER_MOTOR_SPEED                      =  0.5;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_SPEED             = -0.7;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED      =  0.2;
+    static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.2;
     
     // Misc
     const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
@@ -285,6 +317,7 @@ private:
 
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
+    static const int                AXIS_INPUT_DEAD_BAND                    = 0.10;
     static const int                SCALE_TO_PERCENT                        = 100;
     static const unsigned           SINGLE_MOTOR                            = 1;
     static const unsigned           TWO_MOTORS                              = 2;

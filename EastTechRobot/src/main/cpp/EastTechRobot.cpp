@@ -39,6 +39,10 @@ EastTechRobot::EastTechRobot() :
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
     m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, "canivore-8145")),
     m_pSwerveDrive                      (new SwerveDrive(m_pPigeon)),
+    m_pIntakeMotor                      (new TalonFxMotorController(INTAKE_MOTOR_CAN_ID)),
+    m_pFeederMotor                      (new TalonFxMotorController(FEEDER_MOTOR_CAN_ID)),
+    m_pShooterMotors                    (new TalonMotorGroup<TalonFX>("Shooter", TWO_MOTORS, SHOOTER_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Coast, true)),
+    m_pPivotMotors                      (new TalonMotorGroup<TalonFX>("Pivot", TWO_MOTORS, PIVOT_MOTORS_CAN_START_ID, MotorGroupControlMode::FOLLOW_INVERSE, NeutralModeValue::Brake, true)),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pMatchModeTimer                   (new Timer()),
@@ -46,6 +50,8 @@ EastTechRobot::EastTechRobot() :
     m_CameraThread                      (RobotCamera::LimelightThread),
     m_RobotMode                         (ROBOT_MODE_NOT_SET),
     m_AllianceColor                     (DriverStation::GetAlliance()),
+    m_bShootSpeaker                     (true),
+    m_bShotInProgress                   (false),
     m_HeartBeat                         (0U)
 {
     RobotUtils::DisplayMessage("Robot constructor.");
@@ -165,6 +171,26 @@ void EastTechRobot::ConfigureMotorControllers()
     const StatorCurrentLimitConfiguration INTAKE_MOTOR_STATOR_CURRENT_LIMIT_CONFIG = {true, 5.0, 50.0, 5.0};
     pTalon->ConfigStatorCurrentLimit(INTAKE_MOTOR_STATOR_CURRENT_LIMIT_CONFIG);
     */
+
+    // Configure mechanism pivot motor controller
+    TalonFXConfiguration talonConfig;
+    talonConfig.Feedback.SensorToMechanismRatio = 25.0;
+    talonConfig.ClosedLoopGeneral.ContinuousWrap = true;
+
+    talonConfig.CurrentLimits.SupplyCurrentLimit = 25.0;
+    talonConfig.CurrentLimits.SupplyCurrentThreshold = 40.0;
+    talonConfig.CurrentLimits.SupplyTimeThreshold = 0.1;
+    talonConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+
+    talonConfig.Slot0.kP = 15.0;
+    talonConfig.Slot0.kI = 0.0;
+    talonConfig.Slot0.kD = 0.2;
+
+    (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().Apply(talonConfig);
+    (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
+
+    m_pIntakeMotor->m_pTalonFx->SetNeutralMode(NeutralModeValue::Coast);
+    m_pFeederMotor->m_pTalonFx->SetNeutralMode(NeutralModeValue::Coast);
 }
 
 
@@ -254,6 +280,10 @@ void EastTechRobot::TeleopPeriodic()
         SwerveDriveSequence();
     }
 
+    IntakeSequence();
+    ShootSequence();
+    PivotSequence();
+
     //PneumaticSequence();
     
     //CameraSequence();
@@ -274,6 +304,269 @@ void EastTechRobot::UpdateSmartDashboard()
     // @todo: Check if RobotPeriodic() is called every 20ms and use static counter.
     // Give the drive team some state information
     // Nothing to send yet
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::IntakeSequence
+///
+/// Main workflow for controlling the intake.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::IntakeSequence()
+{
+    if (m_pAuxController->GetButtonState(AUX_INTAKE_BUTTON))
+    {
+        m_pIntakeMotor->SetDutyCycle(INTAKE_MOTOR_SPEED);
+        if (!m_bShootSpeaker)
+        {
+            m_pFeederMotor->SetDutyCycle(FEEDER_MOTOR_SPEED);
+        }
+    }
+    else if (std::abs(m_pAuxController->GetAxisValue(AUX_INTAKE_OUT_AXIS)) > AXIS_INPUT_DEAD_BAND)
+    {
+        m_pIntakeMotor->SetDutyCycle(-INTAKE_MOTOR_SPEED);
+        if (!m_bShootSpeaker)
+        {
+            m_pFeederMotor->SetDutyCycle(-FEEDER_MOTOR_SPEED);
+        }
+    }
+    else
+    {
+        m_pIntakeMotor->SetDutyCycle(0.0);
+
+        // Only turn off the feeder if a shot is not in progress (for the amp use case)
+        if (!m_bShootSpeaker && !m_bShotInProgress)
+        {
+            m_pFeederMotor->SetDutyCycle(0.0);
+        }
+    }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::PivotSequence
+///
+/// Main workflow for pivoting the superstructure mechanism.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::PivotSequence()
+{
+    static TalonFX * pPivotLeaderTalon = m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID);
+    static PositionVoltage pivotPositionVoltage(0.0_tr);
+
+    if (m_pAuxController->DetectButtonChange(AUX_TARE_PIVOT_ANGLE))
+    {
+        (void)pPivotLeaderTalon->GetConfigurator().SetPosition(0.0_tr);
+    }
+
+    units::angle::turn_t pivotAngleTurns = pPivotLeaderTalon->GetPosition().GetValue();
+    units::angle::degree_t pivotAngleDegrees = pivotAngleTurns;
+    SmartDashboard::PutNumber("Pivot angle", pivotAngleDegrees.value());
+
+    // 50 degrees: robot aligned to speaker base
+    // 90 degrees: robot aligned to amp base
+
+    units::angle::degree_t pivotTargetDegrees = pivotAngleDegrees;
+    if (m_pAuxController->DetectButtonChange(AUX_PIVOT_TO_SHOOT_BUTTON))
+    {
+        if (m_bShootSpeaker)
+        {
+            pivotTargetDegrees = -50.0_deg;
+        }
+        else
+        {
+            pivotTargetDegrees = -90.0_deg;
+        }
+        (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(pivotTargetDegrees));
+    }
+    else if (m_pAuxController->DetectButtonChange(AUX_PIVOT_TO_ZERO_BUTTON))
+    {
+        pivotTargetDegrees = 0.0_deg;
+        (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(pivotTargetDegrees));
+    }
+    else
+    {
+    }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::ShootSequence
+///
+/// Main workflow for handling shoot requests.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::ShootSequence()
+{
+
+    if (m_pAuxController->DetectButtonChange(AUX_TOGGLE_SPEAKER_AMP_SHOOT_BUTTON))
+    {
+        m_bShootSpeaker = !m_bShootSpeaker;
+    }
+
+    SmartDashboard::PutBoolean("Shoot speaker", m_bShootSpeaker);
+
+    if (m_bShootSpeaker)
+    {
+        ShootSpeaker();
+    }
+    else
+    {
+        ShootAmp();
+    }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::ShootSpeaker
+///
+/// Main workflow for shooting into the speaker.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::ShootSpeaker()
+{
+    enum SpeakerShootState
+    {
+        NOT_SHOOTING,
+        RAMPING_UP,
+        SHOOTING
+    };
+    static SpeakerShootState shootState = NOT_SHOOTING;
+    static Timer * pShootRampUpTimer = new Timer();
+
+    double feederSpeed = 0.0;
+    double shootSpeed = 0.0;
+    double shootSpeedOffset = 0.0;
+    if (std::abs(m_pAuxController->GetAxisValue(AUX_SHOOT_AXIS)) > AXIS_INPUT_DEAD_BAND)
+    {
+        shootSpeed = SHOOTER_MOTOR_SPEAKER_SPEED;
+        shootSpeedOffset = SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED;
+        switch (shootState)
+        {
+            case NOT_SHOOTING:
+            {
+                pShootRampUpTimer->Reset();
+                pShootRampUpTimer->Start();
+                shootState = RAMPING_UP;
+                break;
+            }
+            case RAMPING_UP:
+            {
+                if (pShootRampUpTimer->Get() > 1.0_s)
+                {
+                    pShootRampUpTimer->Stop();
+                    shootState = SHOOTING;
+                }
+                break;
+            }
+            case SHOOTING:
+            {
+                feederSpeed = FEEDER_MOTOR_SPEED;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        shootState = NOT_SHOOTING;
+    }
+
+    m_pShooterMotors->Set(shootSpeed, shootSpeedOffset);
+    m_pFeederMotor->SetDutyCycle(feederSpeed);
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::ShootAmp
+///
+/// Main workflow for shooting into the amp.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::ShootAmp()
+{
+    
+    enum AmpShootState
+    {
+        NOT_SHOOTING,
+        BACK_FEED,
+        RAMPING_UP,
+        SHOOTING
+    };
+    static AmpShootState shootState = NOT_SHOOTING;
+    static Timer * pShootRampUpTimer = new Timer();
+
+    double feederSpeed = 0.0;
+    double shootSpeed = 0.0;
+    double shootSpeedOffset = 0.0;
+    if (std::abs(m_pAuxController->GetAxisValue(AUX_SHOOT_AXIS)) > AXIS_INPUT_DEAD_BAND)
+    {
+        // Start with some default speeds, the cases will override as needed.
+        // Feeder is usually custom set.  Offset is always zero for the amp.
+        shootSpeed = SHOOTER_MOTOR_AMP_SPEED;
+        switch (shootState)
+        {
+            case NOT_SHOOTING:
+            {
+                pShootRampUpTimer->Reset();
+                pShootRampUpTimer->Start();
+                m_bShotInProgress = true;
+                shootState = BACK_FEED;
+                break;
+            }
+            case BACK_FEED:
+            {
+                // Feeder on reverse, shooter off
+                feederSpeed = -FEEDER_MOTOR_SPEED;
+                shootSpeed = 0.0;
+
+                if (pShootRampUpTimer->Get() > 0.25_s)
+                {
+                    pShootRampUpTimer->Reset();
+                    shootState = RAMPING_UP;
+                }
+                break;
+            }
+            case RAMPING_UP:
+            {
+                // Uses default speeds (feeder off, shooter on)
+                if (pShootRampUpTimer->Get() > 0.5_s)
+                {
+                    pShootRampUpTimer->Stop();
+                    shootState = SHOOTING;
+                }
+                break;
+            }
+            case SHOOTING:
+            {
+                // Turn the feeder on too
+                feederSpeed = FEEDER_MOTOR_SPEED;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+    else
+    {
+        m_bShotInProgress = false;
+        shootState = NOT_SHOOTING;
+    }
+
+    m_pShooterMotors->Set(shootSpeed, shootSpeedOffset);
+    if (m_bShotInProgress)
+    {
+        m_pFeederMotor->SetDutyCycle(feederSpeed);
+    }
 }
 
 
