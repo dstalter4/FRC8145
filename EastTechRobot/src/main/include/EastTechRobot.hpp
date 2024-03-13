@@ -307,7 +307,7 @@ private:
     static constexpr double         FEEDER_MOTOR_SPEED                      =  0.5;
     static constexpr double         SHOOTER_MOTOR_SPEAKER_SPEED             = -0.7;
     static constexpr double         SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED      =  0.2;
-    static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.25;
+    static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.30;
     
     // Misc
     const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
@@ -317,7 +317,7 @@ private:
     static constexpr units::angle::degree_t PIVOT_ANGLE_RUNTIME_BASE        =  3.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_INTAKE_NOTE         = 60.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_SPEAKER    = 45.0_deg;
-    static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_AMP        = 95.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_AMP        = 92.0_deg;
 
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
