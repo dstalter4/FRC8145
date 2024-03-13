@@ -187,8 +187,6 @@ private:
 
     // Main sequence for shoot control
     void ShootSequence();
-    void ShootSpeaker();
-    void ShootAmp();
     
     // MEMBER VARIABLES
     
@@ -239,6 +237,8 @@ private:
     <DriverStation::Alliance>       m_AllianceColor;                        // Color reported by driver station during a match
     bool                            m_bShootSpeaker;                        // Differentiates between shooting at the speaker or the amp
     bool                            m_bShotInProgress;                      // Indicates whether a shot is in progress or not
+    bool                            m_bIntakeInProgress;                    // Indicates whether a note is being picked up
+    units::angle::degree_t          m_PivotTargetDegrees;                   // Tracks the desired angle position of the superstructure mechanism
     uint32_t                        m_HeartBeat;                            // Incremental counter to indicate the robot code is executing
     
     // CONSTS
@@ -264,9 +264,9 @@ private:
     
     // Aux inputs
     static const int                ESTOP_BUTTON                            = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
-    static const int                AUX_INTAKE_BUTTON                       = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
-    static const int                AUX_INTAKE_OUT_AXIS                     = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.LEFT_TRIGGER;
     static const int                AUX_SHOOT_AXIS                          = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.RIGHT_TRIGGER;
+    static const int                AUX_INTAKE_AXIS                         = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.LEFT_TRIGGER;
+    static const int                AUX_INTAKE_OUT_BUTTON                   = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
     static const int                AUX_PIVOT_TO_SHOOT_BUTTON               = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
     static const int                AUX_PIVOT_TO_ZERO_BUTTON                = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
     static const int                AUX_TOGGLE_SPEAKER_AMP_SHOOT_BUTTON     = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
@@ -307,13 +307,17 @@ private:
     static constexpr double         FEEDER_MOTOR_SPEED                      =  0.5;
     static constexpr double         SHOOTER_MOTOR_SPEAKER_SPEED             = -0.7;
     static constexpr double         SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED      =  0.2;
-    static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.2;
+    static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.25;
     
     // Misc
     const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
     const std::string               AUTO_ROUTINE_2_STRING                   = "Autonomous Routine 2";
     const std::string               AUTO_ROUTINE_3_STRING                   = "Autonomous Routine 3";
     const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous Test Routine";
+    static constexpr units::angle::degree_t PIVOT_ANGLE_RUNTIME_BASE        =  3.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_INTAKE_NOTE         = 60.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_SPEAKER    = 45.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_AMP        = 95.0_deg;
 
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
