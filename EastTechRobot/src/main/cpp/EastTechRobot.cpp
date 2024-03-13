@@ -51,6 +51,7 @@ EastTechRobot::EastTechRobot() :
     m_RobotMode                         (ROBOT_MODE_NOT_SET),
     m_AllianceColor                     (DriverStation::GetAlliance()),
     m_bShootSpeaker                     (true),
+    m_bShootSpeakerClose                (true),
     m_bShotInProgress                   (false),
     m_bIntakeInProgress                 (false),
     m_PivotTargetDegrees                (0.0_deg),
@@ -210,6 +211,8 @@ void EastTechRobot::InitialStateSetup()
     // First reset any member data
     ResetMemberData();
 
+    (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
+
     // Stop/clear any timers, just in case
     // @todo: Make this a dedicated function.
     m_pMatchModeTimer->Stop();
@@ -332,11 +335,22 @@ void EastTechRobot::IntakeSequence()
         m_PivotTargetDegrees = PIVOT_ANGLE_INTAKE_NOTE;
         m_bIntakeInProgress = true;
     }
+    else if (m_pAuxController->GetButtonState(AUX_INTAKE_AT_SOURCE_BUTTON))
+    {
+        // Same angle as when touching the amp
+        m_pFeederMotor->SetDutyCycle(FEEDER_MOTOR_SPEED);
+        m_pShooterMotors->Set(SHOOTER_MOTOR_LOAD_AT_SOURCE_SPEED);
+        m_PivotTargetDegrees = PIVOT_ANGLE_TOUCHING_AMP;
+        m_bIntakeInProgress = true;
+    }
     else
     {
         m_pIntakeMotor->SetDutyCycle(0.0);
         m_pFeederMotor->SetDutyCycle(0.0);
-        m_PivotTargetDegrees = PIVOT_ANGLE_RUNTIME_BASE;
+        if (!m_bShotInProgress)
+        {
+            m_PivotTargetDegrees = PIVOT_ANGLE_RUNTIME_BASE;
+        }
         m_bIntakeInProgress = false;
     }
 }
@@ -362,12 +376,27 @@ void EastTechRobot::PivotSequence()
     units::angle::turn_t pivotAngleTurns = pPivotLeaderTalon->GetPosition().GetValue();
     units::angle::degree_t pivotAngleDegrees = pivotAngleTurns;
     SmartDashboard::PutNumber("Pivot angle", pivotAngleDegrees.value());
+    SmartDashboard::PutNumber("Target pivot angle", m_PivotTargetDegrees.value());
 
     if (m_bShotInProgress)
     {
         // If an intake is in progress, it will set the target pivot angle.
         // If an intake is not in progress, move to the target position for amp or speaker
-        m_PivotTargetDegrees = (m_bShootSpeaker) ? PIVOT_ANGLE_TOUCHING_SPEAKER : PIVOT_ANGLE_TOUCHING_AMP;
+        if (m_bShootSpeaker)
+        {
+            if (m_bShootSpeakerClose)
+            {
+                m_PivotTargetDegrees = PIVOT_ANGLE_TOUCHING_SPEAKER;
+            }
+            else
+            {
+                m_PivotTargetDegrees = PIVOT_ANGLE_FROM_PODIUM;
+            }
+        }
+        else
+        {
+            m_PivotTargetDegrees = PIVOT_ANGLE_TOUCHING_AMP;
+        }
     }
     (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(m_PivotTargetDegrees));
 }
@@ -386,8 +415,13 @@ void EastTechRobot::ShootSequence()
     {
         m_bShootSpeaker = !m_bShootSpeaker;
     }
+    if (m_pAuxController->DetectButtonChange(AUX_TOGGLE_SPEAKER_SHOOT_CLOSE) && m_bShootSpeaker)
+    {
+        m_bShootSpeakerClose = !m_bShootSpeakerClose;
+    }
 
     SmartDashboard::PutBoolean("Shoot speaker", m_bShootSpeaker);
+    SmartDashboard::PutBoolean("Speaker close", m_bShootSpeakerClose);
 
     enum ShootState
     {
@@ -497,7 +531,10 @@ void EastTechRobot::ShootSequence()
         // Feeder motor is not disabled because it is controlled
         // by the intake sequence.
         pShootTimer->Stop();
-        m_pShooterMotors->Set(0.0, 0.0);
+        if (!m_bIntakeInProgress)
+        {
+            m_pShooterMotors->Set(0.0, 0.0);
+        }
         m_bShotInProgress = false;
         shootState = NOT_SHOOTING;
     }
