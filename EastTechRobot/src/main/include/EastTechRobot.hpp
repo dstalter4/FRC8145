@@ -184,6 +184,7 @@ private:
 
     // Main sequence for superstructure mechanism pivot control
     void PivotSequence();
+    void CheckAndUpdateAmpValues();
 
     // Main sequence for shoot control
     void ShootSequence();
@@ -240,6 +241,8 @@ private:
     bool                            m_bShotInProgress;                      // Indicates whether a shot is in progress or not
     bool                            m_bIntakeInProgress;                    // Indicates whether a note is being picked up
     units::angle::degree_t          m_PivotTargetDegrees;                   // Tracks the desired angle position of the superstructure mechanism
+    units::angle::degree_t          m_AmpTargetDegrees;                     // The current target angle for the pivot mechanism when shooting at the amp
+    double                          m_AmpTargetSpeed;                       // The current target speed for the shooter motors when shooting at the amp
     uint32_t                        m_HeartBeat;                            // Incremental counter to indicate the robot code is executing
     
     // CONSTS
@@ -322,6 +325,7 @@ private:
     static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_SPEAKER    = 48.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_FROM_PODIUM         = 30.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_AMP        = 92.0_deg;
+    static constexpr units::angle::degree_t SHOOTER_STEP_ANGLE              =  2.0_deg;
 
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
