@@ -310,6 +310,7 @@ private:
     static constexpr double         SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED      =  0.2;
     static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.25;
     static constexpr double         SHOOTER_MOTOR_LOAD_AT_SOURCE_SPEED      =  0.30;
+    static constexpr double         SHOOTER_STEP_SPEED                      =  0.05;
     
     // Misc
     const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
