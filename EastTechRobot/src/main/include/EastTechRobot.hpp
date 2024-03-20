@@ -188,6 +188,9 @@ private:
 
     // Main sequence for shoot control
     void ShootSequence();
+
+    // Main sequence for lifting the robot
+    void LiftSequence();
     
     // MEMBER VARIABLES
     
@@ -207,6 +210,7 @@ private:
     TalonFxMotorController *        m_pFeederMotor;                         // Feeder motor control
     TalonMotorGroup<TalonFX> *      m_pShooterMotors;                       // Shooter motors control
     TalonMotorGroup<TalonFX> *      m_pPivotMotors;                         // Pivot motors control
+    TalonMotorGroup<TalonFX> *      m_pLiftMotors;                          // Lift motors control
 
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
@@ -259,6 +263,7 @@ private:
     static const int                AUX_JOYSTICK_PORT                       = 1;
 
     // Driver inputs
+    static const int                DRIVE_LIFT_ROBOT_BUTTON                 = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
     static const int                FIELD_RELATIVE_TOGGLE_BUTTON            = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
     static const int                ZERO_GYRO_YAW_BUTTON                    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
     static const int                CAMERA_TOGGLE_FULL_PROCESSING_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
@@ -282,6 +287,7 @@ private:
     static const unsigned           INTAKE_MOTOR_CAN_ID                     = 11;
     static const unsigned           FEEDER_MOTOR_CAN_ID                     = 12;
     static const unsigned           PIVOT_MOTORS_CAN_START_ID               = 13;
+    static const unsigned           LIFT_MOTORS_CAN_START_ID                = 15;
 
     // CANivore Signals
     // Note: IDs 1-4 are used by the CANcoders (see the
@@ -314,6 +320,7 @@ private:
     static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.25;
     static constexpr double         SHOOTER_MOTOR_LOAD_AT_SOURCE_SPEED      =  0.30;
     static constexpr double         SHOOTER_STEP_SPEED                      =  0.05;
+    static constexpr double         LIFT_MOTOR_SPEED                        =  0.50;
     
     // Misc
     const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";

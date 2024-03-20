@@ -41,8 +41,9 @@ EastTechRobot::EastTechRobot() :
     m_pSwerveDrive                      (new SwerveDrive(m_pPigeon)),
     m_pIntakeMotor                      (new TalonFxMotorController(INTAKE_MOTOR_CAN_ID)),
     m_pFeederMotor                      (new TalonFxMotorController(FEEDER_MOTOR_CAN_ID)),
-    m_pShooterMotors                    (new TalonMotorGroup<TalonFX>("Shooter", TWO_MOTORS, SHOOTER_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Coast, true)),
-    m_pPivotMotors                      (new TalonMotorGroup<TalonFX>("Pivot", TWO_MOTORS, PIVOT_MOTORS_CAN_START_ID, MotorGroupControlMode::FOLLOW_INVERSE, NeutralModeValue::Brake, true)),
+    m_pShooterMotors                    (new TalonMotorGroup<TalonFX>("Shooter", TWO_MOTORS, SHOOTER_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Coast, false)),
+    m_pPivotMotors                      (new TalonMotorGroup<TalonFX>("Pivot", TWO_MOTORS, PIVOT_MOTORS_CAN_START_ID, MotorGroupControlMode::FOLLOW_INVERSE, NeutralModeValue::Brake, false)),
+    m_pLiftMotors                       (new TalonMotorGroup<TalonFX>("Lift", TWO_MOTORS, LIFT_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Brake, false)),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pMatchModeTimer                   (new Timer()),
@@ -290,6 +291,7 @@ void EastTechRobot::TeleopPeriodic()
     IntakeSequence();
     ShootSequence();
     PivotSequence();
+    LiftSequence();
     CheckAndUpdateAmpValues();
 
     //PneumaticSequence();
@@ -594,6 +596,26 @@ void EastTechRobot::CheckAndUpdateAmpValues()
     }
     SmartDashboard::PutNumber("Amp speed", m_AmpTargetSpeed);
     SmartDashboard::PutNumber("Amp angle", m_AmpTargetDegrees.value());
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::LiftSequence
+///
+/// Main workflow for handling lift requests.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::LiftSequence()
+{
+    if (m_pDriveController->GetButtonState(DRIVE_LIFT_ROBOT_BUTTON))
+    {
+        m_pLiftMotors->Set(LIFT_MOTOR_SPEED);
+    }
+    else
+    {
+        m_pLiftMotors->Set(0.0);
+    }
 }
 
 
