@@ -33,7 +33,7 @@ void EastTechRobot::AutonomousRoutine2()
     PositionVoltage pivotPositionVoltage(0.0_tr);
 
     // First start ramping up the shooter motors
-    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
+    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
 
     // Pivot the mechanism to the desired angle
     (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_TOUCHING_SPEAKER));

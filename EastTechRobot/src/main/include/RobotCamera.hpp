@@ -118,6 +118,9 @@ public:
     // Vision thread for using a limelight camera
     static void LimelightThread();
 
+    // Release the vision processing thread
+    inline static void ReleaseThread();
+
 private:
     
     // Create the camera objects for any configured cameras
@@ -254,6 +257,7 @@ private:
     // Misc
     static std::vector<VisionTargetReport>      m_ContourTargetReports;             // Stores information about the contours currently visible
     static VisionTargetReport                   m_VisionTargetReport;               // Information about the vision target
+    static bool                                 m_bThreadReleased;                  // Indicates whether the main robot program has released the vision thread
     static bool                                 m_bDoFullProcessing;                // Indicates whether or not full image processing should occur
     static unsigned                             m_CameraHeartBeat;                  // Keep alive for the camera thread
     
@@ -282,6 +286,23 @@ private:
 
 
 ////////////////////////////////////////////////////////////////
+/// @method RobotCamera::ReleaseThread
+///
+/// Releases the vision processing thread for further
+/// initialization.  The vision thread is created from the robot
+/// constructor, so some things may not be fully initialized
+/// before it executes.  Use this to have the robot program
+/// dictate when it is safe to continue.
+///
+////////////////////////////////////////////////////////////////
+inline void RobotCamera::ReleaseThread()
+{
+    m_bThreadReleased = true;
+}
+
+
+
+////////////////////////////////////////////////////////////////
 /// @method RobotCamera::SetLimelightPipeline
 ///
 /// This method sets the pipeline used by the limelight camera.
@@ -289,7 +310,14 @@ private:
 ////////////////////////////////////////////////////////////////
 inline void RobotCamera::SetLimelightPipeline(int32_t pipelineNum)
 {
-    m_pLimelightNetworkTable->PutNumber("pipeline", pipelineNum);
+    if (m_pLimelightNetworkTable.get() != nullptr)
+    {
+        m_pLimelightNetworkTable->PutNumber("pipeline", pipelineNum);
+    }
+    else
+    {
+        RobotUtils::DisplayFormattedMessage("Limelight network table unavailble.  Pipeline %d not set!\n", pipelineNum);
+    }
 }
 
 
@@ -302,7 +330,14 @@ inline void RobotCamera::SetLimelightPipeline(int32_t pipelineNum)
 ////////////////////////////////////////////////////////////////
 inline void RobotCamera::SetLimelightMode(LimelightMode mode)
 {
-    m_pLimelightNetworkTable->PutNumber("camMode", static_cast<int>(mode));
+    if (m_pLimelightNetworkTable.get() != nullptr)
+    {
+        m_pLimelightNetworkTable->PutNumber("camMode", static_cast<int>(mode));
+    }
+    else
+    {
+        RobotUtils::DisplayFormattedMessage("Limelight network table unavailble.  Camera mode %d not set!\n", static_cast<int>(mode));
+    }
 }
 
 
@@ -315,7 +350,14 @@ inline void RobotCamera::SetLimelightMode(LimelightMode mode)
 ////////////////////////////////////////////////////////////////
 inline void RobotCamera::SetLimelightLedMode(LimelightLedMode ledMode)
 {
-    m_pLimelightNetworkTable->PutNumber("ledMode", static_cast<int>(ledMode));
+    if (m_pLimelightNetworkTable.get() != nullptr)
+    {
+        m_pLimelightNetworkTable->PutNumber("ledMode", static_cast<int>(ledMode));
+    }
+    else
+    {
+        RobotUtils::DisplayFormattedMessage("Limelight network table unavailble.  Led mode %d not set!\n", static_cast<int>(ledMode));
+    }
 }
 
 

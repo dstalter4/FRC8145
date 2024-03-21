@@ -210,7 +210,7 @@ private:
     TalonFxMotorController *        m_pFeederMotor;                         // Feeder motor control
     TalonMotorGroup<TalonFX> *      m_pShooterMotors;                       // Shooter motors control
     TalonMotorGroup<TalonFX> *      m_pPivotMotors;                         // Pivot motors control
-    TalonMotorGroup<TalonFX> *      m_pLiftMotors;                          // Lift motors control
+    EastTech::Talon::EmptyTalonFx * m_pLiftMotors;                          // Lift motors control
 
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
@@ -240,10 +240,12 @@ private:
     RobotMode                       m_RobotMode;                            // Keep track of the current robot state
     std::optional
     <DriverStation::Alliance>       m_AllianceColor;                        // Color reported by driver station during a match
+    bool                            m_bCameraAlignInProgress;               // Indicates if an automatic camera align is in progress
     bool                            m_bShootSpeaker;                        // Differentiates between shooting at the speaker or the amp
     bool                            m_bShootSpeakerClose;                   // Indicates if shooting the speaker from close up or further away
     bool                            m_bShotInProgress;                      // Indicates whether a shot is in progress or not
     bool                            m_bIntakeInProgress;                    // Indicates whether a note is being picked up
+    bool                            m_bPivotTareInProgress;                 // Indicates whether or not a tare of the pivot mechanism is in progress
     units::angle::degree_t          m_PivotTargetDegrees;                   // Tracks the desired angle position of the superstructure mechanism
     units::angle::degree_t          m_AmpTargetDegrees;                     // The current target angle for the pivot mechanism when shooting at the amp
     double                          m_AmpTargetSpeed;                       // The current target speed for the shooter motors when shooting at the amp
@@ -264,6 +266,7 @@ private:
 
     // Driver inputs
     static const int                DRIVE_LIFT_ROBOT_BUTTON                 = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
+    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
     static const int                FIELD_RELATIVE_TOGGLE_BUTTON            = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
     static const int                ZERO_GYRO_YAW_BUTTON                    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
     static const int                CAMERA_TOGGLE_FULL_PROCESSING_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
@@ -280,6 +283,7 @@ private:
     static const int                AUX_TOGGLE_SPEAKER_AMP_SHOOT_BUTTON     = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.UP_BUTTON;
     static const int                AUX_INTAKE_AT_SOURCE_BUTTON             = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
     static const int                AUX_TARE_PIVOT_ANGLE                    = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.START;
+    static const int                AUX_MANUAL_PIVOT_AXIS                   = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.LEFT_Y_AXIS;
 
     // CAN Signals
     // Note: Remember to check the CAN IDs in use in SwerveDrive.hpp.
@@ -315,12 +319,14 @@ private:
     // Motor speeds
     static constexpr double         INTAKE_MOTOR_SPEED                      = -1.0;
     static constexpr double         FEEDER_MOTOR_SPEED                      =  0.5;
-    static constexpr double         SHOOTER_MOTOR_SPEAKER_SPEED             = -0.7;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED       = -0.5;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_FAR_SPEED         = -0.7;
     static constexpr double         SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED      =  0.2;
     static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.25;
     static constexpr double         SHOOTER_MOTOR_LOAD_AT_SOURCE_SPEED      =  0.30;
     static constexpr double         SHOOTER_STEP_SPEED                      =  0.05;
-    static constexpr double         LIFT_MOTOR_SPEED                        =  0.50;
+    static constexpr double         LIFT_MOTOR_SPEED                        =  0.70;
+    static constexpr double         LIFT_MOTOR_OFFSET_SPEED                 =  0.15;
     
     // Misc
     const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
@@ -328,15 +334,14 @@ private:
     const std::string               AUTO_ROUTINE_3_STRING                   = "Autonomous Routine 3";
     const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous Test Routine";
     static constexpr units::angle::degree_t PIVOT_ANGLE_RUNTIME_BASE        =  3.0_deg;
-    static constexpr units::angle::degree_t PIVOT_ANGLE_INTAKE_NOTE         = 60.0_deg;
-    static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_SPEAKER    = 48.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_INTAKE_NOTE         = 30.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_SPEAKER    = 45.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_FROM_PODIUM         = 30.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_AMP        = 92.0_deg;
     static constexpr units::angle::degree_t SHOOTER_STEP_ANGLE              =  2.0_deg;
 
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
-    static const int                AXIS_INPUT_DEAD_BAND                    = 0.10;
     static const int                SCALE_TO_PERCENT                        = 100;
     static const unsigned           SINGLE_MOTOR                            = 1;
     static const unsigned           TWO_MOTORS                              = 2;
@@ -349,6 +354,9 @@ private:
     static constexpr double         JOYSTICK_TRIM_LOWER_LIMIT               = -0.05;
     static constexpr double         SWERVE_ROTATE_SLOW_JOYSTICK_THRESHOLD   =  0.10;
     static constexpr double         SWERVE_ROTATE_SLOW_SPEED                =  0.10;
+    static constexpr double         AXIS_INPUT_DEAD_BAND                    =  0.10;
+    static constexpr double         LIFT_MAX_ROLL_DEGREES                   =  5.00;
+    static constexpr double         LIFT_OFFSET_STOP_POINT_DEGREES          =  0.50;
 
     static constexpr units::second_t    SAFETY_TIMER_MAX_VALUE_S            =  5.00_s;
 

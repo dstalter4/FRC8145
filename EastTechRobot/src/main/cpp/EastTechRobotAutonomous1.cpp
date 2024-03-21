@@ -33,13 +33,13 @@ void EastTechRobot::AutonomousRoutine1()
     PositionVoltage pivotPositionVoltage(0.0_tr);
 
     // First start ramping up the shooter motors
-    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
+    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
 
     // Pivot the mechanism to the desired angle
     (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_TOUCHING_SPEAKER));
 
     // Wait a bit for everything to be ready
-    AutonomousDelay(1.0_s);
+    AutonomousDelay(1.5_s);
 
     // Feeder motor to take the shot
     m_pFeederMotor->SetDutyCycle(FEEDER_MOTOR_SPEED);
@@ -61,11 +61,11 @@ void EastTechRobot::AutonomousRoutine1()
 
     // Should be in position, go through shooting again.  Back feed real quick, ramp up, feed to shoot.
     m_pFeederMotor->SetDutyCycle(-FEEDER_MOTOR_SPEED);
-    AutonomousDelay(0.5_s);
-    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
+    AutonomousDelay(0.15_s);
+    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
     AutonomousDelay(1.0_s);
     m_pFeederMotor->SetDutyCycle(FEEDER_MOTOR_SPEED);
-    AutonomousDelay(0.5_s);
+    AutonomousDelay(1.0_s);
 
     // Everything off
     m_pFeederMotor->SetDutyCycle(0.0);

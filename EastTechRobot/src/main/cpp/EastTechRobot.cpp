@@ -43,7 +43,7 @@ EastTechRobot::EastTechRobot() :
     m_pFeederMotor                      (new TalonFxMotorController(FEEDER_MOTOR_CAN_ID)),
     m_pShooterMotors                    (new TalonMotorGroup<TalonFX>("Shooter", TWO_MOTORS, SHOOTER_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Coast, false)),
     m_pPivotMotors                      (new TalonMotorGroup<TalonFX>("Pivot", TWO_MOTORS, PIVOT_MOTORS_CAN_START_ID, MotorGroupControlMode::FOLLOW_INVERSE, NeutralModeValue::Brake, false)),
-    m_pLiftMotors                       (new TalonMotorGroup<TalonFX>("Lift", TWO_MOTORS, LIFT_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Brake, false)),
+    m_pLiftMotors                       (new EastTech::Talon::EmptyTalonFx("Lift", TWO_MOTORS, LIFT_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Brake, false)),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pMatchModeTimer                   (new Timer()),
@@ -51,10 +51,12 @@ EastTechRobot::EastTechRobot() :
     m_CameraThread                      (RobotCamera::LimelightThread),
     m_RobotMode                         (ROBOT_MODE_NOT_SET),
     m_AllianceColor                     (DriverStation::GetAlliance()),
+    m_bCameraAlignInProgress            (false),
     m_bShootSpeaker                     (true),
     m_bShootSpeakerClose                (true),
     m_bShotInProgress                   (false),
     m_bIntakeInProgress                 (false),
+    m_bPivotTareInProgress              (false),
     m_PivotTargetDegrees                (0.0_deg),
     m_AmpTargetDegrees                  (PIVOT_ANGLE_TOUCHING_AMP),
     m_AmpTargetSpeed                    (SHOOTER_MOTOR_AMP_SPEED),
@@ -79,9 +81,8 @@ EastTechRobot::EastTechRobot() :
     ConfigureMotorControllers();
 
     // Spawn the vision thread
-    // @todo: Use a control variable to prevent the threads from executing too soon.
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
-    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::ARRAY_OFF);
+    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
     m_CameraThread.detach();
 }
 
@@ -179,21 +180,31 @@ void EastTechRobot::ConfigureMotorControllers()
     */
 
     // Configure mechanism pivot motor controller
-    TalonFXConfiguration talonConfig;
-    talonConfig.Feedback.SensorToMechanismRatio = 25.0;
-    talonConfig.ClosedLoopGeneral.ContinuousWrap = true;
+    TalonFXConfiguration pivotTalonConfig;
+    pivotTalonConfig.Feedback.SensorToMechanismRatio = 25.0;
+    pivotTalonConfig.ClosedLoopGeneral.ContinuousWrap = true;
 
-    talonConfig.CurrentLimits.SupplyCurrentLimit = 25.0;
-    talonConfig.CurrentLimits.SupplyCurrentThreshold = 40.0;
-    talonConfig.CurrentLimits.SupplyTimeThreshold = 0.1;
-    talonConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    pivotTalonConfig.CurrentLimits.SupplyCurrentLimit = 25.0;
+    pivotTalonConfig.CurrentLimits.SupplyCurrentThreshold = 40.0;
+    pivotTalonConfig.CurrentLimits.SupplyTimeThreshold = 0.1;
+    pivotTalonConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-    talonConfig.Slot0.kP = 18.0;
-    talonConfig.Slot0.kI = 0.0;
-    talonConfig.Slot0.kD = 0.1;
+    pivotTalonConfig.Slot0.kP = 18.0;
+    pivotTalonConfig.Slot0.kI = 0.0;
+    pivotTalonConfig.Slot0.kD = 0.1;
 
-    (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().Apply(talonConfig);
+    (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().Apply(pivotTalonConfig);
     (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
+
+    // Configure lift motor controller
+    TalonFXConfiguration liftTalonConfig;
+    liftTalonConfig.Feedback.SensorToMechanismRatio = 25.0;
+    liftTalonConfig.ClosedLoopGeneral.ContinuousWrap = true;
+
+    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID)->GetConfigurator().Apply(liftTalonConfig);
+    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
+    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID + 1)->GetConfigurator().Apply(liftTalonConfig);
+    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID + 1)->GetConfigurator().SetPosition(0.0_tr);
 
     m_pIntakeMotor->m_pTalonFx->SetNeutralMode(NeutralModeValue::Coast);
     m_pFeederMotor->m_pTalonFx->SetNeutralMode(NeutralModeValue::Coast);
@@ -215,6 +226,8 @@ void EastTechRobot::InitialStateSetup()
     ResetMemberData();
 
     (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
+    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
+    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID + 1)->GetConfigurator().SetPosition(0.0_tr);
 
     // Stop/clear any timers, just in case
     // @todo: Make this a dedicated function.
@@ -225,6 +238,9 @@ void EastTechRobot::InitialStateSetup()
     
     // Just in case constructor was called before these were set (likely the case)
     m_AllianceColor = DriverStation::GetAlliance();
+
+    // Indicate the camera thread can continue
+    RobotCamera::ReleaseThread();
 
     // Clear the debug output pin
     m_pDebugOutput->Set(false);
@@ -261,7 +277,7 @@ void EastTechRobot::TeleopInit()
     // Tele-op won't do detailed processing of the images unless instructed to
     RobotCamera::SetFullProcessing(false);
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
-    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::ARRAY_OFF);
+    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
 
     // Start the mode timer for teleop
     m_pMatchModeTimer->Start();
@@ -291,12 +307,12 @@ void EastTechRobot::TeleopPeriodic()
     IntakeSequence();
     ShootSequence();
     PivotSequence();
-    LiftSequence();
+    //LiftSequence();
     CheckAndUpdateAmpValues();
 
     //PneumaticSequence();
     
-    //CameraSequence();
+    CameraSequence();
 
     UpdateSmartDashboard();
 }
@@ -352,7 +368,7 @@ void EastTechRobot::IntakeSequence()
     {
         m_pIntakeMotor->SetDutyCycle(0.0);
         m_pFeederMotor->SetDutyCycle(0.0);
-        if (!m_bShotInProgress)
+        if (!m_bShotInProgress && !m_bPivotTareInProgress && !m_bCameraAlignInProgress)
         {
             m_PivotTargetDegrees = PIVOT_ANGLE_RUNTIME_BASE;
         }
@@ -371,11 +387,25 @@ void EastTechRobot::IntakeSequence()
 void EastTechRobot::PivotSequence()
 {
     static TalonFX * pPivotLeaderTalon = m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID);
-    static PositionVoltage pivotPositionVoltage(0.0_tr);
 
-    if (m_pAuxController->DetectButtonChange(AUX_TARE_PIVOT_ANGLE))
+    // If the tare button is being held
+    if (m_pAuxController->GetButtonState(AUX_TARE_PIVOT_ANGLE))
+    {
+        // Allow manual movement
+        double manualPivotInput = m_pAuxController->GetAxisValue(AUX_MANUAL_PIVOT_AXIS);
+        if (std::abs(manualPivotInput) > AXIS_INPUT_DEAD_BAND)
+        {
+            // Limit manual control max speed
+            constexpr const double MANUAL_PIVOT_SCALING_FACTOR = 0.15;
+            m_pPivotMotors->Set(-(manualPivotInput * MANUAL_PIVOT_SCALING_FACTOR));
+        }
+        m_bPivotTareInProgress = true;
+    }
+    // When the tare button is released, set the new zero
+    if (m_pAuxController->DetectButtonChange(AUX_TARE_PIVOT_ANGLE, EastTech::Controller::ButtonStateChanges::BUTTON_RELEASED))
     {
         (void)pPivotLeaderTalon->GetConfigurator().SetPosition(0.0_tr);
+        m_bPivotTareInProgress = false;
     }
 
     units::angle::turn_t pivotAngleTurns = pPivotLeaderTalon->GetPosition().GetValue();
@@ -383,7 +413,13 @@ void EastTechRobot::PivotSequence()
     SmartDashboard::PutNumber("Pivot angle", pivotAngleDegrees.value());
     SmartDashboard::PutNumber("Target pivot angle", m_PivotTargetDegrees.value());
 
-    if (m_bShotInProgress)
+    if (m_bPivotTareInProgress)
+    {
+        return;
+    }
+
+    // Only update the pivot target if the auto camera align didn't set one
+    if (m_bShotInProgress && !m_bCameraAlignInProgress)
     {
         // If an intake is in progress, it will set the target pivot angle.
         // If an intake is not in progress, move to the target position for amp or speaker
@@ -403,7 +439,7 @@ void EastTechRobot::PivotSequence()
             m_PivotTargetDegrees = m_AmpTargetDegrees;
         }
     }
-    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(m_PivotTargetDegrees));
+    m_pPivotMotors->SetAngle(m_PivotTargetDegrees.value());
 }
 
 
@@ -440,12 +476,13 @@ void EastTechRobot::ShootSequence()
     static Timer * pShootTimer = new Timer();
 
     // Constants used in the cases below
-    const double TARGET_SHOOTER_SPEED = (m_bShootSpeaker) ? SHOOTER_MOTOR_SPEAKER_SPEED : m_AmpTargetSpeed;
+    const double TARGET_SHOOTER_SPEAKER_SPEED = (m_bShootSpeakerClose) ? SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED : SHOOTER_MOTOR_SPEAKER_FAR_SPEED;
+    const double TARGET_SHOOTER_SPEED = (m_bShootSpeaker) ? TARGET_SHOOTER_SPEAKER_SPEED : m_AmpTargetSpeed;
     const double TARGET_SHOOTER_OFFSET_SPEED = (m_bShootSpeaker) ? SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED : 0.0;
     const double BACK_FEED_SPEED = 0.2;
     const units::time::second_t TARGET_BACK_FEED_TIME_S = (m_bShootSpeaker) ? 0.15_s : 0.08_s;
-    const units::time::second_t WAIT_FOR_PIVOT_MECHANISM_TIME_S = 0.5_s;
-    const units::time::second_t RAMP_UP_TIME_S = 1.0_s;
+    const units::time::second_t WAIT_FOR_PIVOT_MECHANISM_TIME_S = (m_bShootSpeaker) ? 0.5_s : 1.0_s;
+    const units::time::second_t RAMP_UP_TIME_S = 1.5_s;
 
     double feederSpeed = 0.0;
     double shootSpeed = 0.0;
@@ -548,6 +585,142 @@ void EastTechRobot::ShootSequence()
 
 
 ////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::LiftSequence
+///
+/// Main workflow for handling lift requests.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::LiftSequence()
+{
+    // CCW is positive rotation, CW is negative rotation.
+    // Pigeon orientation is such that robot roll is the reported pitch.
+    // 14 inches of total travel, 80:1, need effective rotation radius/diameter.
+    // ~4 inch circumference -> 1.2732 diameter => 14 inches = 3.5 turns
+    // Measured travel distance is 11.78 in turns.  ~56.55 inches (off by factor of 4?).
+
+    enum TiltDirection
+    {
+        NO_TILT,
+        LEFT_TILT,
+        RIGHT_TILT
+    };
+    static enum TiltDirection tiltDirection = NO_TILT;
+
+    double liftLeaderTurns = std::abs(m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID)->GetPosition().GetValue().value());
+    double liftFollowerTurns = std::abs(m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID + 1)->GetPosition().GetValue().value());
+    double highestTurns = std::max(liftLeaderTurns, liftFollowerTurns);
+    double lowestTurns = std::min(liftLeaderTurns, liftFollowerTurns);
+    const double LIFT_MIN_TURNS = 1.0;
+    const double LIFT_MAX_TURNS = 9.0;
+
+    bool bTravelAllowed = false;
+    double liftSpeed = 0.0;
+    EastTech::Controller::PovDirections drivePovDirection = m_pDriveController->GetPovAsDirection();
+    switch (drivePovDirection)
+    {
+        // Going up to grab the chain
+        case EastTech::Controller::PovDirections::POV_UP:
+        {
+            if (highestTurns < LIFT_MAX_TURNS)
+            {
+                bTravelAllowed = true;
+                liftSpeed = LIFT_MOTOR_SPEED;
+            }
+            break;
+        }
+        // Pulling down to raise the robot
+        case EastTech::Controller::PovDirections::POV_DOWN:
+        {
+            if (lowestTurns > LIFT_MIN_TURNS)
+            {
+                bTravelAllowed = true;
+                liftSpeed = -LIFT_MOTOR_SPEED;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    double liftOffsetSpeed = 0.0;
+    double robotRoll = m_pPigeon->GetPitch().GetValue().value();
+
+    switch (tiltDirection)
+    {
+        case NO_TILT:
+        {    
+            // Positive angle means left side needs to drive harder.
+            // Negative angle means right side needs to drive harder.
+            // This needs to be updated to not stop until is passes a threshold (probably zero).
+            if ((robotRoll > LIFT_MAX_ROLL_DEGREES) && bTravelAllowed)
+            {
+                liftOffsetSpeed = LIFT_MOTOR_OFFSET_SPEED;
+                tiltDirection = LEFT_TILT;
+            }
+            else if ((robotRoll < -LIFT_MAX_ROLL_DEGREES) && bTravelAllowed)
+            {
+                liftOffsetSpeed = -LIFT_MOTOR_OFFSET_SPEED;
+                tiltDirection = RIGHT_TILT;
+            }
+            else
+            {
+                // The offset is still zero from variable initialization
+            }
+            break;
+        }
+        case LEFT_TILT:
+        {
+            // Robot roll was positive, watch for it to drop back near zero
+            if (robotRoll < LIFT_OFFSET_STOP_POINT_DEGREES)
+            {
+                // The offset is still zero from variable initialization
+                tiltDirection = NO_TILT;
+            }
+            else
+            {
+                if (bTravelAllowed)
+                {
+                    liftOffsetSpeed = LIFT_MOTOR_OFFSET_SPEED;
+                }
+            }
+            break;
+        }
+        case RIGHT_TILT:
+        {
+            // Robot roll was negative, watch for it to rise back near zero
+            if (robotRoll > -LIFT_OFFSET_STOP_POINT_DEGREES)
+            {
+                // The offset is still zero from variable initialization
+                tiltDirection = NO_TILT;
+            }
+            else
+            {
+                if (bTravelAllowed)
+                {
+                    liftOffsetSpeed = -LIFT_MOTOR_OFFSET_SPEED;
+                }
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    SmartDashboard::PutNumber("Debug A", liftLeaderTurns);
+    SmartDashboard::PutNumber("Debug B", liftFollowerTurns);
+    SmartDashboard::PutNumber("Debug C", liftSpeed);
+    SmartDashboard::PutNumber("Debug D", liftOffsetSpeed);
+    SmartDashboard::PutNumber("Debug E", tiltDirection);
+    m_pLiftMotors->Set(liftSpeed, liftOffsetSpeed);
+}
+
+
+
+////////////////////////////////////////////////////////////////
 /// @method EastTechRobot::CheckAndUpdateAmpValues
 ///
 /// Checks for change requests to the amp target angle or
@@ -557,9 +730,10 @@ void EastTechRobot::ShootSequence()
 void EastTechRobot::CheckAndUpdateAmpValues()
 {
     static EastTech::Controller::PovDirections lastAuxPovDirection = EastTech::Controller::PovDirections::POV_NOT_PRESSED;
-    EastTech::Controller::PovDirections currentAuxPovDirection  = m_pAuxController->GetPovAsDirection();
+    EastTech::Controller::PovDirections currentAuxPovDirection = m_pAuxController->GetPovAsDirection();
     if (currentAuxPovDirection != lastAuxPovDirection)
     {
+        // @todo: Limit these to min/max values
         switch (currentAuxPovDirection)
         {
             case EastTech::Controller::PovDirections::POV_UP:
@@ -601,26 +775,6 @@ void EastTechRobot::CheckAndUpdateAmpValues()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::LiftSequence
-///
-/// Main workflow for handling lift requests.
-///
-////////////////////////////////////////////////////////////////
-void EastTechRobot::LiftSequence()
-{
-    if (m_pDriveController->GetButtonState(DRIVE_LIFT_ROBOT_BUTTON))
-    {
-        m_pLiftMotors->Set(LIFT_MOTOR_SPEED);
-    }
-    else
-    {
-        m_pLiftMotors->Set(0.0);
-    }
-}
-
-
-
-////////////////////////////////////////////////////////////////
 /// @method EastTechRobot::PneumaticSequence
 ///
 /// This method contains the main workflow for updating the
@@ -644,6 +798,23 @@ void EastTechRobot::PneumaticSequence()
 ////////////////////////////////////////////////////////////////
 void EastTechRobot::CameraSequence()
 {
+    if (m_pDriveController->GetButtonState(DRIVE_ALIGN_WITH_CAMERA_BUTTON))
+    {
+        m_bCameraAlignInProgress = true;
+        RobotCamera::SetLimelightPipeline(1);
+        RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::VISION_PROCESSOR);
+        RobotCamera::AutonomousCamera::AlignToTargetSwerve();
+    }
+    else
+    {
+        m_bCameraAlignInProgress = false;
+        RobotCamera::SetLimelightPipeline(0);
+        RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
+    }
+    return;
+
+    // 2024: Go no further
+
     static bool bFullProcessing = false;
     
     // @note: Use std::chrono if precise time control is needed.
@@ -759,7 +930,7 @@ void EastTechRobot::DisabledInit()
 
     // @todo: Shut off the limelight LEDs?
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
-    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::ARRAY_OFF);
+    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
 }
 
 
