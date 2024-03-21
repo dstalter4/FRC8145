@@ -44,6 +44,7 @@ EastTechRobot::EastTechRobot() :
     m_pShooterMotors                    (new TalonMotorGroup<TalonFX>("Shooter", TWO_MOTORS, SHOOTER_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Coast, false)),
     m_pPivotMotors                      (new TalonMotorGroup<TalonFX>("Pivot", TWO_MOTORS, PIVOT_MOTORS_CAN_START_ID, MotorGroupControlMode::FOLLOW_INVERSE, NeutralModeValue::Brake, false)),
     m_pLiftMotors                       (new EastTech::Talon::EmptyTalonFx("Lift", TWO_MOTORS, LIFT_MOTORS_CAN_START_ID, MotorGroupControlMode::INVERSE_OFFSET, NeutralModeValue::Brake, false)),
+    m_pBlinkin                          (new Spark(BLINKIN_PWM_CHANNEL)),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pMatchModeTimer                   (new Timer()),
@@ -79,6 +80,9 @@ EastTechRobot::EastTechRobot() :
     RobotUtils::DisplayFormattedMessage("The drive left/right axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_X_AXIS);
 
     ConfigureMotorControllers();
+
+    // Enable an LED display pattern (Ocean Palette Rainbow)
+    m_pBlinkin->Set(-0.95);
 
     // Spawn the vision thread
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
@@ -238,6 +242,10 @@ void EastTechRobot::InitialStateSetup()
     
     // Just in case constructor was called before these were set (likely the case)
     m_AllianceColor = DriverStation::GetAlliance();
+
+    // Set the LEDs to the alliance color
+    double ledPwmValue = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? 0.61 : 0.87;
+    m_pBlinkin->Set(ledPwmValue);
 
     // Indicate the camera thread can continue
     RobotCamera::ReleaseThread();
@@ -947,6 +955,9 @@ void EastTechRobot::SwerveDriveSequence()
 void EastTechRobot::DisabledInit()
 {
     RobotUtils::DisplayMessage("DisabledInit called.");
+
+    // Enable an LED display pattern (Ocean Palette Rainbow)
+    m_pBlinkin->Set(-0.95);
 
     // @todo: Shut off the limelight LEDs?
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);

@@ -29,6 +29,7 @@
 #include "frc/Solenoid.h"                       // for Solenoid type
 #include "frc/TimedRobot.h"                     // for base class decalartion
 #include "frc/livewindow/LiveWindow.h"          // for controlling the LiveWindow
+#include "frc/motorcontrol/Spark.h"             // for creating an object to interact with the rev blinkin
 #include "frc/smartdashboard/SendableChooser.h" // for using the smart dashboard sendable chooser functionality
 #include "frc/smartdashboard/SmartDashboard.h"  // for interacting with the smart dashboard
 
@@ -214,6 +215,9 @@ private:
     TalonMotorGroup<TalonFX> *      m_pPivotMotors;                         // Pivot motors control
     EastTech::Talon::EmptyTalonFx * m_pLiftMotors;                          // Lift motors control
 
+    // LEDs
+    Spark *                         m_pBlinkin;                             // Pseudo Spark for rev blinkin LED PWM control
+
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
     
@@ -301,7 +305,7 @@ private:
     static const int                PIGEON_CAN_ID                           = 5;
 
     // PWM Signals
-    // (none)
+    static const int                BLINKIN_PWM_CHANNEL                     = 0;
     
     // Relays
     // (none)
