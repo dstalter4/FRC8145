@@ -47,13 +47,14 @@ void EastTechRobot::AutonomousTestRoutine()
 void EastTechRobot::AutonomousTestSwerveRoutine()
 {
     // Simple demonstration of directional movements
-    AutonomousSwerveDriveSequence(ROBOT_FORWARD, ROBOT_NO_ROTATE, 0.10, 0.0, 1.0_s, true);
-    AutonomousSwerveDriveSequence(ROBOT_LEFT, ROBOT_NO_ROTATE, 0.10, 0.0, 1.0_s, true);
-    AutonomousSwerveDriveSequence(ROBOT_REVERSE, ROBOT_NO_ROTATE, 0.10, 0.0, 1.0_s, true);
-    AutonomousSwerveDriveSequence(ROBOT_RIGHT, ROBOT_NO_ROTATE, 0.10, 0.0, 1.0_s, true);
-    AutonomousSwerveDriveSequence(ROBOT_NO_DIRECTION, ROBOT_CLOCKWISE, 0.0, 0.10, 1.0_s, true);
-    AutonomousSwerveDriveSequence(ROBOT_NO_DIRECTION, ROBOT_COUNTER_CLOCKWISE, 0.0, 0.10, 1.0_s, true);
-    AutonomousSwerveDriveSequence(ROBOT_FORWARD, ROBOT_COUNTER_CLOCKWISE, 0.10, 0.10, 1.0_s, true);
+    AutonomousSwerveDriveSequence(ROBOT_FORWARD, ROBOT_NO_ROTATE, 0.10, 0.0, 0.0, 1.0_s, true);
+    AutonomousSwerveDriveSequence(ROBOT_LEFT, ROBOT_NO_ROTATE, 0.10, 0.0, 0.0, 1.0_s, true);
+    AutonomousSwerveDriveSequence(ROBOT_REVERSE, ROBOT_NO_ROTATE, 0.10, 0.0, 0.0, 1.0_s, true);
+    AutonomousSwerveDriveSequence(ROBOT_RIGHT, ROBOT_NO_ROTATE, 0.10, 0.0, 0.0, 1.0_s, true);
+    AutonomousSwerveDriveSequence(ROBOT_NO_DIRECTION, ROBOT_CLOCKWISE, 0.0, 0.10, 0.0, 1.0_s, true);
+    AutonomousSwerveDriveSequence(ROBOT_NO_DIRECTION, ROBOT_COUNTER_CLOCKWISE, 0.0, 0.10, 0.0, 1.0_s, true);
+    AutonomousSwerveDriveSequence(ROBOT_FORWARD, ROBOT_COUNTER_CLOCKWISE, 0.10, 0.10, 0.0, 1.0_s, true);
+    AutonomousSwerveDriveSequence(static_cast<RobotDirection>(ROBOT_FORWARD | ROBOT_RIGHT), ROBOT_CLOCKWISE, 0.10, 0.10, 0.10, 1.0_s, true);
 
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto test swerve routine done.");

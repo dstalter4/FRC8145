@@ -98,34 +98,44 @@ inline void EastTechRobot::AutonomousDelay(units::second_t time)
 /// using swerve drive modules.
 ///
 ////////////////////////////////////////////////////////////////
-inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotDirection direction, RobotRotate rotate, double speed, double rotateSpeed, units::second_t time, bool bFieldRelative)
+inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotDirection direction, RobotRotate rotate, double translationSpeed, double strafeSpeed, double rotateSpeed, units::second_t time, bool bFieldRelative)
 {
+    RobotDirection translationDirection = static_cast<RobotDirection>(direction & ROBOT_TRANSLATION_MASK);
+    RobotDirection strafeDirection = static_cast<RobotDirection>(direction & ROBOT_STRAFE_MASK);
+
     units::meter_t translation = 0.0_m;
     units::meter_t strafe = 0.0_m;
 
-    switch (direction)
+    switch (translationDirection)
     {
         case ROBOT_FORWARD:
         {
-            translation = units::meter_t(speed);
+            translation = units::meter_t(translationSpeed);
             break;
         }
         case ROBOT_REVERSE:
         {
-            translation = units::meter_t(-speed);
+            translation = units::meter_t(-translationSpeed);
             break;
         }
+        default:
+        {
+            break;
+        }
+    }
+
+    switch (strafeDirection)
+    {
         case ROBOT_LEFT:
         {
-            strafe = units::meter_t(speed);
+            strafe = units::meter_t(strafeSpeed);
             break;
         }
         case ROBOT_RIGHT:
         {
-            strafe = units::meter_t(-speed);
+            strafe = units::meter_t(-strafeSpeed);
             break;
         }
-        case ROBOT_NO_DIRECTION:
         default:
         {
             break;

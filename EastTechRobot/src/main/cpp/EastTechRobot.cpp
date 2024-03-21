@@ -880,20 +880,40 @@ void EastTechRobot::SwerveDriveSequence()
     double rotationAxis = RobotUtils::Trim(m_pDriveController->GetDriveRotateInput() * -1.0, JOYSTICK_TRIM_UPPER_LIMIT, JOYSTICK_TRIM_LOWER_LIMIT);
 
     // Override normal control if a fine positioning request is made
-    if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_LEFT)
+    switch (m_pDriveController->GetPovAsDirection())
     {
-        translationAxis = 0.0;
-        strafeAxis = 0.0;
-        rotationAxis = SWERVE_ROTATE_SLOW_SPEED;
-    }
-    else if (m_pDriveController->GetPovAsDirection() == EastTech::Controller::PovDirections::POV_RIGHT)
-    {
-        translationAxis = 0.0;
-        strafeAxis = 0.0;
-        rotationAxis = -SWERVE_ROTATE_SLOW_SPEED;
-    }
-    else
-    {
+        case EastTech::Controller::PovDirections::POV_UP:
+        {
+            translationAxis = SWERVE_DRIVE_SLOW_SPEED;
+            strafeAxis = 0.0;
+            rotationAxis = 0.0;
+            break;
+        }
+        case EastTech::Controller::PovDirections::POV_DOWN:
+        {
+            translationAxis = -SWERVE_DRIVE_SLOW_SPEED;
+            strafeAxis = 0.0;
+            rotationAxis = 0.0;
+            break;
+        }
+        case EastTech::Controller::PovDirections::POV_LEFT:
+        {
+            translationAxis = 0.0;
+            strafeAxis = 0.0;
+            rotationAxis = SWERVE_ROTATE_SLOW_SPEED;
+            break;
+        }
+        case EastTech::Controller::PovDirections::POV_RIGHT:
+        {
+            translationAxis = 0.0;
+            strafeAxis = 0.0;
+            rotationAxis = -SWERVE_ROTATE_SLOW_SPEED;
+            break;
+        }
+        default:
+        {
+            break;
+        }
     }
 
     SmartDashboard::PutNumber("Strafe", strafeAxis);

@@ -104,13 +104,15 @@ private:
         ROBOT_MODE_NOT_SET
     };
     
-    enum RobotDirection
+    enum RobotDirection : uint32_t
     {
-        ROBOT_NO_DIRECTION,
-        ROBOT_FORWARD,
-        ROBOT_REVERSE,
-        ROBOT_LEFT,
-        ROBOT_RIGHT
+        ROBOT_NO_DIRECTION = 0x0,
+        ROBOT_FORWARD = 0x1,
+        ROBOT_REVERSE = 0x2,
+        ROBOT_LEFT = 0x10,
+        ROBOT_RIGHT = 0x20,
+        ROBOT_TRANSLATION_MASK = 0xF,
+        ROBOT_STRAFE_MASK = 0xF0
     };
     
     enum RobotRotate
@@ -147,7 +149,7 @@ private:
     inline void AutonomousDelay(units::second_t time);
 
     // Autonomous drive for a specified time
-    inline void AutonomousSwerveDriveSequence(RobotDirection direction, RobotRotate rotate, double speed, double rotateSpeed, units::second_t time, bool bFieldRelative);
+    inline void AutonomousSwerveDriveSequence(RobotDirection direction, RobotRotate rotate, double translationSpeed, double strafeSpeed, double rotateSpeed, units::second_t time, bool bFieldRelative);
     
     // Autonomous routines
     // @todo: Make EastTechRobotAutonomous a friend and move these out (requires accessor to *this)!
@@ -329,9 +331,9 @@ private:
     static constexpr double         LIFT_MOTOR_OFFSET_SPEED                 =  0.15;
     
     // Misc
-    const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
-    const std::string               AUTO_ROUTINE_2_STRING                   = "Autonomous Routine 2";
-    const std::string               AUTO_ROUTINE_3_STRING                   = "Autonomous Routine 3";
+    const std::string               AUTO_ROUTINE_1_STRING                   = "Speaker center";
+    const std::string               AUTO_ROUTINE_2_STRING                   = "Speaker source";
+    const std::string               AUTO_ROUTINE_3_STRING                   = "Speaker amp";
     const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous Test Routine";
     static constexpr units::angle::degree_t PIVOT_ANGLE_RUNTIME_BASE        =  3.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_INTAKE_NOTE         = 30.0_deg;
@@ -353,6 +355,7 @@ private:
     static constexpr double         JOYSTICK_TRIM_UPPER_LIMIT               =  0.05;
     static constexpr double         JOYSTICK_TRIM_LOWER_LIMIT               = -0.05;
     static constexpr double         SWERVE_ROTATE_SLOW_JOYSTICK_THRESHOLD   =  0.10;
+    static constexpr double         SWERVE_DRIVE_SLOW_SPEED                 =  0.10;
     static constexpr double         SWERVE_ROTATE_SLOW_SPEED                =  0.10;
     static constexpr double         AXIS_INPUT_DEAD_BAND                    =  0.10;
     static constexpr double         LIFT_MAX_ROLL_DEGREES                   =  5.00;

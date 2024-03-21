@@ -47,7 +47,7 @@ void EastTechRobot::AutonomousRoutine2()
 
     // Shooter motor off, just back up
     m_pShooterMotors->Set(0.0);
-    AutonomousSwerveDriveSequence(RobotDirection::ROBOT_FORWARD, ROBOT_NO_ROTATE, 0.30, 0.0, 3.0_s, true);
+    AutonomousSwerveDriveSequence(RobotDirection::ROBOT_FORWARD, ROBOT_NO_ROTATE, 0.30, 0.0, 0.0, 3.0_s, true);
 
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto routine 2 done.");
