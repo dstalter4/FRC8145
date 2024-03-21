@@ -84,6 +84,10 @@ void EastTechRobot::AutonomousRoutine3()
     m_pFeederMotor->SetDutyCycle(0.0);
     (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_RUNTIME_BASE));
 
+    // Set the pigeon angle relative to final robot position with zero down field
+    units::angle::degree_t gyroYaw = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? -23.0_deg : 23.0_deg;
+    m_pPigeon->SetYaw(gyroYaw);
+
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto routine 3 done.");
 }
