@@ -484,9 +484,9 @@ void EastTechRobot::ShootSequence()
     static Timer * pShootTimer = new Timer();
 
     // Constants used in the cases below
-    const double TARGET_SHOOTER_SPEAKER_SPEED = (m_bShootSpeakerClose) ? SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED : SHOOTER_MOTOR_SPEAKER_FAR_SPEED;
+    const double TARGET_SHOOTER_SPEAKER_SPEED = (m_bShootSpeakerClose) ? SHOOTER_MOTOR_SPEAKER_CLOSE_CW_SPEED : SHOOTER_MOTOR_SPEAKER_FAR_CW_SPEED;
     const double TARGET_SHOOTER_SPEED = (m_bShootSpeaker) ? TARGET_SHOOTER_SPEAKER_SPEED : m_AmpTargetSpeed;
-    const double TARGET_SHOOTER_OFFSET_SPEED = (m_bShootSpeaker) ? SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED : 0.0;
+    const double TARGET_SHOOTER_OFFSET_SPEED = (m_bShootSpeaker) ? SHOOTER_MOTOR_SPEAKER_CW_OFFSET_SPEED : 0.0;
     const double BACK_FEED_SPEED = 0.2;
     const units::time::second_t TARGET_BACK_FEED_TIME_S = (m_bShootSpeaker) ? 0.15_s : 0.08_s;
     const units::time::second_t WAIT_FOR_PIVOT_MECHANISM_TIME_S = (m_bShootSpeaker) ? 0.5_s : 1.0_s;
@@ -748,24 +748,28 @@ void EastTechRobot::CheckAndUpdateAmpValues()
             {
                 // Motor output is negative, so decrease for faster speed
                 m_AmpTargetSpeed -= SHOOTER_STEP_SPEED;
+                m_AmpTargetSpeed = (m_AmpTargetSpeed < SHOOTER_AMP_SPEED_MIN) ? SHOOTER_AMP_SPEED_MIN : m_AmpTargetSpeed;
                 break;
             }
             case EastTech::Controller::PovDirections::POV_DOWN:
             {
                 // Motor output is negative, so increase for slower speed
                 m_AmpTargetSpeed += SHOOTER_STEP_SPEED;
+                m_AmpTargetSpeed = (m_AmpTargetSpeed > SHOOTER_AMP_SPEED_MAX) ? SHOOTER_AMP_SPEED_MAX : m_AmpTargetSpeed;
                 break;
             }
             case EastTech::Controller::PovDirections::POV_RIGHT:
             {
-                // Motor output is negative, so increase for slower speed
+                // Angle increases moving toward amp
                 m_AmpTargetDegrees += SHOOTER_STEP_ANGLE;
+                m_AmpTargetDegrees = (m_AmpTargetDegrees > PIVOT_ANGLE_MAX) ? PIVOT_ANGLE_MAX : m_AmpTargetDegrees;
                 break;
             }
             case EastTech::Controller::PovDirections::POV_LEFT:
             {
-                // Motor output is negative, so increase for slower speed
+                // Angle decreases moving from amp
                 m_AmpTargetDegrees -= SHOOTER_STEP_ANGLE;
+                m_AmpTargetDegrees = (m_AmpTargetDegrees < PIVOT_ANGLE_MIN) ? PIVOT_ANGLE_MIN : m_AmpTargetDegrees;
                 break;
             }
             default:

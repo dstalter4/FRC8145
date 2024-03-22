@@ -325,12 +325,17 @@ private:
     // Motor speeds
     static constexpr double         INTAKE_MOTOR_SPEED                      = -1.0;
     static constexpr double         FEEDER_MOTOR_SPEED                      =  0.5;
-    static constexpr double         SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED       = -0.5;
-    static constexpr double         SHOOTER_MOTOR_SPEAKER_FAR_SPEED         = -0.7;
-    static constexpr double         SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED      =  0.2;
-    static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.25;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_CLOSE_CW_SPEED    = -0.6;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_FAR_CW_SPEED      = -0.75;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_CW_OFFSET_SPEED   =  0.2;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_CLOSE_CCW_SPEED   = -0.4;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_FAR_CCW_SPEED     = -0.55;
+    static constexpr double         SHOOTER_MOTOR_SPEAKER_CCW_OFFSET_SPEED  = -0.2;
+    static constexpr double         SHOOTER_MOTOR_AMP_SPEED                 = -0.22;
     static constexpr double         SHOOTER_MOTOR_LOAD_AT_SOURCE_SPEED      =  0.30;
-    static constexpr double         SHOOTER_STEP_SPEED                      =  0.05;
+    static constexpr double         SHOOTER_STEP_SPEED                      =  0.02;
+    static constexpr double         SHOOTER_AMP_SPEED_MIN                   = -1.00;
+    static constexpr double         SHOOTER_AMP_SPEED_MAX                   =  0.00;
     static constexpr double         LIFT_MOTOR_SPEED                        =  0.70;
     static constexpr double         LIFT_MOTOR_OFFSET_SPEED                 =  0.15;
     
@@ -343,8 +348,10 @@ private:
     static constexpr units::angle::degree_t PIVOT_ANGLE_INTAKE_NOTE         = 30.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_SPEAKER    = 45.0_deg;
     static constexpr units::angle::degree_t PIVOT_ANGLE_FROM_PODIUM         = 30.0_deg;
-    static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_AMP        = 92.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_TOUCHING_AMP        = 100.0_deg;
     static constexpr units::angle::degree_t SHOOTER_STEP_ANGLE              =  2.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_MIN                 =  4.0_deg;
+    static constexpr units::angle::degree_t PIVOT_ANGLE_MAX                 = 106.0_deg;
 
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;

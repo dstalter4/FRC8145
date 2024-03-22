@@ -33,21 +33,29 @@ void EastTechRobot::AutonomousRoutine2()
     PositionVoltage pivotPositionVoltage(0.0_tr);
 
     // First start ramping up the shooter motors
-    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
+    double shooterSpeed = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? SHOOTER_MOTOR_SPEAKER_CLOSE_CCW_SPEED : SHOOTER_MOTOR_SPEAKER_CLOSE_CW_SPEED;
+    double shooterOffsetSpeed = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? SHOOTER_MOTOR_SPEAKER_CCW_OFFSET_SPEED : SHOOTER_MOTOR_SPEAKER_CW_OFFSET_SPEED;
+    m_pShooterMotors->Set(shooterSpeed, shooterOffsetSpeed);
 
     // Pivot the mechanism to the desired angle
     (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_TOUCHING_SPEAKER));
 
     // Wait a bit for everything to be ready
-    AutonomousDelay(1.0_s);
+    AutonomousDelay(1.5_s);
 
     // Feeder motor to take the shot
     m_pFeederMotor->SetDutyCycle(FEEDER_MOTOR_SPEED);
     AutonomousDelay(0.5_s);
 
-    // Shooter motor off, just back up
+    // Shooter motor off, feeder motor off, pivot down
     m_pShooterMotors->Set(0.0);
-    AutonomousSwerveDriveSequence(RobotDirection::ROBOT_FORWARD, ROBOT_NO_ROTATE, 0.30, 0.0, 0.0, 3.0_s, true);
+    m_pFeederMotor->SetDutyCycle(0.0);
+    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_RUNTIME_BASE));
+
+    // Back up to leave past the line
+    RobotDirection autoLeaveBySourceDirection = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? RobotDirection::ROBOT_RIGHT : RobotDirection::ROBOT_LEFT;
+    RobotDirection autoLeaveDirection = static_cast<RobotDirection>(RobotDirection::ROBOT_FORWARD | autoLeaveBySourceDirection);
+    AutonomousSwerveDriveSequence(autoLeaveDirection, ROBOT_NO_ROTATE, 0.30, 0.30, 0.0, 3.0_s, true);
 
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto routine 2 done.");

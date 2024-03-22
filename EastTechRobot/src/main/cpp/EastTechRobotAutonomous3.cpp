@@ -32,14 +32,17 @@ void EastTechRobot::AutonomousRoutine3()
     TalonFX * pPivotLeaderTalon = m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID);
     PositionVoltage pivotPositionVoltage(0.0_tr);
 
+    double shooterSpeed = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? SHOOTER_MOTOR_SPEAKER_CLOSE_CCW_SPEED : SHOOTER_MOTOR_SPEAKER_CLOSE_CW_SPEED;
+    double shooterOffsetSpeed = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? SHOOTER_MOTOR_SPEAKER_CCW_OFFSET_SPEED : SHOOTER_MOTOR_SPEAKER_CW_OFFSET_SPEED;
+
     // First start ramping up the shooter motors
-    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
+    m_pShooterMotors->Set(shooterSpeed, shooterOffsetSpeed);
 
     // Pivot the mechanism to the desired angle
-    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_TOUCHING_SPEAKER));
+    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_TOUCHING_SPEAKER + 2.5_deg));
 
     // Wait a bit for everything to be ready
-    AutonomousDelay(1.0_s);
+    AutonomousDelay(1.5_s);
 
     // Feeder motor to take the shot
     m_pFeederMotor->SetDutyCycle(FEEDER_MOTOR_SPEED);
@@ -66,14 +69,16 @@ void EastTechRobot::AutonomousRoutine3()
     // Start the far shot
 
     // First start ramping up the shooter motors
-    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_FAR_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
+    shooterSpeed = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? SHOOTER_MOTOR_SPEAKER_FAR_CCW_SPEED : SHOOTER_MOTOR_SPEAKER_FAR_CW_SPEED;
+    shooterOffsetSpeed = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? SHOOTER_MOTOR_SPEAKER_CCW_OFFSET_SPEED : SHOOTER_MOTOR_SPEAKER_CW_OFFSET_SPEED;
+    m_pShooterMotors->Set(shooterSpeed, shooterOffsetSpeed);
 
     // Pivot the mechanism to the desired angle
-    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_FROM_PODIUM - 8.0_deg));
+    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_FROM_PODIUM - 6.5_deg));
 
     // Adjust robot angle toward speaker
     RobotRotate towardSpeakerRotate = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? RobotRotate::ROBOT_CLOCKWISE : RobotRotate::ROBOT_COUNTER_CLOCKWISE;
-    AutonomousSwerveDriveSequence(RobotDirection::ROBOT_NO_DIRECTION, towardSpeakerRotate, 0.0, 0.0, 0.08, 0.9_s, true);
+    AutonomousSwerveDriveSequence(RobotDirection::ROBOT_NO_DIRECTION, towardSpeakerRotate, 0.0, 0.0, 0.08, 1.0_s, true);
 
     // Feeder motor to take the shot
     m_pFeederMotor->SetDutyCycle(FEEDER_MOTOR_SPEED);

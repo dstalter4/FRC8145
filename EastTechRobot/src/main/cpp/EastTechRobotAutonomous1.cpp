@@ -32,8 +32,11 @@ void EastTechRobot::AutonomousRoutine1()
     TalonFX * pPivotLeaderTalon = m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID);
     PositionVoltage pivotPositionVoltage(0.0_tr);
 
+    double shooterSpeed = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? SHOOTER_MOTOR_SPEAKER_CLOSE_CCW_SPEED : SHOOTER_MOTOR_SPEAKER_CLOSE_CW_SPEED;
+    double shooterOffsetSpeed = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? SHOOTER_MOTOR_SPEAKER_CCW_OFFSET_SPEED : SHOOTER_MOTOR_SPEAKER_CW_OFFSET_SPEED;
+
     // First start ramping up the shooter motors
-    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
+    m_pShooterMotors->Set(shooterSpeed, shooterOffsetSpeed);
 
     // Pivot the mechanism to the desired angle
     (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_TOUCHING_SPEAKER));
@@ -62,14 +65,15 @@ void EastTechRobot::AutonomousRoutine1()
     // Should be in position, go through shooting again.  Back feed real quick, ramp up, feed to shoot.
     m_pFeederMotor->SetDutyCycle(-FEEDER_MOTOR_SPEED);
     AutonomousDelay(0.15_s);
-    m_pShooterMotors->Set(SHOOTER_MOTOR_SPEAKER_CLOSE_SPEED, SHOOTER_MOTOR_SPEAKER_OFFSET_SPEED);
+    m_pShooterMotors->Set(shooterSpeed, shooterOffsetSpeed);
     AutonomousDelay(1.0_s);
     m_pFeederMotor->SetDutyCycle(FEEDER_MOTOR_SPEED);
     AutonomousDelay(1.0_s);
 
-    // Everything off
+    // Everything off and pivot down
     m_pFeederMotor->SetDutyCycle(0.0);
     m_pShooterMotors->Set(0.0);
+    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_RUNTIME_BASE));
 
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto routine 1 done.");
