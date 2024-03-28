@@ -56,9 +56,11 @@ EastTechRobot::EastTechRobot() :
     m_bShootSpeaker                     (true),
     m_bShootSpeakerClose                (true),
     m_bShotInProgress                   (false),
+    m_bPass                             (false),
     m_bIntakeInProgress                 (false),
     m_bPivotTareInProgress              (false),
     m_PivotTargetDegrees                (0.0_deg),
+    m_SpeakerTargetDegrees              (PIVOT_ANGLE_TOUCHING_SPEAKER),
     m_AmpTargetDegrees                  (PIVOT_ANGLE_TOUCHING_AMP),
     m_AmpTargetSpeed                    (SHOOTER_MOTOR_AMP_SPEED),
     m_HeartBeat                         (0U)
@@ -316,7 +318,7 @@ void EastTechRobot::TeleopPeriodic()
     ShootSequence();
     PivotSequence();
     //LiftSequence();
-    CheckAndUpdateAmpValues();
+    CheckAndUpdateShootValues();
 
     //PneumaticSequence();
     
@@ -431,11 +433,15 @@ void EastTechRobot::PivotSequence()
     {
         // If an intake is in progress, it will set the target pivot angle.
         // If an intake is not in progress, move to the target position for amp or speaker
-        if (m_bShootSpeaker)
+        if (m_bPass)
+        {
+            m_PivotTargetDegrees = PIVOT_ANGLE_RUNTIME_BASE;
+        }
+        else if (m_bShootSpeaker)
         {
             if (m_bShootSpeakerClose)
             {
-                m_PivotTargetDegrees = PIVOT_ANGLE_TOUCHING_SPEAKER;
+                m_PivotTargetDegrees = m_SpeakerTargetDegrees;
             }
             else
             {
@@ -469,6 +475,15 @@ void EastTechRobot::ShootSequence()
         m_bShootSpeakerClose = !m_bShootSpeakerClose;
     }
 
+    if (m_pAuxController->GetButtonState(AUX_PASS_BUTTON))
+    {
+        m_bPass = true;
+    }
+    else
+    {
+        m_bPass = false;
+    }
+
     SmartDashboard::PutBoolean("Shoot speaker", m_bShootSpeaker);
     SmartDashboard::PutBoolean("Speaker close", m_bShootSpeakerClose);
 
@@ -495,7 +510,7 @@ void EastTechRobot::ShootSequence()
     double feederSpeed = 0.0;
     double shootSpeed = 0.0;
     double shootSpeedOffset = 0.0;
-    if (std::abs(m_pAuxController->GetAxisValue(AUX_SHOOT_AXIS)) > AXIS_INPUT_DEAD_BAND)
+    if (m_bPass || (std::abs(m_pAuxController->GetAxisValue(AUX_SHOOT_AXIS)) > AXIS_INPUT_DEAD_BAND))
     {
         switch (shootState)
         {
@@ -729,13 +744,13 @@ void EastTechRobot::LiftSequence()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::CheckAndUpdateAmpValues
+/// @method EastTechRobot::CheckAndUpdateShootValues
 ///
 /// Checks for change requests to the amp target angle or
 /// shooter motors speed values.
 ///
 ////////////////////////////////////////////////////////////////
-void EastTechRobot::CheckAndUpdateAmpValues()
+void EastTechRobot::CheckAndUpdateShootValues()
 {
     static EastTech::Controller::PovDirections lastAuxPovDirection = EastTech::Controller::PovDirections::POV_NOT_PRESSED;
     EastTech::Controller::PovDirections currentAuxPovDirection = m_pAuxController->GetPovAsDirection();
@@ -760,16 +775,32 @@ void EastTechRobot::CheckAndUpdateAmpValues()
             }
             case EastTech::Controller::PovDirections::POV_RIGHT:
             {
-                // Angle increases moving toward amp
-                m_AmpTargetDegrees += SHOOTER_STEP_ANGLE;
-                m_AmpTargetDegrees = (m_AmpTargetDegrees > PIVOT_ANGLE_MAX) ? PIVOT_ANGLE_MAX : m_AmpTargetDegrees;
+                if (m_bShootSpeaker)
+                {
+                    m_SpeakerTargetDegrees += SHOOTER_STEP_ANGLE;
+                    m_SpeakerTargetDegrees = (m_SpeakerTargetDegrees > PIVOT_ANGLE_MAX) ? PIVOT_ANGLE_MAX : m_SpeakerTargetDegrees;
+                }
+                else
+                {
+                    // Angle increases moving toward amp
+                    m_AmpTargetDegrees += SHOOTER_STEP_ANGLE;
+                    m_AmpTargetDegrees = (m_AmpTargetDegrees > PIVOT_ANGLE_MAX) ? PIVOT_ANGLE_MAX : m_AmpTargetDegrees;
+                }
                 break;
             }
             case EastTech::Controller::PovDirections::POV_LEFT:
             {
-                // Angle decreases moving from amp
-                m_AmpTargetDegrees -= SHOOTER_STEP_ANGLE;
-                m_AmpTargetDegrees = (m_AmpTargetDegrees < PIVOT_ANGLE_MIN) ? PIVOT_ANGLE_MIN : m_AmpTargetDegrees;
+                if (m_bShootSpeaker)
+                {
+                    m_SpeakerTargetDegrees -= SHOOTER_STEP_ANGLE;
+                    m_SpeakerTargetDegrees = (m_SpeakerTargetDegrees < PIVOT_ANGLE_MIN) ? PIVOT_ANGLE_MIN : m_SpeakerTargetDegrees;
+                }
+                else
+                {
+                    // Angle decreases moving from amp
+                    m_AmpTargetDegrees -= SHOOTER_STEP_ANGLE;
+                    m_AmpTargetDegrees = (m_AmpTargetDegrees < PIVOT_ANGLE_MIN) ? PIVOT_ANGLE_MIN : m_AmpTargetDegrees;
+                }
                 break;
             }
             default:
@@ -780,6 +811,7 @@ void EastTechRobot::CheckAndUpdateAmpValues()
 
         lastAuxPovDirection = currentAuxPovDirection;
     }
+    SmartDashboard::PutNumber("Speaker angle", m_SpeakerTargetDegrees.value());
     SmartDashboard::PutNumber("Amp speed", m_AmpTargetSpeed);
     SmartDashboard::PutNumber("Amp angle", m_AmpTargetDegrees.value());
 }

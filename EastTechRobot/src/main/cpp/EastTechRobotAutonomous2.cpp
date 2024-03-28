@@ -55,7 +55,7 @@ void EastTechRobot::AutonomousRoutine2()
     // Back up to leave past the line
     RobotDirection autoLeaveBySourceDirection = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? RobotDirection::ROBOT_RIGHT : RobotDirection::ROBOT_LEFT;
     RobotDirection autoLeaveDirection = static_cast<RobotDirection>(RobotDirection::ROBOT_FORWARD | autoLeaveBySourceDirection);
-    AutonomousSwerveDriveSequence(autoLeaveDirection, ROBOT_NO_ROTATE, 0.30, 0.30, 0.0, 3.0_s, true);
+    AutonomousSwerveDriveSequence(autoLeaveDirection, ROBOT_NO_ROTATE, 0.30, 0.0, 0.0, 3.0_s, true);
 
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto routine 2 done.");

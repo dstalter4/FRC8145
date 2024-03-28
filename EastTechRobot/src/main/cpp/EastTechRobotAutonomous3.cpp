@@ -74,7 +74,7 @@ void EastTechRobot::AutonomousRoutine3()
     m_pShooterMotors->Set(shooterSpeed, shooterOffsetSpeed);
 
     // Pivot the mechanism to the desired angle
-    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_FROM_PODIUM - 6.5_deg));
+    (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_FROM_PODIUM - 3.5_deg));
 
     // Adjust robot angle toward speaker
     RobotRotate towardSpeakerRotate = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? RobotRotate::ROBOT_CLOCKWISE : RobotRotate::ROBOT_COUNTER_CLOCKWISE;
