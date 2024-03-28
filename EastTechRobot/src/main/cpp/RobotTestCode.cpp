@@ -166,8 +166,8 @@ void EastTechRobotTest::QuickTestCode()
     // Disable the actual swerve object creation.
     static CANSparkMax * m_pDriveSpark = new CANSparkMax(4, CANSparkLowLevel::MotorType::kBrushless);
     static CANSparkMax * m_pAngleSpark = new CANSparkMax(3, CANSparkLowLevel::MotorType::kBrushless);
-    static SparkRelativeEncoder m_DriveSparkEncoder = m_pDriveSpark->GetEncoder(SparkRelativeEncoder::Type::kHallSensor);
-    static SparkRelativeEncoder m_AngleSparkEncoder = m_pAngleSpark->GetEncoder(SparkRelativeEncoder::Type::kHallSensor);
+    static SparkRelativeEncoder m_DriveSparkEncoder = m_pDriveSpark->GetEncoder();
+    static SparkRelativeEncoder m_AngleSparkEncoder = m_pAngleSpark->GetEncoder();
     static SparkPIDController m_DrivePidController = m_pDriveSpark->GetPIDController();
     static SparkPIDController m_AnglePidController = m_pAngleSpark->GetPIDController();
     static CANcoder * m_pAngleCanCoder = new CANcoder(2, "canivore-8145");
