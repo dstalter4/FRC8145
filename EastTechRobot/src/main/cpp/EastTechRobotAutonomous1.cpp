@@ -23,7 +23,7 @@
 ////////////////////////////////////////////////////////////////
 /// @method EastTechRobot::AutonomousRoutine1
 ///
-/// Autonomous routine 1.
+/// Autonomous routine 1.  Runs from center.
 ///
 ////////////////////////////////////////////////////////////////
 void EastTechRobot::AutonomousRoutine1()
@@ -52,7 +52,8 @@ void EastTechRobot::AutonomousRoutine1()
     // Start the intake to pick it up, keep feeder on.
     m_pShooterMotors->Set(0.1);
     m_pIntakeMotor->SetDutyCycle(INTAKE_MOTOR_SPEED);
-    AutonomousSwerveDriveSequence(RobotDirection::ROBOT_FORWARD, ROBOT_NO_ROTATE, 0.30, 0.0, 0.0, 1.5_s, true);
+    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_FORWARD, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
+    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.30, 0.0, 0.0, 1.5_s, true);
 
     // Stop for a brief period allowing the piece to get picked up
     AutonomousDelay(1.0_s);
@@ -60,7 +61,8 @@ void EastTechRobot::AutonomousRoutine1()
     // Intake/feeder motors off, drive back to the speaker
     m_pIntakeMotor->SetDutyCycle(0.0);
     m_pFeederMotor->SetDutyCycle(0.0);
-    AutonomousSwerveDriveSequence(RobotDirection::ROBOT_REVERSE, ROBOT_NO_ROTATE, 0.30, 0.0, 0.0, 1.5_s, true);
+    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_REVERSE, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
+    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.30, 0.0, 0.0, 1.5_s, true);
 
     // Should be in position, go through shooting again.  Back feed real quick, ramp up, feed to shoot.
     m_pFeederMotor->SetDutyCycle(-FEEDER_MOTOR_SPEED);

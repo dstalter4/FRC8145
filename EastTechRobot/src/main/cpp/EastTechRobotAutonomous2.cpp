@@ -23,7 +23,7 @@
 ////////////////////////////////////////////////////////////////
 /// @method EastTechRobot::AutonomousRoutine2
 ///
-/// Autonomous routine 2.
+/// Autonomous routine 2.  Runs from the source side.
 ///
 ////////////////////////////////////////////////////////////////
 void EastTechRobot::AutonomousRoutine2()
@@ -53,9 +53,9 @@ void EastTechRobot::AutonomousRoutine2()
     (void)pPivotLeaderTalon->SetControl(pivotPositionVoltage.WithPosition(PIVOT_ANGLE_RUNTIME_BASE));
 
     // Back up to leave past the line
-    RobotDirection autoLeaveBySourceDirection = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? RobotDirection::ROBOT_RIGHT : RobotDirection::ROBOT_LEFT;
-    RobotDirection autoLeaveDirection = static_cast<RobotDirection>(RobotDirection::ROBOT_FORWARD | autoLeaveBySourceDirection);
-    AutonomousSwerveDriveSequence(autoLeaveDirection, ROBOT_NO_ROTATE, 0.30, 0.0, 0.0, 3.0_s, true);
+    RobotStrafe autoLeaveBySourceStrafe = (m_AllianceColor.value() == DriverStation::Alliance::kRed) ? RobotStrafe::ROBOT_STRAFE_RIGHT : RobotStrafe::ROBOT_STRAFE_LEFT;
+    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_FORWARD, autoLeaveBySourceStrafe, RobotRotation::ROBOT_NO_ROTATION);
+    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.30, 0.0, 0.0, 3.0_s, true);
 
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto routine 2 done.");

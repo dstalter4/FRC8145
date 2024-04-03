@@ -98,22 +98,19 @@ inline void EastTechRobot::AutonomousDelay(units::second_t time)
 /// using swerve drive modules.
 ///
 ////////////////////////////////////////////////////////////////
-inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotDirection direction, RobotRotate rotate, double translationSpeed, double strafeSpeed, double rotateSpeed, units::second_t time, bool bFieldRelative)
+inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotSwerveDirections & rSwerveDirections, double translationSpeed, double strafeSpeed, double rotateSpeed, units::second_t time, bool bFieldRelative)
 {
-    RobotDirection translationDirection = static_cast<RobotDirection>(direction & ROBOT_TRANSLATION_MASK);
-    RobotDirection strafeDirection = static_cast<RobotDirection>(direction & ROBOT_STRAFE_MASK);
-
     units::meter_t translation = 0.0_m;
     units::meter_t strafe = 0.0_m;
 
-    switch (translationDirection)
+    switch (rSwerveDirections.GetTranslation())
     {
-        case ROBOT_FORWARD:
+        case RobotTranslation::ROBOT_TRANSLATION_FORWARD:
         {
             translation = units::meter_t(translationSpeed);
             break;
         }
-        case ROBOT_REVERSE:
+        case RobotTranslation::ROBOT_TRANSLATION_REVERSE:
         {
             translation = units::meter_t(-translationSpeed);
             break;
@@ -124,14 +121,14 @@ inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotDirection directio
         }
     }
 
-    switch (strafeDirection)
+    switch (rSwerveDirections.GetStrafe())
     {
-        case ROBOT_LEFT:
+        case RobotStrafe::ROBOT_STRAFE_LEFT:
         {
             strafe = units::meter_t(strafeSpeed);
             break;
         }
-        case ROBOT_RIGHT:
+        case RobotStrafe::ROBOT_STRAFE_RIGHT:
         {
             strafe = units::meter_t(-strafeSpeed);
             break;
@@ -142,20 +139,20 @@ inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotDirection directio
         }
     }
 
-    switch (rotate)
+    switch (rSwerveDirections.GetRotation())
     {
-        case ROBOT_NO_ROTATE:
+        case RobotRotation::ROBOT_NO_ROTATION:
         {
             // Just in case the user decided to pass a speed anyway
             rotateSpeed = 0.0;
             break;
         }
-        case ROBOT_CLOCKWISE:
+        case RobotRotation::ROBOT_CLOCKWISE:
         {
             rotateSpeed *= -1.0;
             break;
         }
-        case ROBOT_COUNTER_CLOCKWISE:
+        case RobotRotation::ROBOT_COUNTER_CLOCKWISE:
         default:
         {
             break;
@@ -173,6 +170,10 @@ inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotDirection directio
 
     // Stop motion
     m_pSwerveDrive->SetModuleStates({0_m, 0_m}, 0.0, true, true);
+
+    // Clear the swerve directions to prevent the caller from
+    // accidentally reusing them without explicitly setting them again.
+    rSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_NO_TRANSLATION, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
 }
 
 #endif // EASTTECHROBOTAUTONOMOUS_HPP
