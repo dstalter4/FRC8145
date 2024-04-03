@@ -200,7 +200,7 @@ void EastTechRobot::ConfigureMotorControllers()
     pivotTalonConfig.CurrentLimits.SupplyTimeThreshold = 0.1;
     pivotTalonConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
 
-    pivotTalonConfig.Slot0.kP = 18.0;
+    pivotTalonConfig.Slot0.kP = 25.0;
     pivotTalonConfig.Slot0.kI = 0.0;
     pivotTalonConfig.Slot0.kD = 0.1;
 
