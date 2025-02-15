@@ -8,6 +8,8 @@
 /// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
+#if 0
+
 #ifndef NEOSWERVEMODULE_HPP
 #define NEOSWERVEMODULE_HPP
 
@@ -20,7 +22,7 @@
 #include "frc/kinematics/SwerveModulePosition.h"        // for struct declaration
 #include "frc/kinematics/SwerveModuleState.h"           // for struct declaration
 #include "frc/geometry/Rotation2d.h"                    // for class declaration
-#include "rev/CANSparkMax.h"                            // for interacting with spark max motor controllers
+#include "rev/SparkMax.h"                               // for interacting with spark max motor controllers
 #include "units/angle.h"                                // for degree user defined literal
 #include "units/voltage.h"                              // for voltage unit user defined literals
 
@@ -124,5 +126,7 @@ private:
     NeoSwerveModule(const NeoSwerveModule &) = delete;
     NeoSwerveModule & operator=(const NeoSwerveModule &) = delete;
 };
+
+#endif
 
 #endif // NEOSWERVEMODULE_HPP

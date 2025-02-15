@@ -14,7 +14,7 @@
 
 // C INCLUDES
 #include "frc/BuiltInAccelerometer.h"   // for the built-in accelerometer
-#include "rev/CANSparkMax.h"            // for interacting with spark max motor controllers
+#include "rev/SparkMax.h"               // for interacting with spark max motor controllers
 
 // C++ INCLUDES
 #include "RobotUtils.hpp"               // for DisplayMessage(), DisplayFormattedMessage()
@@ -162,6 +162,9 @@ void EastTechRobotTest::InitializeCommonPointers()
 ////////////////////////////////////////////////////////////////
 void EastTechRobotTest::QuickTestCode()
 {
+/*
+    // @todo_2025: Port this to the new APIs
+
     // Rev only allows creating one motor object with a CAN ID.
     // Disable the actual swerve object creation.
     static CANSparkMax * m_pDriveSpark = new CANSparkMax(4, CANSparkLowLevel::MotorType::kBrushless);
@@ -207,6 +210,7 @@ void EastTechRobotTest::QuickTestCode()
     // BR: 1-2-1, 191.602
     SmartDashboard::PutNumber("Debug C", m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble());
     SmartDashboard::PutNumber("Debug D", m_AngleSparkEncoder.GetPosition());
+*/
 }
 
 
@@ -316,8 +320,8 @@ void EastTechRobotTest::CtreSpeedControllerTest()
 ////////////////////////////////////////////////////////////////
 void EastTechRobotTest::RevSpeedControllerTest()
 {
-    static rev::CANSparkMax * pLeftNeo = new rev::CANSparkMax(1, rev::CANSparkLowLevel::MotorType::kBrushless);
-    static rev::CANSparkMax * pRightNeo = new rev::CANSparkMax(2, rev::CANSparkLowLevel::MotorType::kBrushless);
+    static rev::spark::SparkMax * pLeftNeo = new rev::spark::SparkMax(1, rev::spark::SparkMax::MotorType::kBrushless);
+    static rev::spark::SparkMax * pRightNeo = new rev::spark::SparkMax(2, rev::spark::SparkMax::MotorType::kBrushless);
 
     while (m_pJoystick->GetRawButton(1))
     {

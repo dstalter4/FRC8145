@@ -12,7 +12,6 @@
 // <none>
 
 // C INCLUDES
-#include "cameraserver/CameraServer.h"          // for CameraServer instance
 #include "networktables/NetworkTable.h"         // for network tables
 #include "networktables/NetworkTableInstance.h" // for network table instance
 #include "wpinet/PortForwarder.h"               // for port forwarding
@@ -177,6 +176,8 @@ bool RobotCamera::AutonomousCamera::AlignToTarget(SeekDirection seekDirection, c
 ////////////////////////////////////////////////////////////////
 void RobotCamera::AutonomousCamera::AlignToTargetSwerve()
 {
+    // @todo: This is 2024 code.
+
     // Note: LimelightHelpers.h uses a series of inline functions that expands to
     //       m_pLimelightNetworkTable->GetEntry("pipeline").SetDouble(0);
 
@@ -223,47 +224,11 @@ void RobotCamera::AutonomousCamera::AlignToTargetSwerve()
         pRobotObj->m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, 0.0, true, true);
     }
 
-    //Putting the coding for the shooter angle stuff here just so it's all in the same spot 
-
-    //Estimate distance for use in finding the ideal shooting angle
-    //Unless otherwise noted, measurements are in feet from here forward
-    //constexpr double limelightMountAngleDegrees = 25.0;
-    constexpr double cameraVerticalOffset = 20.0; 
-    constexpr double targetHeight = 51.9;
-    double targetOffsetAngleVertical = m_pLimelightNetworkTable->GetNumber("ty",0.0);
-    double angleToGoal = cameraVerticalOffset + targetOffsetAngleVertical;
-
-    //Estimates the distance, which can be used for the angle of the shooter
-    double estimateDistance = (targetHeight - cameraVerticalOffset) / std::tan(angleToGoal);
-
-    //Calculate the ideal shooter angle based on the estimated distance
-    double estimatedShooterAngle = std::tan(79.4/estimateDistance);
-    //Get the current angle being read from the encoder (should be between 0 and 95)
-    double currentShooterAngle = pRobotObj->m_PivotTargetDegrees.value();
-    double targetShooterAngle = currentShooterAngle-estimatedShooterAngle;
-
-    bool bMoveShooterAngle = false;
-    if (bMoveShooterAngle)
-    {
-        if (targetShooterAngle > 1)
-        {
-            //rotate shooter motor
-        }
-        else if(targetShooterAngle < -1)
-        {
-            //rotate shooter motor the other way
-        }
-        else 
-        {
-            //run shooter motors maybe
-        }
-    }
-
     return;
 
 
 
-    // 2024: Go no further
+    // 2025: Go no further
 
     // Get the x-axis target value
     double targetX = m_pLimelightNetworkTable->GetNumber("tx", 0.0);
@@ -295,8 +260,8 @@ void RobotCamera::AutonomousCamera::AlignToTargetSwerve()
 ///
 ////////////////////////////////////////////////////////////////
 RobotCamera::UsbCameraInfo::UsbCameraInfo(const CameraType camType, int devNum, const int xRes, const int yRes, const int fps) :
-    m_UsbCam(),
-    m_CamSink(),
+    m_UsbCam(CameraServer::StartAutomaticCapture()),
+    m_CamSink(CameraServer::GetVideo(m_UsbCam)),
     m_bIsPresent(true),
     m_DeviceNum(devNum),
     CAM_TYPE(camType),
@@ -307,10 +272,8 @@ RobotCamera::UsbCameraInfo::UsbCameraInfo(const CameraType camType, int devNum, 
     RobotUtils::DisplayFormattedMessage("Creating camera %d.\n", devNum);
 
     // Start image capture, set the resolution and connect the sink
-    m_UsbCam = CameraServer::StartAutomaticCapture();
     m_UsbCam.SetResolution(xRes, yRes);
     m_UsbCam.SetFPS(fps);
-    m_CamSink = CameraServer::GetVideo(m_UsbCam);
 }
 
 
