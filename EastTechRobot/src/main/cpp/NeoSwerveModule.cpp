@@ -8,6 +8,8 @@
 /// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
+#if 0
+
 // SYSTEM INCLUDES
 // <none>
 
@@ -293,3 +295,5 @@ void NeoSwerveModule::UpdateSmartDashboard()
         lastUpdateTime = currentTime;
     }
 }
+
+#endif

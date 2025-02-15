@@ -167,37 +167,6 @@ void EastTechRobot::ConfigureMotorControllers()
     const StatorCurrentLimitConfiguration INTAKE_MOTOR_STATOR_CURRENT_LIMIT_CONFIG = {true, 5.0, 50.0, 5.0};
     pTalon->ConfigStatorCurrentLimit(INTAKE_MOTOR_STATOR_CURRENT_LIMIT_CONFIG);
     */
-
-    // Configure mechanism pivot motor controller
-    TalonFXConfiguration pivotTalonConfig;
-    pivotTalonConfig.Feedback.SensorToMechanismRatio = 25.0;
-    pivotTalonConfig.ClosedLoopGeneral.ContinuousWrap = true;
-
-    pivotTalonConfig.CurrentLimits.SupplyCurrentLimit = 25.0;
-    pivotTalonConfig.CurrentLimits.SupplyCurrentThreshold = 40.0;
-    pivotTalonConfig.CurrentLimits.SupplyTimeThreshold = 0.1;
-    pivotTalonConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
-
-    pivotTalonConfig.Slot0.kP = 25.0;
-    pivotTalonConfig.Slot0.kI = 0.0;
-    pivotTalonConfig.Slot0.kD = 0.1;
-
-    (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().Apply(pivotTalonConfig);
-    (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
-
-    // Configure lift motor controller
-    TalonFXConfiguration liftTalonConfig;
-    liftTalonConfig.Feedback.SensorToMechanismRatio = 25.0;
-    liftTalonConfig.ClosedLoopGeneral.ContinuousWrap = true;
-
-    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID)->GetConfigurator().Apply(liftTalonConfig);
-    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
-    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID + 1)->GetConfigurator().Apply(liftTalonConfig);
-    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID + 1)->GetConfigurator().SetPosition(0.0_tr);
-
-    m_pIntakeMotor->m_pTalonFx->SetNeutralMode(NeutralModeValue::Coast);
-    m_pFeederMotor->m_pTalonFx->SetNeutralMode(NeutralModeValue::Coast);
-    m_pAmpNoteControlMotor->m_pTalonFx->SetNeutralMode(NeutralModeValue::Brake);
 }
 
 
@@ -214,10 +183,6 @@ void EastTechRobot::InitialStateSetup()
 {
     // First reset any member data
     ResetMemberData();
-
-    (void)m_pPivotMotors->GetMotorObject(PIVOT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
-    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
-    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID + 1)->GetConfigurator().SetPosition(0.0_tr);
 
     // Stop/clear any timers, just in case
     // @todo: Make this a dedicated function.

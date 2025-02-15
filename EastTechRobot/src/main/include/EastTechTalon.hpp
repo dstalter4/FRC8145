@@ -220,9 +220,9 @@ private:
             {
                 // Limits were 40.0, 55.0, 0.1
                 CurrentLimitsConfigs driveMotorCurrentLimits;
-                driveMotorCurrentLimits.SupplyCurrentLimit = 55.0;
-                driveMotorCurrentLimits.SupplyCurrentThreshold = 60.0;
-                driveMotorCurrentLimits.SupplyTimeThreshold = 0.1;
+                driveMotorCurrentLimits.SupplyCurrentLowerLimit = 55.0_A;
+                driveMotorCurrentLimits.SupplyCurrentLimit = 60.0_A;
+                driveMotorCurrentLimits.SupplyCurrentLowerTime = 0.1_s;
                 driveMotorCurrentLimits.SupplyCurrentLimitEnable = true;
                 (void)m_pTalon->GetConfigurator().Apply(driveMotorCurrentLimits);
             }
