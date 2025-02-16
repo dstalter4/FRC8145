@@ -44,15 +44,18 @@ namespace SwerveConfig
     static constexpr const double METERS_PER_INCH = 0.0254;
 
     // SDS MK4 L3 Very Fast configuration
-    static constexpr double DRIVE_GEAR_RATIO = (6.12 / 1.0);
-    static constexpr double ANGLE_GEAR_RATIO = (12.8 / 1.0);
+    //static constexpr double DRIVE_GEAR_RATIO = (6.12 / 1.0);
+    //static constexpr double ANGLE_GEAR_RATIO = (12.8 / 1.0);
+    // SDS MK4n L3+ configuration
+    static constexpr double DRIVE_GEAR_RATIO = (5.36 / 1.0);
+    static constexpr double ANGLE_GEAR_RATIO = (18.75 / 1.0);
     static constexpr double FX_INTEGRATED_SENSOR_UNITS_PER_ROTATION = 2048.0;
     static constexpr double WHEEL_CIRCUMFERENCE = 4.0 * METERS_PER_INCH * M_PI;
 
     // Distance between front/back wheel centers 23.5_in (0.5969_m)
-    static constexpr const units::meter_t WHEEL_BASE = units::meter_t(23.5 * METERS_PER_INCH);
+    static constexpr const units::meter_t WHEEL_BASE = units::meter_t(22.75 * METERS_PER_INCH);
     // Distance between left/right wheel centers, 21.5_in (0.5461_m)
-    static constexpr const units::meter_t TRACK_WIDTH = units::meter_t(21.5 * METERS_PER_INCH);
+    static constexpr const units::meter_t TRACK_WIDTH = units::meter_t(22.75 * METERS_PER_INCH);
 
     // 14.7638 feet per second (conversion *3.28084), 487.0141 degrees per second (conversion *57.2957795131)
     static constexpr units::meters_per_second_t MAX_DRIVE_VELOCITY_MPS = 4.5_mps;

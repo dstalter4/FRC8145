@@ -333,8 +333,8 @@ private:
 
     static const unsigned           CAMERA_RUN_INTERVAL_MS                  = 1000U;
     
-    static constexpr double         JOYSTICK_TRIM_UPPER_LIMIT               =  0.05;
-    static constexpr double         JOYSTICK_TRIM_LOWER_LIMIT               = -0.05;
+    static constexpr double         JOYSTICK_TRIM_UPPER_LIMIT               =  0.10;
+    static constexpr double         JOYSTICK_TRIM_LOWER_LIMIT               = -0.10;
     static constexpr double         SWERVE_ROTATE_SLOW_JOYSTICK_THRESHOLD   =  0.10;
     static constexpr double         SWERVE_DRIVE_SLOW_SPEED                 =  0.10;
     static constexpr double         SWERVE_ROTATE_SLOW_SPEED                =  0.10;
