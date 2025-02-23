@@ -60,9 +60,9 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
 
     // Configure drive motor controller
     TalonFXConfiguration driveTalonConfig;
-    driveTalonConfig.MotorOutput.Inverted = InvertedValue::CounterClockwise_Positive;
+    driveTalonConfig.MotorOutput.Inverted = SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.DRIVE_MOTOR_INVERTED_VALUE;
     driveTalonConfig.MotorOutput.NeutralMode = NeutralModeValue::Brake;
-    driveTalonConfig.Feedback.SensorToMechanismRatio = SwerveConfig::DRIVE_GEAR_RATIO;
+    driveTalonConfig.Feedback.SensorToMechanismRatio = SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.DRIVE_GEAR_RATIO;
 
     driveTalonConfig.CurrentLimits.SupplyCurrentLowerLimit = 35.0_A;
     driveTalonConfig.CurrentLimits.SupplyCurrentLimit = 60.0_A;
@@ -83,15 +83,15 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
     (void)m_pDriveTalon->GetConfigurator().SetPosition(0.0_tr);
 
     // @todo: Should the talons change default group status rates to preserve CAN bandwidth?
+    // @todo_phoenix6: The example calls need to be updated.
     //m_pDriveTalon->SetStatusFramePeriod(StatusFrameEnhanced::Status_1_General, 100);
     //m_pDriveTalon->SetStatusFramePeriod(StatusFrameEnhanced::Status_2_Feedback0, 100);
 
     // Configure angle motor controller
-    // mk4 swerve uses Clockwise_Positive, mk4n uses CounterClockwise_Positive
     TalonFXConfiguration angleTalonConfig;
-    angleTalonConfig.MotorOutput.Inverted = InvertedValue::CounterClockwise_Positive;
+    angleTalonConfig.MotorOutput.Inverted = SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.ANGLE_MOTOR_INVERTED_VALUE;
     angleTalonConfig.MotorOutput.NeutralMode = NeutralModeValue::Coast;
-    angleTalonConfig.Feedback.SensorToMechanismRatio = SwerveConfig::ANGLE_GEAR_RATIO;
+    angleTalonConfig.Feedback.SensorToMechanismRatio = SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.ANGLE_GEAR_RATIO;
     angleTalonConfig.ClosedLoopGeneral.ContinuousWrap = true;
 
     angleTalonConfig.CurrentLimits.SupplyCurrentLowerLimit = 25.0_A;
@@ -110,7 +110,7 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
     CANcoderConfiguration canCoderConfig;
     // Per the CTRE documentation: Setting this to 1 makes the absolute position unsigned [0, 1)
     canCoderConfig.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 1.0_tr;
-    canCoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue::CounterClockwise_Positive;
+    canCoderConfig.MagnetSensor.SensorDirection = SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.CANCODER_INVERTED_VALUE;
     (void)m_pAngleCanCoder->GetConfigurator().Apply(canCoderConfig);
 
     // Reset the swerve module to the absolute angle starting position.

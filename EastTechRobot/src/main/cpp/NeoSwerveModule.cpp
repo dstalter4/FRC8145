@@ -65,8 +65,8 @@ NeoSwerveModule::NeoSwerveModule(SwerveModuleConfig config) :
     driveConfig.SmartCurrentLimit(80);
     driveConfig.Inverted(false);
     driveConfig.SetIdleMode(SparkMaxConfig::IdleMode::kBrake);
-    driveConfig.encoder.PositionConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::DRIVE_GEAR_RATIO);
-    driveConfig.encoder.VelocityConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::DRIVE_GEAR_RATIO / 60.0);
+    driveConfig.encoder.PositionConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.DRIVE_GEAR_RATIO);
+    driveConfig.encoder.VelocityConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.DRIVE_GEAR_RATIO / 60.0);
     driveConfig.closedLoop.SetFeedbackSensor(ClosedLoopConfig::FeedbackSensor::kPrimaryEncoder);
     driveConfig.closedLoop.Pid(0.02, 0.0, 0.0);
     driveConfig.closedLoop.VelocityFF(0.0);
@@ -87,7 +87,7 @@ NeoSwerveModule::NeoSwerveModule(SwerveModuleConfig config) :
     angleConfig.SmartCurrentLimit(20);
     angleConfig.Inverted(false);
     angleConfig.SetIdleMode(SparkMaxConfig::IdleMode::kCoast);
-    angleConfig.encoder.PositionConversionFactor(360.0 / SwerveConfig::ANGLE_GEAR_RATIO);
+    angleConfig.encoder.PositionConversionFactor(360.0 / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.ANGLE_GEAR_RATIO);
     angleConfig.closedLoop.SetFeedbackSensor(ClosedLoopConfig::FeedbackSensor::kPrimaryEncoder);
     angleConfig.closedLoop.Pid(0.028, 0.0, 0.0015);
     angleConfig.closedLoop.VelocityFF(0.000);
