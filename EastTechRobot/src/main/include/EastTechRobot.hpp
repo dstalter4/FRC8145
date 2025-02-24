@@ -318,10 +318,10 @@ private:
     // (none)
     
     // Misc
-    const std::string               AUTO_ROUTINE_1_STRING                   = "Speaker center";
-    const std::string               AUTO_ROUTINE_2_STRING                   = "Speaker source";
-    const std::string               AUTO_ROUTINE_3_STRING                   = "Speaker amp";
     const std::string               AUTO_NO_ROUTINE_STRING                  = "No autonomous routine";
+    const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
+    const std::string               AUTO_ROUTINE_2_STRING                   = "Autonomous Routine 2";
+    const std::string               AUTO_ROUTINE_3_STRING                   = "Autonomous Routine 3";
     const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous Test Routine";
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
