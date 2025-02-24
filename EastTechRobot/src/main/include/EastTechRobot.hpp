@@ -318,10 +318,10 @@ private:
     // (none)
     
     // Misc
-    const std::string               AUTO_ROUTINE_1_STRING                   = "Speaker center";
-    const std::string               AUTO_ROUTINE_2_STRING                   = "Speaker source";
-    const std::string               AUTO_ROUTINE_3_STRING                   = "Speaker amp";
     const std::string               AUTO_NO_ROUTINE_STRING                  = "No autonomous routine";
+    const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
+    const std::string               AUTO_ROUTINE_2_STRING                   = "Autonomous Routine 2";
+    const std::string               AUTO_ROUTINE_3_STRING                   = "Autonomous Routine 3";
     const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous Test Routine";
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
@@ -333,8 +333,8 @@ private:
 
     static const unsigned           CAMERA_RUN_INTERVAL_MS                  = 1000U;
     
-    static constexpr double         JOYSTICK_TRIM_UPPER_LIMIT               =  0.05;
-    static constexpr double         JOYSTICK_TRIM_LOWER_LIMIT               = -0.05;
+    static constexpr double         JOYSTICK_TRIM_UPPER_LIMIT               =  0.10;
+    static constexpr double         JOYSTICK_TRIM_LOWER_LIMIT               = -0.10;
     static constexpr double         SWERVE_ROTATE_SLOW_JOYSTICK_THRESHOLD   =  0.10;
     static constexpr double         SWERVE_DRIVE_SLOW_SPEED                 =  0.10;
     static constexpr double         SWERVE_ROTATE_SLOW_SPEED                =  0.10;

@@ -8,14 +8,13 @@
 /// Copyright (c) 2024 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
-#if 0
-
 // SYSTEM INCLUDES
 // <none>
 
 // C INCLUDES
 #include "frc/Timer.h"                              // for timers
 #include "frc/smartdashboard/SmartDashboard.h"      // for interacting with the smart dashboard
+#include "rev/config/SparkMaxConfig.h"              // for creating and applying SparkMax configs
 #include "units/length.h"                           // for units::meters
 
 // C++ INCLUDES
@@ -44,12 +43,12 @@ uint32_t NeoSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 ////////////////////////////////////////////////////////////////
 NeoSwerveModule::NeoSwerveModule(SwerveModuleConfig config) :
     m_MotorGroupPosition(config.m_Position),
-    m_pDriveSpark(new CANSparkMax(config.m_DriveMotorCanId, CANSparkLowLevel::MotorType::kBrushless)),
-    m_pAngleSpark(new CANSparkMax(config.m_AngleMotorCanId, CANSparkLowLevel::MotorType::kBrushless)),
+    m_pDriveSpark(new SparkMax(config.m_DriveMotorCanId, SparkMax::MotorType::kBrushless)),
+    m_pAngleSpark(new SparkMax(config.m_AngleMotorCanId, SparkMax::MotorType::kBrushless)),
     m_DriveSparkEncoder(m_pDriveSpark->GetEncoder()),
     m_AngleSparkEncoder(m_pAngleSpark->GetEncoder()),
-    m_DrivePidController(m_pDriveSpark->GetPIDController()),
-    m_AnglePidController(m_pAngleSpark->GetPIDController()),
+    m_DrivePidController(m_pDriveSpark->GetClosedLoopController()),
+    m_AnglePidController(m_pAngleSpark->GetClosedLoopController()),
     m_pAngleCanCoder(new CANcoder(config.m_CanCoderId, "canivore-8145")),
     m_AngleOffset(config.m_AngleOffset),
     m_LastAngle(),
@@ -62,43 +61,50 @@ NeoSwerveModule::NeoSwerveModule(SwerveModuleConfig config) :
     std::snprintf(&m_DisplayStrings.m_AngleNeoTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "angle temp (F)");
 
     // Configure drive motor controller
-    m_pDriveSpark->RestoreFactoryDefaults();
-    m_pDriveSpark->SetSmartCurrentLimit(80);
-    m_pDriveSpark->SetInverted(false);
-    m_pDriveSpark->SetIdleMode(CANSparkMax::IdleMode::kBrake);
-    m_DriveSparkEncoder.SetPositionConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::DRIVE_GEAR_RATIO);
-    m_DriveSparkEncoder.SetVelocityConversionFactor((SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::DRIVE_GEAR_RATIO) / 60.0);
+    SparkMaxConfig driveConfig;
+    driveConfig.SmartCurrentLimit(80);
+    driveConfig.Inverted(false);
+    driveConfig.SetIdleMode(SparkMaxConfig::IdleMode::kBrake);
+    driveConfig.encoder.PositionConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.DRIVE_GEAR_RATIO);
+    driveConfig.encoder.VelocityConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.DRIVE_GEAR_RATIO / 60.0);
+    driveConfig.closedLoop.SetFeedbackSensor(ClosedLoopConfig::FeedbackSensor::kPrimaryEncoder);
+    driveConfig.closedLoop.Pid(0.02, 0.0, 0.0);
+    driveConfig.closedLoop.VelocityFF(0.0);
+    driveConfig.VoltageCompensation(12.0);
+    m_pDriveSpark->Configure(driveConfig, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+
     m_DriveSparkEncoder.SetPosition(0.0);     // countsPerRev = 42
-    m_DrivePidController.SetP(0.02);
-    m_DrivePidController.SetI(0.0);
-    m_DrivePidController.SetD(0.0);
-    m_DrivePidController.SetFF(0.0);
-    m_pDriveSpark->EnableVoltageCompensation(12.0);
-    m_pDriveSpark->BurnFlash();
-    //m_pDriveSpark->SetPeriodicFramePeriod(CANSparkMax::PeriodicFrame::kStatus1, 20);
-    //m_pDriveSpark->SetPeriodicFramePeriod(CANSparkMax::PeriodicFrame::kStatus2, 20);
-    //m_pDriveSpark->SetPeriodicFramePeriod(CANSparkMax::PeriodicFrame::kStatus3, 50);
+
+    // The signals retrieved by each kStatusX periodic frame are listed in SparkLowLevel.h.
+    // Set a specific signal frequency using configVariable.signals.Function(value).  The
+    // library will then manage the kStatusX as appropriate.
+    //driveConfig.signals.PrimaryEncoderPositionPeriodMs(20);
+
 
     // Configure angle motor controller
     // Current limiting values: enable, limit, threshold, duration
-    m_pAngleSpark->RestoreFactoryDefaults();
-    m_pAngleSpark->SetSmartCurrentLimit(20);
-    m_pAngleSpark->SetInverted(false);
-    m_pAngleSpark->SetIdleMode(CANSparkMax::IdleMode::kCoast);
-    m_AngleSparkEncoder.SetPositionConversionFactor(360.0 / SwerveConfig::ANGLE_GEAR_RATIO);
-    m_AnglePidController.SetP(0.028);
-    m_AnglePidController.SetI(0.000);
-    m_AnglePidController.SetD(0.0015);
-    m_AnglePidController.SetFF(0.000);
-    m_pAngleSpark->EnableVoltageCompensation(12.0);
-    m_pAngleSpark->BurnFlash();
-    //m_pAngleSpark->SetPeriodicFramePeriod(CANSparkMax::PeriodicFrame::kStatus1, 500);
-    //m_pAngleSpark->SetPeriodicFramePeriod(CANSparkMax::PeriodicFrame::kStatus2, 20);
-    //m_pAngleSpark->SetPeriodicFramePeriod(CANSparkMax::PeriodicFrame::kStatus3, 500);
+    SparkMaxConfig angleConfig;
+    angleConfig.SmartCurrentLimit(20);
+    angleConfig.Inverted(false);
+    angleConfig.SetIdleMode(SparkMaxConfig::IdleMode::kCoast);
+    angleConfig.encoder.PositionConversionFactor(360.0 / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.ANGLE_GEAR_RATIO);
+    angleConfig.closedLoop.SetFeedbackSensor(ClosedLoopConfig::FeedbackSensor::kPrimaryEncoder);
+    angleConfig.closedLoop.Pid(0.028, 0.0, 0.0015);
+    angleConfig.closedLoop.VelocityFF(0.000);
+    angleConfig.VoltageCompensation(12.0);
+
+    m_pAngleSpark->Configure(angleConfig, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+
+    // The signals retrieved by each kStatusX periodic frame are listed in SparkLowLevel.h.
+    // Set a specific signal frequency using configVariable.signals.Function(value).  The
+    // library will then manage the kStatusX as appropriate.
+    //angleConfig.signals.PrimaryEncoderPositionPeriodMs(20);
+
 
     // Configure CANCoder
     CANcoderConfiguration canCoderConfig;
-    canCoderConfig.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue::Unsigned_0To1;
+    // Per the CTRE documentation: Setting this to 1 makes the absolute position unsigned [0, 1)
+    canCoderConfig.MagnetSensor.AbsoluteSensorDiscontinuityPoint = 1.0_tr;
     canCoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue::CounterClockwise_Positive;
     (void)m_pAngleCanCoder->GetConfigurator().Apply(canCoderConfig);
     //m_pAngleCanCoder->SetStatusFramePeriod(CANCoderStatusFrame_SensorData, 100);
@@ -133,7 +139,7 @@ void NeoSwerveModule::HomeModule()
 {
     double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - m_AngleOffset.Degrees().value();
     m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
-    m_AnglePidController.SetReference(0.0, CANSparkMax::ControlType::kPosition);
+    m_AnglePidController.SetReference(0.0, SparkMax::ControlType::kPosition);
     m_LastAngle = 0.0_deg;
 }
 
@@ -192,7 +198,7 @@ void NeoSwerveModule::SetDesiredState(SwerveModuleState desiredState, bool bIsOp
     }
     else
     {
-        m_DrivePidController.SetReference(desiredState.speed.value(), CANSparkMax::ControlType::kVelocity, 0, m_pFeedForward->Calculate(desiredState.speed).value());
+        m_DrivePidController.SetReference(desiredState.speed.value(), SparkMax::ControlType::kVelocity, ClosedLoopSlot::kSlot0, m_pFeedForward->Calculate(desiredState.speed).value());
     }
 
     // Update the angle motor controller
@@ -207,7 +213,7 @@ void NeoSwerveModule::SetDesiredState(SwerveModuleState desiredState, bool bIsOp
     {
         angle = desiredState.angle;
     }
-    m_AnglePidController.SetReference(angle.Degrees().value(), CANSparkMax::ControlType::kPosition);
+    m_AnglePidController.SetReference(angle.Degrees().value(), SparkMax::ControlType::kPosition);
 
     // Save off the updated last angle
     m_LastAngle = angle;
@@ -295,5 +301,3 @@ void NeoSwerveModule::UpdateSmartDashboard()
         lastUpdateTime = currentTime;
     }
 }
-
-#endif
