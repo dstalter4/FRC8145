@@ -8,7 +8,7 @@
 /// control routines as well as all necessary support for interacting with all
 /// motors, sensors and input/outputs on the robot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -39,13 +39,29 @@ EastTechRobot::EastTechRobot() :
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
     m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, "canivore-8145")),
     m_pSwerveDrive                      (new SwerveDrive(m_pPigeon)),
+    m_pLiftMotors                       (new TalonMotorGroup<TalonFX>("Lift motors", TWO_MOTORS, LIFT_MOTORS_CAN_START_ID, MotorGroupControlMode::FOLLOW_INVERSE, NeutralModeValue::Brake, false)),
+    m_pArmPivotMotor                    (new TalonFxMotorController(ARM_PIVOT_MOTOR_CAN_ID)),
+    m_pWristPivotMotor                  (new TalonFxMotorController(WRIST_PIVOT_MOTOR_CAN_ID)),
+    m_pGamePieceMotor                   (new TalonFxMotorController(GAME_PIECE_MOTOR_CAN_ID)),
+    m_pHangMotor                        (new TalonFxMotorController(HANG_MOTOR_CAN_ID)),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
+    m_pArmAbsoluteEncoder               (new DutyCycleEncoder(ARM_ABSOLUTE_ENCODER_DIO_CHANNEL)),
+    m_pWristAbsoluteEncoder             (new DutyCycleEncoder(WRIST_ABSOLUTE_ENCODER_DIO_CHANNEL)),
     m_pMatchModeTimer                   (new Timer()),
+    m_pRobotProgramTimer                (new Timer()),
     m_pSafetyTimer                      (new Timer()),
     m_CameraThread                      (RobotCamera::LimelightThread),
+    m_LiftTargetDegrees                 (LIFT_DOWN_ANGLE),
+    m_ArmTargetDegrees                  (ARM_STARTING_POSITION_DEGREES),
+    m_ArmManualOffsetDegrees            (0.0_deg),
+    m_WristTargetDegrees                (WRIST_STARTING_POSITION_DEGREES),
+    m_WristManualOffsetDegrees          (0.0_deg),
+    m_LiftPosition                      (LiftPosition::LIFT_DOWN),
+    m_ArmPosition                       (ArmPosition::NEUTRAL),
     m_RobotMode                         (ROBOT_MODE_NOT_SET),
     m_AllianceColor                     (DriverStation::GetAlliance()),
+    m_AbsoluteEncodersInitialized       (false),
     m_bCameraAlignInProgress            (false),
     m_HeartBeat                         (0U)
 {
@@ -73,6 +89,10 @@ EastTechRobot::EastTechRobot() :
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
     RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
     m_CameraThread.detach();
+
+    // Start the free running timer
+    m_pRobotProgramTimer->Reset();
+    m_pRobotProgramTimer->Start();
 }
 
 
@@ -126,6 +146,90 @@ void EastTechRobot::RobotPeriodic()
         RobotUtils::DisplayMessage("RobotPeriodic called.");
         bRobotPeriodicStarted = true;
     }
+
+    // This is the logic to wait to take the absolute encoder readings until the RIO is ready
+    static units::time::second_t enabledTimeStamp = 0.0_s;
+    units::time::second_t currentTimeStamp = m_pRobotProgramTimer->Get();
+    if (DriverStation::IsEnabled() && (!m_AbsoluteEncodersInitialized))
+    {
+        // If the robot was just enabled (in any mode)
+        if (enabledTimeStamp == 0.0_s)
+        {
+            // Set the start time stamp
+            enabledTimeStamp = currentTimeStamp;
+        }
+
+        // Now check if enough time has passed for the RIO pins to have stabilized
+        static constexpr const units::time::second_t RIO_DUTY_CYCLE_ENCODER_STARTUP_DELAY = 2.0_s;
+        if ((currentTimeStamp - enabledTimeStamp) > RIO_DUTY_CYCLE_ENCODER_STARTUP_DELAY)
+        {
+/// START ARM
+            // Increases going down, crosses the zero boundary
+            // Decreases going up, crosses the zero boundary
+            // Range of motion is ~195.12_deg
+
+            double armEncoderValue = m_pArmAbsoluteEncoder->Get();
+            units::angle::degree_t armEncoderValueDegrees(armEncoderValue * ANGLE_360_DEGREES);
+
+            // This is the delta between the current mechanism position and the desired starting position (or zero point)
+            units::angle::degree_t armStartingOffsetDegrees = armEncoderValueDegrees - ARM_STARTING_POSITION_ENCODER_VALUE;
+            std::printf("armStartingOffsetDegrees (start): %f\n", armStartingOffsetDegrees.value());
+
+            // If the starting offset is negative, we crossed over the absolute encoder boundary
+            // We give a tolerance of five degrees in case the mechanism is near where we want to start
+            // @todo: Does this need to check for very small readings below zero?
+            // @todo: Boundary conditions here will be difficult
+            if (armStartingOffsetDegrees < ENCODER_BOUNDARY_TOLERANCE_DEGREES)
+            {
+                // the 0/1 boundary is 360, so subtract the starting position to see how many degrees were up to that point
+                // Add in the absolute value of the overage, which was negative
+                // This used to add units::angle::degree_t(std::abs(armStartingOffsetDegrees.value())), but that's probably wrong
+                armStartingOffsetDegrees = (units::angle::degree_t(ANGLE_360_DEGREES) - ARM_STARTING_POSITION_ENCODER_VALUE) + armEncoderValueDegrees;
+            }
+
+            // At this point we have the angle we want relative to zero
+            (void)m_pArmPivotMotor->m_pTalonFx->GetConfigurator().SetPosition(armStartingOffsetDegrees);
+            std::printf("armEncoderValue: %f\n", armEncoderValue);
+            std::printf("armEncoderValueDegrees: %f\n", armEncoderValueDegrees.value());
+            std::printf("armStartingOffsetDegrees (final): %f\n", armStartingOffsetDegrees.value());
+//// END ARM
+/// START WRIST
+            double wristEncoderValue = m_pWristAbsoluteEncoder->Get();
+            units::angle::degree_t wristEncoderValueDegrees(wristEncoderValue * ANGLE_360_DEGREES);
+
+            // This is the delta between the current mechanism position and the desired starting position (or zero point)
+            units::angle::degree_t wristStartingOffsetDegrees = wristEncoderValueDegrees - WRIST_STARTING_POSITION_ENCODER_VALUE;
+            std::printf("wristStartingOffsetDegrees (start): %f\n", wristStartingOffsetDegrees.value());
+
+            // If the starting offset is negative, we crossed over the absolute encoder boundary
+            // We give a tolerance of five degrees in case the mechanism is near where we want to start
+            // @todo: Does this need to check for very small readings below zero?
+            // @todo: Boundary conditions here will be difficult
+            if (wristStartingOffsetDegrees < -5.0_deg)
+            {
+                // the 0/1 boundary is 360, so subtract the starting position to see how many degrees were up to that point
+                // Add in the absolute value of the overage, which was negative
+                wristStartingOffsetDegrees = (units::angle::degree_t(ANGLE_360_DEGREES) - WRIST_STARTING_POSITION_ENCODER_VALUE) + wristEncoderValueDegrees;//units::angle::degree_t(std::abs(wristStartingOffsetDegrees.value()));
+            }
+
+            // At this point we have the angle we want relative to zero
+            (void)m_pWristPivotMotor->m_pTalonFx->GetConfigurator().SetPosition(wristStartingOffsetDegrees);
+            std::printf("wristEncoderValue: %f\n", wristEncoderValue);
+            std::printf("wristEncoderValueDegrees: %f\n", wristEncoderValueDegrees.value());
+            std::printf("wristStartingOffsetDegrees (final): %f\n", wristStartingOffsetDegrees.value());
+//// END WRIST
+            m_AbsoluteEncodersInitialized = true;
+        }
+    }
+    else
+    {
+        // Set the enabled time stamp back to zero until the robot is enabled again
+        enabledTimeStamp = 0.0_s;
+
+        // m_AbsoluteEncodersInitialized exists for the life of the program.  Once
+        // we have a stable reading acquired, we don't need to do it again until the
+        // robot program restarts.
+    }
 }
 
 
@@ -167,6 +271,62 @@ void EastTechRobot::ConfigureMotorControllers()
     const StatorCurrentLimitConfiguration INTAKE_MOTOR_STATOR_CURRENT_LIMIT_CONFIG = {true, 5.0, 50.0, 5.0};
     pTalon->ConfigStatorCurrentLimit(INTAKE_MOTOR_STATOR_CURRENT_LIMIT_CONFIG);
     */
+
+    // Some notes about applying motor configurations:
+    // - The classes/structs in YtaTalon.hpp have motor configuration objects in them.
+    // - Declaring stack local or class scope configuration objects are *separate and
+    //   distinct* from the configuration objects in the YtaTalon.hpp classes/structs.
+    // - If a stack local or class scope configuration is applied, it will overwrite
+    //   the configuration stored in the device.
+    // - Calling the methods provided by YtaTalon.hpp *never* update the configuration
+    //   objects in the classes/structs.  To update those objects, retrieve the objects
+    //   via things like m_MotorConfiguration (for individual motors) or
+    //   GetMotorConfiguration() (for motor groups).
+    // - The classes/structs in YtaTalon.hpp provide ApplyConfiguration() routines.
+    //   These can be used to directly apply a stack local or class scope configuration,
+    //   or to apply an updated configuration when the configuration objects were directly
+    //   modified.  Keep the notes above in mind when calling them.
+    // - The ApplyConfiguration() method for motor groups will default to applying the
+    //   configuration to all motors unless a specific CAN ID is given.  The configuration
+    //   applied to each motor in the group is the *saved configuration* for that specific
+    //   motor.  It may be different for each motor, depending on the robot code.
+    // - Configurations can be applied to the whole configuration object type, or to
+    //   sub-types only (e.g. TalonFXConfiguration vs. CurrentLimitsConfigs), as
+    //   ApplyConfiguration() is overloaded.  The template version only applies stack
+    //   local or class scope configs, so remember the notes above.  Right now the
+    //   template version is disabled, so don't call it.
+    // - Thank CTRE for all this.  Instead of letting the config be a member of the motor
+    //   object class with simple getter/setters, it's separate and overly complex.
+
+    // Configure lift motors (only needs to be applied to the lead motor of the group)
+    // Brake mode was set when the motor group was constructed
+    (void)m_pLiftMotors->GetMotorConfiguration(LIFT_MOTORS_CAN_START_ID)->Feedback.WithSensorToMechanismRatio(12.0 / 1.0);
+    (void)m_pLiftMotors->GetMotorConfiguration(LIFT_MOTORS_CAN_START_ID)->Slot0.WithKP(18.0).WithKI(0.0).WithKD(0.1);
+    m_pLiftMotors->ApplyConfiguration(LIFT_MOTORS_CAN_START_ID);
+    (void)m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
+
+    // Configure arm pivot motor
+    (void)m_pArmPivotMotor->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
+    (void)m_pArmPivotMotor->m_MotorConfiguration.Feedback.WithSensorToMechanismRatio(135.0 / 1.0);
+    (void)m_pArmPivotMotor->m_MotorConfiguration.Slot0.WithKP(50.0).WithKI(0.0).WithKD(2.0);
+    (void)m_pArmPivotMotor->m_pTalonFx->GetConfigurator().SetPosition(0.0_tr);
+    m_pArmPivotMotor->ApplyConfiguration();
+
+    // Configure wrist pivot motor
+    m_pWristPivotMotor->m_MotorConfiguration.MotorOutput.Inverted = true;
+    (void)m_pWristPivotMotor->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
+    (void)m_pWristPivotMotor->m_MotorConfiguration.Feedback.WithSensorToMechanismRatio(25.0 / 1.0);
+    (void)m_pWristPivotMotor->m_MotorConfiguration.Slot0.WithKP(18.0).WithKI(0.0).WithKD(0.1);
+    (void)m_pWristPivotMotor->m_pTalonFx->GetConfigurator().SetPosition(0.0_tr);
+    m_pWristPivotMotor->ApplyConfiguration();
+
+    // Configure algae/coral motor
+    (void)m_pGamePieceMotor->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Coast);
+    m_pGamePieceMotor->ApplyConfiguration();
+
+    // Configure hang motor
+    (void)m_pHangMotor->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
+    m_pHangMotor->ApplyConfiguration();
 }
 
 
@@ -259,6 +419,16 @@ void EastTechRobot::TeleopPeriodic()
         SwerveDriveSequence();
     }
 
+    // No superstructure movement can happen until the absolute encoders are ready and stable
+    if (m_AbsoluteEncodersInitialized)
+    {
+        LiftSequence();
+        ArmSequence();
+        WristSequence();
+        GamePieceControlSequence();
+        HangSequence();
+    }
+
     //PneumaticSequence();
     
     CameraSequence();
@@ -278,7 +448,461 @@ void EastTechRobot::UpdateSmartDashboard()
 {
     // @todo: Check if RobotPeriodic() is called every 20ms and use static counter.
     // Give the drive team some state information
-    // Nothing to send yet
+    SmartDashboard::PutBoolean("Absolute encoders ready", m_AbsoluteEncodersInitialized);
+
+    // Build a stack of "lights" to give visual feedback to the
+    // drive team on the current overall superstructure position
+    bool bLoad = false;
+    bool bL1 = false;
+    bool bL2 = false;
+    bool bL3 = false;
+    bool bL4 = false;
+    switch (m_LiftPosition)
+    {
+        case LiftPosition::LIFT_DOWN:
+        {
+            switch (m_ArmPosition)
+            {
+                case ArmPosition::LOADING:
+                {
+                    bLoad = true;
+                    break;
+                }
+                case ArmPosition::REEF_L1:
+                {
+                    bL1 = true;
+                    break;
+                }
+                case ArmPosition::REEF_L2_L3:
+                {
+                    bL2 = true;
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+            break;
+        }
+        case LiftPosition::LIFT_MIDDLE:
+        {
+            if (m_ArmPosition == ArmPosition::REEF_L2_L3)
+            {
+                bL3 = true;
+            }
+            break;
+        }
+        case LiftPosition::LIFT_UP:
+        {
+            if (m_ArmPosition == ArmPosition::REEF_L4)
+            {
+                bL4 = true;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    SmartDashboard::PutBoolean("Load", bLoad);
+    SmartDashboard::PutBoolean("L1", bL1);
+    SmartDashboard::PutBoolean("L2", bL2);
+    SmartDashboard::PutBoolean("L3", bL3);
+    SmartDashboard::PutBoolean("L4", bL4);
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::LiftSequence
+///
+/// This method contains the main workflow for controlling
+/// the lift on the robot.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::LiftSequence()
+{
+    // Lift mechanism can do slightly over 5x sprocket rotations from bottom to top
+    // Measured 0->1890 degrees = 5.25 turns.  Limit range to five rotations (0->1800 degrees).
+    // Give tolerance at top/bottom of 45 degrees.
+    static TalonFX * pLiftLeaderTalon = m_pLiftMotors->GetMotorObject(LIFT_MOTORS_CAN_START_ID);
+
+    units::angle::turn_t liftAngleTurns = pLiftLeaderTalon->GetPosition().GetValue();
+    units::angle::degree_t liftAngleDegrees = liftAngleTurns;
+
+
+    static bool bTareInProgress = false;
+    static bool bSetNewZero = false;
+    // If the tare button is being held
+    if (m_pAuxController->GetButtonState(AUX_TARE_LIFT_BUTTON))
+    {
+        // Allow manual movement, but only down
+        if (m_pAuxController->GetPovAsDirection() == AUX_CONTROLS_LIFT_DOWN)
+        {
+            m_pLiftMotors->Set(-0.1);
+            bSetNewZero = true;
+        }
+        else if (m_pAuxController->GetPovAsDirection() == AUX_CONTROLS_LIFT_UP)
+        {
+            m_pLiftMotors->Set(0.1);
+        }
+        else
+        {
+            m_pLiftMotors->Set(0.0);
+        }
+        bTareInProgress = true;
+    }
+    // When the tare button is released, set the new zero
+    if (m_pAuxController->DetectButtonChange(AUX_TARE_LIFT_BUTTON, EastTech::Controller::ButtonStateChanges::BUTTON_RELEASED))
+    {
+        if (bSetNewZero)
+        {
+            (void)pLiftLeaderTalon->GetConfigurator().SetPosition(0.0_tr);
+            m_LiftTargetDegrees = LIFT_DOWN_ANGLE;
+            m_LiftPosition = LiftPosition::LIFT_DOWN;
+            bSetNewZero = false;
+        }
+        bTareInProgress = false;
+    }
+    // Don't continue if a tare is in progress
+    if (bTareInProgress)
+    {
+        return;
+    }
+
+
+    bool bLiftMotionAllowed = false;
+
+    // The arm must be at REEF_L1 or higher to allow motion
+    switch (m_ArmPosition)
+    {
+        case ArmPosition::REEF_L1:
+        case ArmPosition::REEF_L2_L3:
+        case ArmPosition::REEF_L4:
+        {
+            // Allowing motion here regardless of where the lift
+            // currently is doesn't matter because the increment
+            // and decrement functions do bounds checking.
+            bLiftMotionAllowed = true;
+            break;
+        }
+        case ArmPosition::NEUTRAL:
+        case ArmPosition::LOADING:
+        default:
+        {
+            // Do nothing, no motion allowed
+            break;
+        }
+    }
+
+    // If motion is allowed, adjust the state
+    if (bLiftMotionAllowed)
+    {
+        // Check if a state change request occurred
+        if (m_pAuxController->DetectPovChange(EastTech::Controller::PovDirections::POV_UP))
+        {
+            // Increase enum value
+            IncrementLiftPosition(m_LiftPosition);
+        }
+        else if (m_pAuxController->DetectPovChange(EastTech::Controller::PovDirections::POV_DOWN))
+        {
+            // Decrease enum value
+            DecrementLiftPosition(m_LiftPosition);
+        }
+        else
+        {
+        }
+    }
+
+    // Based on the current lift position, set the target angle
+    switch (m_LiftPosition)
+    {
+        case LiftPosition::LIFT_DOWN:
+        {
+            m_LiftTargetDegrees = LIFT_DOWN_ANGLE;
+            break;
+        }
+        case LiftPosition::LIFT_MIDDLE:
+        {
+            m_LiftTargetDegrees = LIFT_MIDDLE_ANGLE;
+            break;
+        }
+        case LiftPosition::LIFT_UP:
+        {
+            m_LiftTargetDegrees = LIFT_UP_ANGLE;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+
+    // Check for a change between brake and coast
+    static bool bOnCoast = false;
+    if (m_pAuxController->DetectButtonChange(AUX_TOGGLE_LIFT_BRAKE_COAST_BUTTON))
+    {
+        if (bOnCoast)
+        {
+            m_pLiftMotors->SetBrakeMode();
+        }
+        else
+        {
+            m_pLiftMotors->SetCoastMode();
+        }
+        bOnCoast = !bOnCoast;
+    }
+
+
+    // Only set the position if motion is enabled
+    if (SUPERSTRUCTURE_MOTION_ENABLED)
+    {
+        m_pLiftMotors->SetAngle(m_LiftTargetDegrees.value());
+    }
+
+
+    // Update smart dashboard
+    SmartDashboard::PutNumber("Lift angle", liftAngleDegrees.value());
+    SmartDashboard::PutNumber("Lift target angle", m_LiftTargetDegrees.value());
+    SmartDashboard::PutNumber("Lift position (enum)", static_cast<uint32_t>(m_LiftPosition));
+    SmartDashboard::PutBoolean("Lift motors coast", bOnCoast);
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::ArmSequence
+///
+/// This method contains the main workflow for controlling
+/// the arm pivot mechanisms on the robot.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::ArmSequence()
+{
+    // If the arm is pointing straight down at the lift, there is ~20 degrees
+    // to the hard stop.  180 degrees would point straight up.
+    // Moving toward the loading station position is defined as 'lowering', angle is increasing
+    // Moving toward the reef placing position is defined as 'raising', angle is decreasing
+    units::angle::turn_t armAngleTurns = m_pArmPivotMotor->m_pTalonFx->GetPosition().GetValue();
+    units::angle::degree_t armAngleDegrees = armAngleTurns;
+
+
+    // Check for a request to move the arm    
+    if (m_pAuxController->DetectButtonChange(AUX_ARM_TOWARDS_REEF_BUTTON))
+    {
+        // Increase enum value
+        IncrementArmPosition(m_ArmPosition);
+    }
+    else if (m_pAuxController->DetectButtonChange(AUX_ARM_TOWARDS_LOAD_BUTTON))
+    {
+        // Decrease enum value
+        DecrementArmPosition(m_ArmPosition);
+    }
+    else
+    {
+    }
+
+
+    // Set the arm and wrist positions
+    // @todo: Only do this on position changes.  Ideal would be to only set
+    //        the position whenever it changes, but that has to be communicated
+    //        to the wrist logic and manual movement control.
+    switch (m_ArmPosition)
+    {
+        case ArmPosition::LOADING:
+        {
+            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_LOADING_TARGET_DEGREES;
+            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_LOADING_TARGET_DEGREES;
+            break;
+        }
+        case ArmPosition::NEUTRAL:
+        {
+            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_NEUTRAL_TARGET_DEGREES;
+            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_NEUTRAL_TARGET_DEGREES;
+            break;
+        }
+        case ArmPosition::REEF_L1:
+        {
+            // Lift is down at this reef level
+            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_REEF_L1_TARGET_DEGREES;
+            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_REEF_L1_TARGET_DEGREES;
+            break;
+        }
+        case ArmPosition::REEF_L2_L3:
+        {
+            // Lift is either down or mid at this reef level
+            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_REEF_L2_L3_TARGET_DEGREES;
+            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_REEF_L2_L3_TARGET_DEGREES;
+            break;
+        }
+        case ArmPosition::REEF_L4:
+        {
+            // Lift is up for this reef level
+            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_REEF_L4_TARGET_DEGREES;
+            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_REEF_L4_TARGET_DEGREES;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+
+    // Only set the position if motion is enabled
+    if (SUPERSTRUCTURE_MOTION_ENABLED)
+    {
+        m_pArmPivotMotor->SetPositionVoltage(m_ArmTargetDegrees.value());
+    }
+
+
+    // Update smart dashboard
+    SmartDashboard::PutNumber("Arm angle", armAngleDegrees.value());
+    SmartDashboard::PutNumber("Arm target angle", m_ArmTargetDegrees.value());
+    SmartDashboard::PutNumber("Arm offset angle", m_ArmManualOffsetDegrees.value());
+    SmartDashboard::PutNumber("Arm encoder", m_pArmAbsoluteEncoder->Get());
+    SmartDashboard::PutNumber("Arm position (enum)", static_cast<uint32_t>(m_ArmPosition));
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::WristSequence
+///
+/// This method contains the main workflow for controlling
+/// the wrist pivot mechanisms on the robot.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::WristSequence()
+{
+    // Encoder value increases moving toward lift
+    // Range = 0.718 (~258.48_deg)
+    units::angle::turn_t wristAngleTurns = m_pWristPivotMotor->m_pTalonFx->GetPosition().GetValue();
+    units::angle::degree_t wristAngleDegrees = wristAngleTurns;
+
+
+    // Check for a change to arm/wrist manual adjustment
+    // This logic is in the wrist function because it's the more likely one to change
+    static bool bAdjustWrist = true;
+    if (m_pAuxController->DetectButtonChange(AUX_TOGGLE_ANGLE_ADJUST_BUTTON))
+    {
+        bAdjustWrist = !bAdjustWrist;
+    }
+
+    // Check for a request to manually adjust the wrist angle
+    if (m_pAuxController->DetectButtonChange(AUX_INCREASE_ANGLE_OFFSET_BUTTON))
+    {
+        if (bAdjustWrist)
+        {
+            m_WristManualOffsetDegrees += ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
+        }
+        else
+        {
+            m_ArmManualOffsetDegrees += ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
+        }
+    }
+    if (m_pAuxController->DetectButtonChange(AUX_DECREASE_ANGLE_OFFSET_BUTTON))
+    {
+        if (bAdjustWrist)
+        {
+            m_WristManualOffsetDegrees -= ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
+        }
+        else
+        {
+            m_ArmManualOffsetDegrees -= ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
+        }
+    }
+
+
+    // Only set the position if motion is enabled
+    if (SUPERSTRUCTURE_MOTION_ENABLED)
+    {
+        m_pWristPivotMotor->SetPositionVoltage(m_WristTargetDegrees.value());
+    }
+
+
+    // Update smart dashboard
+    SmartDashboard::PutNumber("Wrist angle", wristAngleDegrees.value());
+    SmartDashboard::PutNumber("Wrist target angle", m_WristTargetDegrees.value());
+    SmartDashboard::PutNumber("Wrist offset angle", m_WristManualOffsetDegrees.value());
+    SmartDashboard::PutNumber("Wrist encoder", m_pWristAbsoluteEncoder->Get());
+    SmartDashboard::PutBoolean("Angle adjust wrist", bAdjustWrist);
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::HangSequence
+///
+/// This method contains the main workflow for hanging.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::HangSequence()
+{
+    if (m_pDriveController->GetButtonState(DRIVE_HANG_UP_BUTTON))
+    {
+        m_pHangMotor->SetDutyCycle(1.0);
+    }
+    else if (m_pDriveController->GetButtonState(DRIVE_HANG_DOWN_BUTTON))
+    {
+        m_pHangMotor->SetDutyCycle(-1.0);
+    }
+    else
+    {
+        m_pHangMotor->SetDutyCycle(0.0);
+    }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::GamePieceControlSequence
+///
+/// This method contains the main workflow for controlling
+/// game pice actions (algae/coral in/out).
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::GamePieceControlSequence()
+{
+    double outputSpeed = GAME_PIECE_MOTOR_SPEED_FAST;
+    double outputMultiplier = 1.0;
+    switch (m_ArmPosition)
+    {
+        case ArmPosition::REEF_L1:
+        {
+            outputSpeed = GAME_PIECE_MOTOR_SPEED_SLOW;
+            break;
+        }
+        case ArmPosition::REEF_L4:
+        {
+            outputMultiplier = -1.0;
+            break;
+        }
+        case ArmPosition::LOADING:
+        {
+            outputMultiplier = -1.0;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    if (m_pAuxController->GetButtonState(AUX_GAME_PIECE_IN_BUTTON))
+    {
+        m_pGamePieceMotor->SetDutyCycle(GAME_PIECE_MOTOR_SPEED_INTAKE * outputMultiplier);
+    }
+    else if (m_pAuxController->GetButtonState(AUX_GAME_PIECE_OUT_BUTTON))
+    {
+        m_pGamePieceMotor->SetDutyCycle(-outputSpeed * outputMultiplier);
+    }
+    else
+    {
+        m_pGamePieceMotor->SetDutyCycle(0.0);
+    }
 }
 
 

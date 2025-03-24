@@ -9,7 +9,7 @@
 /// right time as controlled by the switches on the driver station or the field
 /// controls.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef EASTTECHROBOT_HPP
@@ -25,6 +25,7 @@
 #include "frc/DigitalOutput.h"                  // for DigitalOutput type
 #include "frc/DoubleSolenoid.h"                 // for DoubleSolenoid type
 #include "frc/DriverStation.h"                  // for interacting with the driver station
+#include "frc/DutyCycleEncoder.h"               // for interacting with the REV through bore encoders
 #include "frc/Relay.h"                          // for Relay type
 #include "frc/Solenoid.h"                       // for Solenoid type
 #include "frc/TimedRobot.h"                     // for base class decalartion
@@ -135,6 +136,64 @@ private:
         ROBOT_COUNTER_CLOCKWISE
     };
 
+    enum class LiftPosition : uint32_t
+    {
+        // These must stay in order for the incrementing/decrementing to work right
+        LIFT_DOWN,
+        LIFT_MIDDLE,
+        LIFT_UP
+    };
+
+    inline void IncrementLiftPosition(LiftPosition & rLiftPosition)
+    {
+        if (rLiftPosition != LiftPosition::LIFT_UP)
+        {
+            uint32_t positionAsUint = static_cast<uint32_t>(rLiftPosition);
+            positionAsUint++;
+            rLiftPosition = static_cast<LiftPosition>(positionAsUint);
+        }
+    }
+
+    inline void DecrementLiftPosition(LiftPosition & rLiftPosition)
+    {
+        if (rLiftPosition != LiftPosition::LIFT_DOWN)
+        {
+            uint32_t positionAsUint = static_cast<uint32_t>(rLiftPosition);
+            positionAsUint--;
+            rLiftPosition = static_cast<LiftPosition>(positionAsUint);
+        }
+    }
+
+    enum class ArmPosition : uint32_t
+    {
+        // These must stay in order for the incrementing/decrementing to work right
+        LOADING,
+        NEUTRAL,
+        REEF_L1,
+        REEF_L2_L3,
+        REEF_L4
+    };
+
+    inline void IncrementArmPosition(ArmPosition & rArmPosition)
+    {
+        if (rArmPosition != ArmPosition::REEF_L4)
+        {
+            uint32_t positionAsUint = static_cast<uint32_t>(rArmPosition);
+            positionAsUint++;
+            rArmPosition = static_cast<ArmPosition>(positionAsUint);
+        }
+    }
+
+    inline void DecrementArmPosition(ArmPosition & rArmPosition)
+    {
+        if (rArmPosition != ArmPosition::LOADING)
+        {
+            uint32_t positionAsUint = static_cast<uint32_t>(rArmPosition);
+            positionAsUint--;
+            rArmPosition = static_cast<ArmPosition>(positionAsUint);
+        }
+    }
+
     // STRUCTS
     struct RobotSwerveDirections
     {
@@ -210,6 +269,13 @@ private:
     
     // Main sequence for vision processing
     void CameraSequence();
+
+    // Superstructure sequences
+    void LiftSequence();
+    void ArmSequence();
+    void WristSequence();
+    void HangSequence();
+    void GamePieceControlSequence();
     
     // MEMBER VARIABLES
     
@@ -226,7 +292,11 @@ private:
     SwerveDrive *                   m_pSwerveDrive;                         // Swerve drive control
     
     // Motors
-    // (none)
+    TalonMotorGroup<TalonFX> *      m_pLiftMotors;                          // Lift motor control
+    TalonFxMotorController *        m_pArmPivotMotor;                       // Arm pivot motor control
+    TalonFxMotorController *        m_pWristPivotMotor;                     // Wrist pivot motor control
+    TalonFxMotorController *        m_pGamePieceMotor;                      // Motor for manipulating game pieces
+    TalonFxMotorController *        m_pHangMotor;                           // Hang motor control
 
     // LEDs
     // (none)
@@ -244,10 +314,12 @@ private:
     // (none)
     
     // Encoders
-    // (none)
+    DutyCycleEncoder *              m_pArmAbsoluteEncoder;                  // REV through bore encoder for the arm position
+    DutyCycleEncoder *              m_pWristAbsoluteEncoder;                // REV through bore encoder for the wrist position
     
     // Timers
     Timer *                         m_pMatchModeTimer;                      // Times how long a particular mode (autonomous, teleop) is running
+    Timer *                         m_pRobotProgramTimer;                   // Starts at robot program entry, free runs for program life time
     Timer *                         m_pSafetyTimer;                         // Fail safe in case critical operations don't complete
 
     // Camera
@@ -256,9 +328,17 @@ private:
     std::thread                     m_CameraThread;
     
     // Misc
+    units::angle::degree_t          m_LiftTargetDegrees;                    // Tracks the desired angle position of the lift
+    units::angle::degree_t          m_ArmTargetDegrees;                     // Tracks the desired angle position of the arm
+    units::angle::degree_t          m_ArmManualOffsetDegrees;               // Tracks the desired manual offset of the arm angle
+    units::angle::degree_t          m_WristTargetDegrees;                   // Tracks the desired angle position of the wrist
+    units::angle::degree_t          m_WristManualOffsetDegrees;             // Tracks the desired manual offset of the wrist angle
+    LiftPosition                    m_LiftPosition;                         // Keep track of where the lift is currently positioned
+    ArmPosition                     m_ArmPosition;                          // Keep track of where the arm is currently positioned
     RobotMode                       m_RobotMode;                            // Keep track of the current robot state
     std::optional
     <DriverStation::Alliance>       m_AllianceColor;                        // Color reported by driver station during a match
+    bool                            m_AbsoluteEncodersInitialized;          // Indicates whether the absolute encoders have been initialized
     bool                            m_bCameraAlignInProgress;               // Indicates if an automatic camera align is in progress
     uint32_t                        m_HeartBeat;                            // Incremental counter to indicate the robot code is executing
     
@@ -276,20 +356,41 @@ private:
     static const int                AUX_JOYSTICK_PORT                       = 1;
 
     // Driver inputs
-    static const int                DRIVE_LIFT_ROBOT_BUTTON                 = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
-    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
+    static const int                DRIVE_HANG_UP_BUTTON                    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
+    static const int                DRIVE_HANG_DOWN_BUTTON                  = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
     static const int                FIELD_RELATIVE_TOGGLE_BUTTON            = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
     static const int                REZERO_SWERVE_BUTTON                    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
+    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_STICK_CLICK;
     static const int                CAMERA_TOGGLE_FULL_PROCESSING_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                CAMERA_TOGGLE_PROCESSED_IMAGE_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                SELECT_FRONT_CAMERA_BUTTON              = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                SELECT_BACK_CAMERA_BUTTON               = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     
     // Aux inputs
+    static const int                AUX_WRIST_IN_AXIS                       = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.LEFT_TRIGGER;
+    static const int                AUX_WRIST_OUT_AXIS                      = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.RIGHT_TRIGGER;
+    static const int                AUX_ARM_TOWARDS_LOAD_BUTTON             = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
+    static const int                AUX_ARM_TOWARDS_REEF_BUTTON             = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
+    static const int                AUX_GAME_PIECE_IN_BUTTON                = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
+    static const int                AUX_GAME_PIECE_OUT_BUTTON               = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
+    static const int                AUX_TARE_LIFT_BUTTON                    = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.START;
+    static const int                AUX_TOGGLE_LIFT_BRAKE_COAST_BUTTON      = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.SELECT;
+    static const int                AUX_INCREASE_ANGLE_OFFSET_BUTTON        = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.UP_BUTTON;
+    static const int                AUX_DECREASE_ANGLE_OFFSET_BUTTON        = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUTTON;
+    static const int                AUX_TOGGLE_ANGLE_ADJUST_BUTTON          = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_STICK_CLICK;
     static const int                ESTOP_BUTTON                            = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
+
+    static const EastTech::Controller::PovDirections  AUX_CONTROLS_LIFT_UP                  = EastTech::Controller::PovDirections::POV_UP;
+    static const EastTech::Controller::PovDirections  AUX_CONTROLS_LIFT_DOWN                = EastTech::Controller::PovDirections::POV_DOWN;
 
     // CAN Signals
     // Note: Remember to check the CAN IDs in use in SwerveDrive.hpp.
+    // Superstructure uses IDs starting at 21
+    static const unsigned           LIFT_MOTORS_CAN_START_ID                = 21;
+    static const unsigned           ARM_PIVOT_MOTOR_CAN_ID                  = 23;
+    static const unsigned           WRIST_PIVOT_MOTOR_CAN_ID                = 24;
+    static const unsigned           GAME_PIECE_MOTOR_CAN_ID                 = 25;
+    static const unsigned           HANG_MOTOR_CAN_ID                       = 26;
 
     // CANivore Signals
     // Note: IDs 1-4 are used by the CANcoders (see the
@@ -303,6 +404,8 @@ private:
     // (none)
     
     // Digital I/O Signals
+    static const int                ARM_ABSOLUTE_ENCODER_DIO_CHANNEL        = 0;
+    static const int                WRIST_ABSOLUTE_ENCODER_DIO_CHANNEL      = 1;
     static const int                DEBUG_OUTPUT_DIO_CHANNEL                = 7;
     
     // Analog I/O Signals
@@ -314,8 +417,38 @@ private:
     // Solenoids
     // (none)
 
-    // Motor speeds
-    // (none)
+    // Motor speeds and angles
+    static constexpr const double GAME_PIECE_MOTOR_SPEED_FAST                           = 0.30;
+    static constexpr const double GAME_PIECE_MOTOR_SPEED_SLOW                           = 0.15;
+    static constexpr const double GAME_PIECE_MOTOR_SPEED_INTAKE                         = 0.10;
+
+    static constexpr const units::angle::degree_t LIFT_DOWN_ANGLE                       = 45.0_deg;
+    static constexpr const units::angle::degree_t LIFT_MIDDLE_ANGLE                     = 1000.0_deg;
+    static constexpr const units::angle::degree_t LIFT_UP_ANGLE                         = 1890.0_deg;
+
+    static constexpr const units::angle::degree_t ARM_STARTING_POSITION_DEGREES         = 180.0_deg;
+    static constexpr const units::angle::degree_t ARM_STARTING_POSITION_ENCODER_VALUE   = units::angle::degree_t(0.8230 * 360.0);
+    static constexpr const units::angle::degree_t ARM_ENDING_POSITION_ENCODER_VALUE     = units::angle::degree_t(0.3650 * 360.0);
+    static constexpr const units::angle::degree_t ARM_LOADING_TARGET_DEGREES            = 195.0_deg;
+    static constexpr const units::angle::degree_t ARM_NEUTRAL_TARGET_DEGREES            = 180.0_deg;
+    static constexpr const units::angle::degree_t ARM_REEF_L1_TARGET_DEGREES            = 75.0_deg;
+    static constexpr const units::angle::degree_t ARM_REEF_L2_L3_TARGET_DEGREES         = 30.0_deg;
+    static constexpr const units::angle::degree_t ARM_REEF_L4_TARGET_DEGREES            = -15.0_deg;
+
+    static constexpr const units::angle::degree_t ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES  = 10.0_deg;
+
+    static constexpr const units::angle::degree_t WRIST_STARTING_POSITION_DEGREES       = 135.0_deg;
+    static constexpr const units::angle::degree_t WRIST_STARTING_POSITION_ENCODER_VALUE = units::angle::degree_t(0.7500 * 360.0);//0.2906 * 360.0);
+    static constexpr const units::angle::degree_t WRIST_ENDING_POSITION_ENCODER_VALUE   = units::angle::degree_t(0.4750 * 360.0);//0.0419 * 360.0);
+    static constexpr const units::angle::degree_t WRIST_LOADING_TARGET_DEGREES          = 35.0_deg;
+    static constexpr const units::angle::degree_t WRIST_NEUTRAL_TARGET_DEGREES          = 135.0_deg;
+    static constexpr const units::angle::degree_t WRIST_REEF_L1_TARGET_DEGREES          = 135.0_deg;
+    static constexpr const units::angle::degree_t WRIST_REEF_L2_L3_TARGET_DEGREES       = 195.0_deg;
+    static constexpr const units::angle::degree_t WRIST_REEF_L4_TARGET_DEGREES          = 60.0_deg;
+
+    static constexpr const units::angle::degree_t ENCODER_BOUNDARY_TOLERANCE_DEGREES    = -5.0_deg;
+
+    static constexpr const bool     SUPERSTRUCTURE_MOTION_ENABLED           = true;
     
     // Misc
     const std::string               AUTO_NO_ROUTINE_STRING                  = "No autonomous routine";
@@ -325,6 +458,10 @@ private:
     const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous Test Routine";
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
+    static const int                ANGLE_90_DEGREES                        = 90;
+    static const int                ANGLE_180_DEGREES                       = 180;
+    static const int                ANGLE_360_DEGREES                       = 360;
+    static const int                POV_INPUT_TOLERANCE_VALUE               = 30;
     static const int                SCALE_TO_PERCENT                        = 100;
     static const unsigned           SINGLE_MOTOR                            = 1;
     static const unsigned           TWO_MOTORS                              = 2;
