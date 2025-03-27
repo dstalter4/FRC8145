@@ -44,6 +44,8 @@ EastTechRobot::EastTechRobot() :
     m_pWristPivotMotor                  (new TalonFxMotorController(WRIST_PIVOT_MOTOR_CAN_ID)),
     m_pGamePieceMotor                   (new TalonFxMotorController(GAME_PIECE_MOTOR_CAN_ID)),
     m_pHangMotor                        (new TalonFxMotorController(HANG_MOTOR_CAN_ID)),
+    m_pCandle                           (new CANdle(CANDLE_CAN_ID, "canivore-8145")),
+    m_RainbowAnimation                  ({1, 0.5, 308}),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pArmAbsoluteEncoder               (new DutyCycleEncoder(ARM_ABSOLUTE_ENCODER_DIO_CHANNEL)),
@@ -84,6 +86,11 @@ EastTechRobot::EastTechRobot() :
     RobotUtils::DisplayFormattedMessage("The drive left/right axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_X_AXIS);
 
     ConfigureMotorControllers();
+
+    CANdleConfiguration candleConfig;
+    candleConfig.stripType = LEDStripType::RGB;
+    m_pCandle->ConfigAllSettings(candleConfig);
+    m_pCandle->Animate(m_RainbowAnimation);
 
     // Spawn the vision thread
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
@@ -353,6 +360,12 @@ void EastTechRobot::InitialStateSetup()
     
     // Just in case constructor was called before these were set (likely the case)
     m_AllianceColor = DriverStation::GetAlliance();
+
+    // Disable the rainbow animation
+    m_pCandle->ClearAnimation(0);
+
+    // Set the LEDs to the alliance color
+    SetLedsToAllianceColor();
 
     // Indicate the camera thread can continue
     RobotCamera::ReleaseThread();
@@ -1085,6 +1098,9 @@ void EastTechRobot::DisabledInit()
     // @todo: Shut off the limelight LEDs?
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
     RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
+
+    // Turn the rainbow animation back on
+    m_pCandle->Animate(m_RainbowAnimation);
 }
 
 

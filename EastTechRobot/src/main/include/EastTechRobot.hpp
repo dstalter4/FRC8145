@@ -40,9 +40,12 @@
 #include "EastTechTalon.hpp"                    // for custom Talon control
 #include "RobotUtils.hpp"                       // for ASSERT, DEBUG_PRINTS
 #include "SwerveDrive.hpp"                      // for using swerve drive
+#include "ctre/phoenix/led/CANdle.h"
+#include "ctre/phoenix/led/RainbowAnimation.h"
 #include "ctre/phoenix6/Pigeon2.hpp"            // for PigeonIMU
 
 using namespace frc;
+using namespace ctre::phoenix::led;
 
 
 ////////////////////////////////////////////////////////////////
@@ -270,6 +273,9 @@ private:
     // Main sequence for vision processing
     void CameraSequence();
 
+    // LED sequence/support
+    inline void SetLedsToAllianceColor();
+
     // Superstructure sequences
     void LiftSequence();
     void ArmSequence();
@@ -299,7 +305,8 @@ private:
     TalonFxMotorController *        m_pHangMotor;                           // Hang motor control
 
     // LEDs
-    // (none)
+    CANdle *                        m_pCandle;
+    RainbowAnimation                m_RainbowAnimation;
 
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
@@ -396,6 +403,7 @@ private:
     // Note: IDs 1-4 are used by the CANcoders (see the
     //       SwerveModuleConfigs in SwerveDrive.hpp).
     static const int                PIGEON_CAN_ID                           = 5;
+    static const int                CANDLE_CAN_ID                           = 6;
 
     // PWM Signals
     // (none)
@@ -465,7 +473,7 @@ private:
     static const int                SCALE_TO_PERCENT                        = 100;
     static const unsigned           SINGLE_MOTOR                            = 1;
     static const unsigned           TWO_MOTORS                              = 2;
-    static const unsigned           NUMBER_OF_LEDS                          = 8;
+    static const unsigned           NUMBER_OF_LEDS                          = 308;
     static const char               NULL_CHARACTER                          = '\0';
 
     static const unsigned           CAMERA_RUN_INTERVAL_MS                  = 1000U;
@@ -559,6 +567,35 @@ private:
     }
 
 };  // End class
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::SetLedsToAllianceColor
+///
+/// Sets the LEDs to the alliance color.
+///
+////////////////////////////////////////////////////////////////
+inline void EastTechRobot::SetLedsToAllianceColor()
+{
+    switch (m_AllianceColor.value())
+    {
+        case DriverStation::Alliance::kRed:
+        {
+            m_pCandle->SetLEDs(255, 0, 0, 0, 0, NUMBER_OF_LEDS);
+            break;
+        }
+        case DriverStation::Alliance::kBlue:
+        {
+            m_pCandle->SetLEDs(0, 0, 255, 0, 0, NUMBER_OF_LEDS);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
 
 
 
