@@ -72,6 +72,8 @@ private:
         m_LastAngle = 0.0_deg;
     }
 
+    void RealignModule();
+
     // Update a swerve module to the desired state
     void SetDesiredState(SwerveModuleState desiredState, bool bIsOpenLoop);
 

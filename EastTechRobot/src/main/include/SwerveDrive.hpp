@@ -71,6 +71,11 @@ public:
     inline void ZeroGyroYaw()
     {
         m_pPigeon->SetYaw(0.0_deg);
+
+        for (uint32_t i = 0U; i < SwerveConfig::NUM_SWERVE_DRIVE_MODULES; i++)
+        {
+            m_SwerveModules[i].RealignModule();
+        }
     }
 
 private:

@@ -148,6 +148,38 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
 }
 
 
+void TalonFxSwerveModule::RealignModule()
+{
+
+    // Reset the swerve module to the absolute angle starting position.
+    // This reads the current angle from the CANCoder and figures out how
+    // far the module is from the config passed in (the predetermined
+    // position from manual measurement/calibration).
+    units::angle::turn_t currentCanCoderInTurns = m_pAngleCanCoder->GetAbsolutePosition().GetValue();
+    units::angle::degree_t currentCanCoderInDegrees = currentCanCoderInTurns;
+
+    units::angle::degree_t canCoderDeltaDegrees = CANCODER_REFERENCE_ABSOLUTE_OFFSET.Degrees() - currentCanCoderInDegrees;
+    if (canCoderDeltaDegrees.value() < 0.0)
+    {
+        canCoderDeltaDegrees += 360.0_deg;
+    }
+    units::angle::turn_t fxTargetTurns = canCoderDeltaDegrees;
+
+    while (fxTargetTurns > 1.0_tr)
+    {
+        fxTargetTurns -= 1.0_tr;
+    }
+
+    while (fxTargetTurns < -1.0_tr)
+    {
+        fxTargetTurns += 1.0_tr;
+    }
+
+    m_pAngleTalon->SetPosition(fxTargetTurns);
+    m_LastAngle = units::degree_t(m_pAngleTalon->GetPosition().GetValue());
+}
+
+
 ////////////////////////////////////////////////////////////////
 /// @method TalonFxSwerveModule::Optimize
 ///

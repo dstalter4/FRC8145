@@ -34,7 +34,11 @@ void EastTechRobot::AutonomousRoutine1()
         WaitForSensorConfig();
     }
 
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_FORWARD, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
+    // Force a reread the swerve module absolute encoders
+    m_pSwerveDrive->ZeroGyroYaw();
+    m_pPigeon->SetYaw(units::angle::degree_t(180.0));
+
+    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_REVERSE, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
     AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.15, 0.0, 0.0, 3.0_s, true);
 
     // Returning from here will enter the idle state until autonomous is over

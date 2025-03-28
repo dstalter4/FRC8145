@@ -447,7 +447,7 @@ private:
     static constexpr const units::angle::degree_t ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES  = 10.0_deg;
 
     static constexpr const units::angle::degree_t WRIST_STARTING_POSITION_DEGREES       = 135.0_deg;
-    static constexpr const units::angle::degree_t WRIST_STARTING_POSITION_ENCODER_VALUE = units::angle::degree_t(0.0517 * 360.0);
+    static constexpr const units::angle::degree_t WRIST_STARTING_POSITION_ENCODER_VALUE = units::angle::degree_t(0.8220 * 360.0);
     static constexpr const units::angle::degree_t WRIST_ENDING_POSITION_ENCODER_VALUE   = units::angle::degree_t(0.0000 * 360.0);
     static constexpr const units::angle::degree_t WRIST_LOADING_TARGET_DEGREES          = 35.0_deg;
     static constexpr const units::angle::degree_t WRIST_NEUTRAL_TARGET_DEGREES          = 135.0_deg;
