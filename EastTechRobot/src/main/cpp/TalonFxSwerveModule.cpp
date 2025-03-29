@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -37,7 +37,7 @@ uint32_t TalonFxSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 /// on the CANivore bus, which requires a 120 ohm terminating
 /// resistor.
 ///
-/// 2024: Bevels facing right is 1.0 forward on the Talons.
+/// 2025: Bevels facing right is 1.0 forward on the Talons.
 ///
 ////////////////////////////////////////////////////////////////
 TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
@@ -113,44 +113,19 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
     canCoderConfig.MagnetSensor.SensorDirection = SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.CANCODER_INVERTED_VALUE;
     (void)m_pAngleCanCoder->GetConfigurator().Apply(canCoderConfig);
 
-    // Reset the swerve module to the absolute angle starting position.
-    // This reads the current angle from the CANCoder and figures out how
-    // far the module is from the config passed in (the predetermined
-    // position from manual measurement/calibration).
-    units::angle::turn_t currentCanCoderInTurns = m_pAngleCanCoder->GetAbsolutePosition().GetValue();
-    units::angle::degree_t currentCanCoderInDegrees = currentCanCoderInTurns;
-
-    units::angle::degree_t canCoderDeltaDegrees = CANCODER_REFERENCE_ABSOLUTE_OFFSET.Degrees() - currentCanCoderInDegrees;
-    if (canCoderDeltaDegrees.value() < 0.0)
-    {
-        canCoderDeltaDegrees += 360.0_deg;
-    }
-    units::angle::turn_t fxTargetTurns = canCoderDeltaDegrees;
-
-    std::printf("Swerve mod %d fxTargetTurns (start): %f\n", m_MotorGroupPosition, fxTargetTurns.value());
-    while (fxTargetTurns > 1.0_tr)
-    {
-        fxTargetTurns -= 1.0_tr;
-    }
-
-    while (fxTargetTurns < -1.0_tr)
-    {
-        fxTargetTurns += 1.0_tr;
-    }
-
-    std::printf("Swerve mod %d fxPosition: %f\n", m_MotorGroupPosition, m_pAngleTalon->GetPosition().GetValueAsDouble());
-    std::printf("Swerve mod %d canCoderDeg: %f\n", m_MotorGroupPosition, currentCanCoderInDegrees.value());
-    std::printf("Swerve mod %d canCoderDelta: %f\n", m_MotorGroupPosition, canCoderDeltaDegrees.value());
-    std::printf("Swerve mod %d fxTargetTurns (final): %f\n", m_MotorGroupPosition, fxTargetTurns.value());
-
-    m_pAngleTalon->SetPosition(fxTargetTurns);
-    m_LastAngle = units::degree_t(m_pAngleTalon->GetPosition().GetValue());
+    RecalibrateModules();
 }
 
 
-void TalonFxSwerveModule::RealignModule()
+////////////////////////////////////////////////////////////////
+/// @method TalonFxSwerveModule::RecalibrateModules
+///
+/// Recalibrates the swerve module by reading the absolute
+/// encoder and setting the appropriate motor controller values.
+///
+////////////////////////////////////////////////////////////////
+void TalonFxSwerveModule::RecalibrateModules()
 {
-
     // Reset the swerve module to the absolute angle starting position.
     // This reads the current angle from the CANCoder and figures out how
     // far the module is from the config passed in (the predetermined
@@ -164,6 +139,7 @@ void TalonFxSwerveModule::RealignModule()
         canCoderDeltaDegrees += 360.0_deg;
     }
     units::angle::turn_t fxTargetTurns = canCoderDeltaDegrees;
+    units::angle::turn_t fxTargetTurnsStart = fxTargetTurns;
 
     while (fxTargetTurns > 1.0_tr)
     {
@@ -173,6 +149,17 @@ void TalonFxSwerveModule::RealignModule()
     while (fxTargetTurns < -1.0_tr)
     {
         fxTargetTurns += 1.0_tr;
+    }
+
+    static bool bPrintedFirstMeasurement = false;
+    if (!bPrintedFirstMeasurement)
+    {
+        std::printf("Swerve mod %d fxTargetTurns (start): %f\n", m_MotorGroupPosition, fxTargetTurnsStart.value());
+        std::printf("Swerve mod %d fxPosition: %f\n", m_MotorGroupPosition, m_pAngleTalon->GetPosition().GetValueAsDouble());
+        std::printf("Swerve mod %d canCoderDeg: %f\n", m_MotorGroupPosition, currentCanCoderInDegrees.value());
+        std::printf("Swerve mod %d canCoderDelta: %f\n", m_MotorGroupPosition, canCoderDeltaDegrees.value());
+        std::printf("Swerve mod %d fxTargetTurns (final): %f\n", m_MotorGroupPosition, fxTargetTurns.value());
+        bPrintedFirstMeasurement = true;
     }
 
     m_pAngleTalon->SetPosition(fxTargetTurns);

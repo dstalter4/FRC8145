@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a swerve drive robot base.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SWERVEDRIVE_HPP
@@ -55,15 +55,6 @@ public:
     // Updates each swerve module based on the inputs
     void SetModuleStates(Translation2d translation, double rotation, bool bFieldRelative, bool bIsOpenLoop);
 
-    // Points each swerve module to zero degrees (forward)
-    void HomeModules()
-    {
-        for (uint32_t i = 0U; i < SwerveConfig::NUM_SWERVE_DRIVE_MODULES; i++)
-        {
-            m_SwerveModules[i].HomeModule();
-        }
-    }
-
     // Puts useful values on the dashboard
     void UpdateSmartDashboard();
 
@@ -71,10 +62,32 @@ public:
     inline void ZeroGyroYaw()
     {
         m_pPigeon->SetYaw(0.0_deg);
+    }
 
+    // Points all the modules to zero degrees, which should be straight forward
+    inline void HomeModules()
+    {
         for (uint32_t i = 0U; i < SwerveConfig::NUM_SWERVE_DRIVE_MODULES; i++)
         {
-            m_SwerveModules[i].RealignModule();
+            m_SwerveModules[i].HomeModule();
+        }
+    }
+
+    // Lock the wheels in an X pattern to prevent movement
+    inline void LockWheels()
+    {
+        for (uint32_t i = 0U; i < SwerveConfig::NUM_SWERVE_DRIVE_MODULES; i++)
+        {
+            m_SwerveModules[i].LockWheel();
+        }
+    }
+
+    // Recalibrate the modules based on the absolute encoder
+    inline void RecalibrateModules()
+    {
+        for (uint32_t i = 0U; i < SwerveConfig::NUM_SWERVE_DRIVE_MODULES; i++)
+        {
+            m_SwerveModules[i].RecalibrateModules();
         }
     }
 

@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef TALONFXSWERVEMODULE_HPP
@@ -72,7 +72,11 @@ private:
         m_LastAngle = 0.0_deg;
     }
 
-    void RealignModule();
+    // Point the module wheel in the correct direciton to form an X to prevent movement
+    void LockWheel();
+
+    // Align the swerve module to the absolute encoder
+    void RecalibrateModules();
 
     // Update a swerve module to the desired state
     void SetDesiredState(SwerveModuleState desiredState, bool bIsOpenLoop);

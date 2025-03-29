@@ -35,6 +35,7 @@ EastTechRobot * EastTechRobot::m_pThis;
 ////////////////////////////////////////////////////////////////
 EastTechRobot::EastTechRobot() :
     m_AutonomousChooser                 (),
+    m_AutoSwerveDirections              (),
     m_pDriveController                  (new DriveControllerType(DRIVE_CONTROLLER_MODEL, DRIVE_JOYSTICK_PORT)),
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
     m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, "canivore-8145")),
@@ -56,9 +57,19 @@ EastTechRobot::EastTechRobot() :
     m_CameraThread                      (RobotCamera::LimelightThread),
     m_LiftTargetDegrees                 (LIFT_DOWN_ANGLE),
     m_ArmTargetDegrees                  (ARM_STARTING_POSITION_DEGREES),
-    m_ArmManualOffsetDegrees            (0.0_deg),
+    m_ArmLoadingOffsetDegrees           (0.0_deg),
+    m_ArmNeutralOffsetDegrees           (0.0_deg),
+    m_ArmL1OffsetDegrees                (0.0_deg),
+    m_ArmL2L3OffsetDegrees              (0.0_deg),
+    m_ArmL4OffsetDegrees                (0.0_deg),
+    m_pArmManualOffsetDegrees           (&m_ArmNeutralOffsetDegrees),
     m_WristTargetDegrees                (WRIST_STARTING_POSITION_DEGREES),
-    m_WristManualOffsetDegrees          (0.0_deg),
+    m_WristLoadingOffsetDegrees         (0.0_deg),
+    m_WristNeutralOffsetDegrees         (0.0_deg),
+    m_WristL1OffsetDegrees              (0.0_deg),
+    m_WristL2L3OffsetDegrees            (0.0_deg),
+    m_WristL4OffsetDegrees              (0.0_deg),
+    m_pWristManualOffsetDegrees         (&m_WristNeutralOffsetDegrees),
     m_LiftPosition                      (LiftPosition::LIFT_DOWN),
     m_ArmPosition                       (ArmPosition::NEUTRAL),
     m_RobotMode                         (ROBOT_MODE_NOT_SET),
@@ -184,7 +195,7 @@ void EastTechRobot::WaitForSensorConfig()
         static constexpr const units::time::second_t RIO_DUTY_CYCLE_ENCODER_STARTUP_DELAY = 2.0_s;
         if ((currentTimeStamp - enabledTimeStamp) > RIO_DUTY_CYCLE_ENCODER_STARTUP_DELAY)
         {
-/// START ARM
+        /// START ARM
             // Increases going down, crosses the zero boundary
             // Decreases going up, crosses the zero boundary
             // Range of motion is ~195.12_deg
@@ -213,8 +224,8 @@ void EastTechRobot::WaitForSensorConfig()
             //std::printf("armEncoderValue: %f\n", armEncoderValue);
             //std::printf("armEncoderValueDegrees: %f\n", armEncoderValueDegrees.value());
             //std::printf("armStartingOffsetDegrees (final): %f\n", armStartingOffsetDegrees.value());
-//// END ARM
-/// START WRIST
+        /// END ARM
+        /// START WRIST
             double wristEncoderValue = m_pWristAbsoluteEncoder->Get();
             units::angle::degree_t wristEncoderValueDegrees(wristEncoderValue * ANGLE_360_DEGREES);
 
@@ -226,7 +237,7 @@ void EastTechRobot::WaitForSensorConfig()
             // We give a tolerance of five degrees in case the mechanism is near where we want to start
             // @todo: Does this need to check for very small readings below zero?
             // @todo: Boundary conditions here will be difficult
-            if (wristStartingOffsetDegrees < -5.0_deg)
+            if (wristStartingOffsetDegrees < ENCODER_BOUNDARY_TOLERANCE_DEGREES)
             {
                 // the 0/1 boundary is 360, so subtract the starting position to see how many degrees were up to that point
                 // Add in the absolute value of the overage, which was negative
@@ -238,7 +249,7 @@ void EastTechRobot::WaitForSensorConfig()
             //std::printf("wristEncoderValue: %f\n", wristEncoderValue);
             //std::printf("wristEncoderValueDegrees: %f\n", wristEncoderValueDegrees.value());
             //std::printf("wristStartingOffsetDegrees (final): %f\n", wristStartingOffsetDegrees.value());
-//// END WRIST
+        /// END WRIST
             m_AbsoluteEncodersInitialized = true;
         }
     }
@@ -390,12 +401,15 @@ void EastTechRobot::InitialStateSetup()
     // Reset the heartbeat
     m_HeartBeat = 0U;
 
-    // Set the swerve modules to a known angle.  This addresses an
-    // issue with the Neos where setting position during constructors
-    // doesn't take effect.
-    #ifdef USE_NEO_SWERVE
-    // @todo: Check this on TalonFX
+    // Point the swerve modules straight.  With SparkMax, this (also) addresses
+    // an issue where setting position during constructors doesn't take effect.
     m_pSwerveDrive->HomeModules();
+
+    // With CTRE swerve electronics, sometimes the CANcoder appears to not be
+    // ready when constructors measure the absolute position.  The issue isn't
+    // entirely understood, but recalibrating here seems to provide stability.
+    #ifdef USE_TALONFX_SWERVE
+    m_pSwerveDrive->RecalibrateModules();
     #endif
 }
 
@@ -480,6 +494,7 @@ void EastTechRobot::UpdateSmartDashboard()
     // Build a stack of "lights" to give visual feedback to the
     // drive team on the current overall superstructure position
     bool bLoad = false;
+    bool bNeutral = false;
     bool bL1 = false;
     bool bL2 = false;
     bool bL3 = false;
@@ -493,6 +508,11 @@ void EastTechRobot::UpdateSmartDashboard()
                 case ArmPosition::LOADING:
                 {
                     bLoad = true;
+                    break;
+                }
+                case ArmPosition::NEUTRAL:
+                {
+                    bNeutral = true;
                     break;
                 }
                 case ArmPosition::REEF_L1:
@@ -534,6 +554,7 @@ void EastTechRobot::UpdateSmartDashboard()
         }
     }
     SmartDashboard::PutBoolean("Load", bLoad);
+    SmartDashboard::PutBoolean("Neutral", bNeutral);
     SmartDashboard::PutBoolean("L1", bL1);
     SmartDashboard::PutBoolean("L2", bL2);
     SmartDashboard::PutBoolean("L3", bL3);
@@ -741,35 +762,45 @@ void EastTechRobot::ArmSequence()
     {
         case ArmPosition::LOADING:
         {
-            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_LOADING_TARGET_DEGREES;
-            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_LOADING_TARGET_DEGREES;
+            m_pArmManualOffsetDegrees = &m_ArmLoadingOffsetDegrees;
+            m_ArmTargetDegrees = (*m_pArmManualOffsetDegrees) + ARM_LOADING_TARGET_DEGREES;
+            m_pWristManualOffsetDegrees = &m_WristLoadingOffsetDegrees;
+            m_WristTargetDegrees = (*m_pWristManualOffsetDegrees) + WRIST_LOADING_TARGET_DEGREES;
             break;
         }
         case ArmPosition::NEUTRAL:
         {
-            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_NEUTRAL_TARGET_DEGREES;
-            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_NEUTRAL_TARGET_DEGREES;
+            m_pArmManualOffsetDegrees = &m_ArmNeutralOffsetDegrees;
+            m_ArmTargetDegrees = (*m_pArmManualOffsetDegrees) + ARM_NEUTRAL_TARGET_DEGREES;
+            m_pWristManualOffsetDegrees = &m_WristNeutralOffsetDegrees;
+            m_WristTargetDegrees = (*m_pWristManualOffsetDegrees) + WRIST_NEUTRAL_TARGET_DEGREES;
             break;
         }
         case ArmPosition::REEF_L1:
         {
             // Lift is down at this reef level
-            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_REEF_L1_TARGET_DEGREES;
-            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_REEF_L1_TARGET_DEGREES;
+            m_pArmManualOffsetDegrees = &m_ArmL1OffsetDegrees;
+            m_ArmTargetDegrees = (*m_pArmManualOffsetDegrees) + ARM_REEF_L1_TARGET_DEGREES;
+            m_pWristManualOffsetDegrees = &m_WristL1OffsetDegrees;
+            m_WristTargetDegrees = (*m_pWristManualOffsetDegrees) + WRIST_REEF_L1_TARGET_DEGREES;
             break;
         }
         case ArmPosition::REEF_L2_L3:
         {
             // Lift is either down or mid at this reef level
-            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_REEF_L2_L3_TARGET_DEGREES;
-            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_REEF_L2_L3_TARGET_DEGREES;
+            m_pArmManualOffsetDegrees = &m_ArmL2L3OffsetDegrees;
+            m_ArmTargetDegrees = (*m_pArmManualOffsetDegrees) + ARM_REEF_L2_L3_TARGET_DEGREES;
+            m_pWristManualOffsetDegrees = &m_WristL2L3OffsetDegrees;
+            m_WristTargetDegrees = (*m_pWristManualOffsetDegrees) + WRIST_REEF_L2_L3_TARGET_DEGREES;
             break;
         }
         case ArmPosition::REEF_L4:
         {
             // Lift is up for this reef level
-            m_ArmTargetDegrees = m_ArmManualOffsetDegrees + ARM_REEF_L4_TARGET_DEGREES;
-            m_WristTargetDegrees = m_WristManualOffsetDegrees + WRIST_REEF_L4_TARGET_DEGREES;
+            m_pArmManualOffsetDegrees = &m_ArmL4OffsetDegrees;
+            m_ArmTargetDegrees = (*m_pArmManualOffsetDegrees) + ARM_REEF_L4_TARGET_DEGREES;
+            m_pWristManualOffsetDegrees = &m_WristL4OffsetDegrees;
+            m_WristTargetDegrees = (*m_pWristManualOffsetDegrees) + WRIST_REEF_L4_TARGET_DEGREES;
             break;
         }
         default:
@@ -789,7 +820,7 @@ void EastTechRobot::ArmSequence()
     // Update smart dashboard
     SmartDashboard::PutNumber("Arm angle", armAngleDegrees.value());
     SmartDashboard::PutNumber("Arm target angle", m_ArmTargetDegrees.value());
-    SmartDashboard::PutNumber("Arm offset angle", m_ArmManualOffsetDegrees.value());
+    SmartDashboard::PutNumber("Arm offset angle", (*m_pArmManualOffsetDegrees).value());
     SmartDashboard::PutNumber("Arm encoder", m_pArmAbsoluteEncoder->Get());
     SmartDashboard::PutNumber("Arm position (enum)", static_cast<uint32_t>(m_ArmPosition));
 }
@@ -819,27 +850,27 @@ void EastTechRobot::WristSequence()
         bAdjustWrist = !bAdjustWrist;
     }
 
-    // Check for a request to manually adjust the wrist angle
+    // Check for a request to manually adjust the wrist or arm angle
     if (m_pAuxController->DetectButtonChange(AUX_INCREASE_ANGLE_OFFSET_BUTTON))
     {
         if (bAdjustWrist)
         {
-            m_WristManualOffsetDegrees += ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
+            (*m_pWristManualOffsetDegrees) += ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
         }
         else
         {
-            m_ArmManualOffsetDegrees += ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
+            (*m_pArmManualOffsetDegrees) += ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
         }
     }
     if (m_pAuxController->DetectButtonChange(AUX_DECREASE_ANGLE_OFFSET_BUTTON))
     {
         if (bAdjustWrist)
         {
-            m_WristManualOffsetDegrees -= ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
+            (*m_pWristManualOffsetDegrees) -= ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
         }
         else
         {
-            m_ArmManualOffsetDegrees -= ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
+            (*m_pArmManualOffsetDegrees) -= ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES;
         }
     }
 
@@ -854,7 +885,7 @@ void EastTechRobot::WristSequence()
     // Update smart dashboard
     SmartDashboard::PutNumber("Wrist angle", wristAngleDegrees.value());
     SmartDashboard::PutNumber("Wrist target angle", m_WristTargetDegrees.value());
-    SmartDashboard::PutNumber("Wrist offset angle", m_WristManualOffsetDegrees.value());
+    SmartDashboard::PutNumber("Wrist offset angle", (*m_pWristManualOffsetDegrees).value());
     SmartDashboard::PutNumber("Wrist encoder", m_pWristAbsoluteEncoder->Get());
     SmartDashboard::PutBoolean("Angle adjust wrist", bAdjustWrist);
 }
@@ -1031,6 +1062,7 @@ void EastTechRobot::SwerveDriveSequence()
     if (m_pDriveController->DetectButtonChange(REZERO_SWERVE_BUTTON))
     {
         m_pSwerveDrive->ZeroGyroYaw();
+        m_pSwerveDrive->RecalibrateModules();
         m_pSwerveDrive->HomeModules();
     }
 
@@ -1059,16 +1091,18 @@ void EastTechRobot::SwerveDriveSequence()
         }
         case EastTech::Controller::PovDirections::POV_LEFT:
         {
+            // Left/right POV control can either toggle strafe or rotation
             translationAxis = 0.0;
-            strafeAxis = 0.0;
-            rotationAxis = SWERVE_ROTATE_SLOW_SPEED;
+            strafeAxis = (EastTech::Drive::Config::SWERVE_SLOW_USE_ROTATION_AXIS) ? (0.0) : (SWERVE_DRIVE_SLOW_SPEED);
+            rotationAxis = (EastTech::Drive::Config::SWERVE_SLOW_USE_ROTATION_AXIS) ? (SWERVE_ROTATE_SLOW_SPEED) : (0.0);
             break;
         }
         case EastTech::Controller::PovDirections::POV_RIGHT:
         {
+            // Left/right POV control can either toggle strafe or rotation
             translationAxis = 0.0;
-            strafeAxis = 0.0;
-            rotationAxis = -SWERVE_ROTATE_SLOW_SPEED;
+            strafeAxis = (EastTech::Drive::Config::SWERVE_SLOW_USE_ROTATION_AXIS) ? (0.0) : (-SWERVE_DRIVE_SLOW_SPEED);
+            rotationAxis = (EastTech::Drive::Config::SWERVE_SLOW_USE_ROTATION_AXIS) ? (-SWERVE_ROTATE_SLOW_SPEED) : (0.0);
             break;
         }
         default:
