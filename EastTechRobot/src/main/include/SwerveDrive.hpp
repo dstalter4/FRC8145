@@ -25,14 +25,8 @@
 
 // C++ INCLUDES
 #include "SwerveConfig.hpp"                             // for swerve configuration and constants
-#ifdef USE_NEO_SWERVE
-  #include "NeoSwerveModule.hpp"                        // for interacting with a Neo swerve module
-  typedef NeoSwerveModule SwerveModule;
-#endif
-#ifdef USE_TALONFX_SWERVE
-  #include "TalonFxSwerveModule.hpp"                    // for interacting with a TalonFX swerve module
-  typedef TalonFxSwerveModule SwerveModule;
-#endif
+#include "NeoSwerveModule.hpp"                          // for interacting with a Neo swerve module
+#include "TalonFxSwerveModule.hpp"                      // for interacting with a TalonFX swerve module
 #include "ctre/phoenix6/Pigeon2.hpp"                    // for PigeonIMU
 
 using namespace frc;
@@ -46,8 +40,6 @@ using namespace frc;
 ////////////////////////////////////////////////////////////////
 class SwerveDrive
 {
-    typedef SwerveModule::SwerveModuleConfig SwerveModuleConfig;
-
 public:
     // Constructor
     SwerveDrive(Pigeon2 * pPigeon);
@@ -93,7 +85,7 @@ public:
 
 private:
     Pigeon2 * m_pPigeon;
-    SwerveModule m_SwerveModules[SwerveConfig::NUM_SWERVE_DRIVE_MODULES];
+    SwerveConfig::SwerveModuleType m_SwerveModules[SwerveConfig::NUM_SWERVE_DRIVE_MODULES];
 
     // From https://docs.wpilib.org/en/stable/docs/software/kinematics-and-odometry/swerve-drive-odometry.html
     // 0 degrees / radians represents the robot angle when the robot is facing directly toward your opponent’s
@@ -124,10 +116,10 @@ private:
     // BR: 0.221680 (79.8048_deg), 0.230957 (83.14452_deg)
     // Config information on each swerve module.
     // Fields are: Name, Position, Drive TalonFX CAN ID, Angle TalonFX CAN ID, CANCoder ID, Angle Offset
-    static constexpr const SwerveModuleConfig FRONT_LEFT_MODULE_CONFIG = {"Front left", SwerveModule::FRONT_LEFT, 11, 12, 1, 297.94932_deg};
-    static constexpr const SwerveModuleConfig FRONT_RIGHT_MODULE_CONFIG = {"Front right", SwerveModule::FRONT_RIGHT, 13, 14, 2, 115.75188_deg};
-    static constexpr const SwerveModuleConfig BACK_LEFT_MODULE_CONFIG = {"Back left", SwerveModule::BACK_LEFT, 15, 16, 3, 71.89452_deg};
-    static constexpr const SwerveModuleConfig BACK_RIGHT_MODULE_CONFIG = {"Back right", SwerveModule::BACK_RIGHT, 17, 18, 4, 83.14452_deg};
+    static constexpr const SwerveConfig::ModuleInformation FRONT_LEFT_MODULE_INFO = {"Front left", SwerveConfig::ModulePosition::FRONT_LEFT, 11, 12, 1, 297.94932_deg};
+    static constexpr const SwerveConfig::ModuleInformation FRONT_RIGHT_MODULE_INFO = {"Front right", SwerveConfig::ModulePosition::FRONT_RIGHT, 13, 14, 2, 115.75188_deg};
+    static constexpr const SwerveConfig::ModuleInformation BACK_LEFT_MODULE_INFO = {"Back left", SwerveConfig::ModulePosition::BACK_LEFT, 15, 16, 3, 71.89452_deg};
+    static constexpr const SwerveConfig::ModuleInformation BACK_RIGHT_MODULE_INFO = {"Back right", SwerveConfig::ModulePosition::BACK_RIGHT, 17, 18, 4, 83.14452_deg};
 
     SwerveDrive(const SwerveDrive &) = delete;
     SwerveDrive & operator=(const SwerveDrive &) = delete;

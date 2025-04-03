@@ -23,13 +23,11 @@
 #include "ctre/phoenix6/CANcoder.hpp"                   // for CTRE CANcoder API
 #include "ctre/phoenix6/TalonFX.hpp"                    // for CTRE TalonFX API
 
-// Selects between using a Neo or TalonFX swerve module.
-// Only enable one define.
-//#define USE_NEO_SWERVE
-#define USE_TALONFX_SWERVE
-
 using namespace frc;
 using namespace ctre::phoenix6::signals;
+
+class TalonFxSwerveModule;
+class NeoSwerveModule;
 
 
 ////////////////////////////////////////////////////////////////
@@ -40,24 +38,50 @@ using namespace ctre::phoenix6::signals;
 ////////////////////////////////////////////////////////////////
 namespace SwerveConfig
 {
+    enum ModulePosition
+    {
+        FRONT_LEFT,
+        FRONT_RIGHT,
+        BACK_LEFT,
+        BACK_RIGHT
+    };
+
+    struct ModuleInformation
+    {
+        const char * m_pModuleName;
+        ModulePosition m_Position;
+        int m_DriveMotorCanId;
+        int m_AngleMotorCanId;
+        int m_CanCoderId;
+        const Rotation2d m_EncoderReferenceAbsoluteOffset;
+    };
+
     // Represents the configurable parameters in a swerve module
-    struct SwerveModuleConfig
+    struct ModuleConfiguration
     {
         const double DRIVE_GEAR_RATIO;
         const double ANGLE_GEAR_RATIO;
+
+        // These types are specific to CTRE configurations, but the
+        // concepts apply to swerve in general.  Swerve modules using
+        // Neo motors will ignore the inverted values here and just
+        // directly specify true/false for invert.  If something
+        // besides a typical CTRE setup is used, this part of the
+        // configuration may need to be reworked.
         const InvertedValue DRIVE_MOTOR_INVERTED_VALUE;
         const InvertedValue ANGLE_MOTOR_INVERTED_VALUE;
         const SensorDirectionValue CANCODER_INVERTED_VALUE;
     };
 
     // SDS MK4 L3 Very Fast configuration
-    static constexpr const SwerveModuleConfig SDS_MK4_CONFIG = {(6.12 / 1.0), (12.8 / 1.0), InvertedValue::CounterClockwise_Positive, InvertedValue::Clockwise_Positive, SensorDirectionValue::CounterClockwise_Positive};
+    static constexpr const ModuleConfiguration SDS_MK4_CONFIG = {(6.12 / 1.0), (12.8 / 1.0), InvertedValue::CounterClockwise_Positive, InvertedValue::Clockwise_Positive, SensorDirectionValue::CounterClockwise_Positive};
 
     // SDS MK4n L3+ configuration
-    static constexpr const SwerveModuleConfig SDS_MK4N_CONFIG = {(5.36 / 1.0), (18.75 / 1.0), InvertedValue::CounterClockwise_Positive, InvertedValue::CounterClockwise_Positive, SensorDirectionValue::CounterClockwise_Positive};
+    static constexpr const ModuleConfiguration SDS_MK4N_CONFIG = {(5.36 / 1.0), (18.75 / 1.0), InvertedValue::CounterClockwise_Positive, InvertedValue::CounterClockwise_Positive, SensorDirectionValue::CounterClockwise_Positive};
 
-    // The swerve module configuration on the robot
-    static constexpr const SwerveModuleConfig & SELECTED_SWERVE_MODULE_CONFIG = SDS_MK4N_CONFIG;
+    // The swerve module configuration on the robot (change the typedef based on the motors on the module)
+    typedef TalonFxSwerveModule SwerveModuleType;
+    static constexpr const ModuleConfiguration & SELECTED_SWERVE_MODULE_CONFIG = SDS_MK4N_CONFIG;
 
     static constexpr const size_t NUM_SWERVE_DRIVE_MODULES = 4U;
 
