@@ -47,7 +47,7 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveConfig::ModuleInformation moduleI
     m_DriveDutyCycleOut(0.0),
     m_DriveVelocityVoltage(0.0_tps),
     m_AnglePositionVoltage(0.0_tr),
-    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, "canivore-120")),
+    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, "canivore-8145")),
     m_LastAngle(),
     m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA)),
     CANCODER_REFERENCE_ABSOLUTE_OFFSET(moduleInfo.m_EncoderReferenceAbsoluteOffset)
