@@ -174,12 +174,13 @@ private:
         NEUTRAL,
         REEF_L1,
         REEF_L2_L3,
-        REEF_L4
+        REEF_L4,
+        REMOVE_ALGAE
     };
 
     inline void IncrementArmPosition(ArmPosition & rArmPosition)
     {
-        if (rArmPosition != ArmPosition::REEF_L4)
+        if (rArmPosition != ArmPosition::REMOVE_ALGAE)
         {
             uint32_t positionAsUint = static_cast<uint32_t>(rArmPosition);
             positionAsUint++;
@@ -346,6 +347,7 @@ private:
     units::angle::degree_t          m_ArmL1OffsetDegrees;                   // Tracks the desired manual offset of the arm angle when at L1
     units::angle::degree_t          m_ArmL2L3OffsetDegrees;                 // Tracks the desired manual offset of the arm angle when at L2/L3
     units::angle::degree_t          m_ArmL4OffsetDegrees;                   // Tracks the desired manual offset of the arm angle when at L4
+    units::angle::degree_t          m_ArmRemoveAlgaeOffsetDegrees;          // Tracks the desired manual offset of the arm angle for removing algae
     units::angle::degree_t *        m_pArmManualOffsetDegrees;              // Pointer to the current variable for manual offset of the arm angle
     units::angle::degree_t          m_WristTargetDegrees;                   // Tracks the desired angle position of the wrist
     units::angle::degree_t          m_WristLoadingOffsetDegrees;            // Tracks the desired manual offset of the wrist angle when loading
@@ -353,6 +355,7 @@ private:
     units::angle::degree_t          m_WristL1OffsetDegrees;                 // Tracks the desired manual offset of the wrist angle when at L1
     units::angle::degree_t          m_WristL2L3OffsetDegrees;               // Tracks the desired manual offset of the wrist angle when at L2/L3
     units::angle::degree_t          m_WristL4OffsetDegrees;                 // Tracks the desired manual offset of the wrist angle when at L4
+    units::angle::degree_t          m_WristRemoveAlgaeOffsetDegrees;        // Tracks the desired manual offset of the wrist angle for removing algae
     units::angle::degree_t *        m_pWristManualOffsetDegrees;            // Pointer to the current variable for manual offset of the wrist angle
     LiftPosition                    m_LiftPosition;                         // Keep track of where the lift is currently positioned
     ArmPosition                     m_ArmPosition;                          // Keep track of where the arm is currently positioned
@@ -467,6 +470,8 @@ private:
     static constexpr const units::angle::degree_t WRIST_REEF_L1_TARGET_DEGREES          = 135.0_deg;
     static constexpr const units::angle::degree_t WRIST_REEF_L2_L3_TARGET_DEGREES       = 195.0_deg;
     static constexpr const units::angle::degree_t WRIST_REEF_L4_TARGET_DEGREES          = 60.0_deg;
+    static constexpr const units::angle::degree_t WRIST_REEF_ALGAE_TARGET_DEGREES       = 255.0_deg;
+    static constexpr const units::angle::degree_t ARM_REEF_ALGAE_TARGET_DEGREES         = 5.0_deg;
 
     static constexpr const units::angle::degree_t ENCODER_BOUNDARY_TOLERANCE_DEGREES    = -5.0_deg;
 
