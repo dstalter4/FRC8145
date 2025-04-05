@@ -35,6 +35,7 @@ EastTechRobot * EastTechRobot::m_pThis;
 ////////////////////////////////////////////////////////////////
 EastTechRobot::EastTechRobot() :
     m_AutonomousChooser                 (),
+    m_AutonomousScoreCoral              (),
     m_AutoSwerveDirections              (),
     m_pDriveController                  (new DriveControllerType(DRIVE_CONTROLLER_MODEL, DRIVE_JOYSTICK_PORT)),
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
@@ -93,6 +94,10 @@ EastTechRobot::EastTechRobot() :
     m_AutonomousChooser.AddOption(AUTO_NO_ROUTINE_STRING, AUTO_NO_ROUTINE_STRING);
     m_AutonomousChooser.AddOption(AUTO_TEST_ROUTINE_STRING, AUTO_TEST_ROUTINE_STRING);
     SmartDashboard::PutData("Autonomous Modes", &m_AutonomousChooser);
+
+    m_AutonomousScoreCoral.SetDefaultOption("No", false);
+    m_AutonomousScoreCoral.AddOption("Yes", true);
+    SmartDashboard::PutData("Score coral?", &m_AutonomousScoreCoral);
     
     RobotUtils::DisplayFormattedMessage("The drive forward axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.RIGHT_TRIGGER);
     RobotUtils::DisplayFormattedMessage("The drive reverse axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_TRIGGER);
