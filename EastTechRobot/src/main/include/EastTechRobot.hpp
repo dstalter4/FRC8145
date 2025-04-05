@@ -453,18 +453,18 @@ private:
     static constexpr const units::angle::degree_t LIFT_UP_ANGLE                         = 1890.0_deg;
 
     static constexpr const units::angle::degree_t ARM_STARTING_POSITION_DEGREES         = 180.0_deg;
-    static constexpr const units::angle::degree_t ARM_STARTING_POSITION_ENCODER_VALUE   = units::angle::degree_t(0.0985 * 360.0);
+    static constexpr const units::angle::degree_t ARM_STARTING_POSITION_ENCODER_VALUE   = units::angle::degree_t(0.0995 * 360.0);
     static constexpr const units::angle::degree_t ARM_ENDING_POSITION_ENCODER_VALUE     = units::angle::degree_t(0.0000 * 360.0);
     static constexpr const units::angle::degree_t ARM_LOADING_TARGET_DEGREES            = 195.0_deg;
     static constexpr const units::angle::degree_t ARM_NEUTRAL_TARGET_DEGREES            = 180.0_deg;
     static constexpr const units::angle::degree_t ARM_REEF_L1_TARGET_DEGREES            = 75.0_deg;
     static constexpr const units::angle::degree_t ARM_REEF_L2_L3_TARGET_DEGREES         = 30.0_deg;
-    static constexpr const units::angle::degree_t ARM_REEF_L4_TARGET_DEGREES            = -15.0_deg;
+    static constexpr const units::angle::degree_t ARM_REEF_L4_TARGET_DEGREES            = -25.0_deg;
 
     static constexpr const units::angle::degree_t ARM_WRIST_MANUAL_ADJUST_STEP_DEGREES  = 10.0_deg;
 
     static constexpr const units::angle::degree_t WRIST_STARTING_POSITION_DEGREES       = 135.0_deg;
-    static constexpr const units::angle::degree_t WRIST_STARTING_POSITION_ENCODER_VALUE = units::angle::degree_t(0.8220 * 360.0);
+    static constexpr const units::angle::degree_t WRIST_STARTING_POSITION_ENCODER_VALUE = units::angle::degree_t(0.9057 * 360.0);
     static constexpr const units::angle::degree_t WRIST_ENDING_POSITION_ENCODER_VALUE   = units::angle::degree_t(0.0000 * 360.0);
     static constexpr const units::angle::degree_t WRIST_LOADING_TARGET_DEGREES          = 35.0_deg;
     static constexpr const units::angle::degree_t WRIST_NEUTRAL_TARGET_DEGREES          = 135.0_deg;
