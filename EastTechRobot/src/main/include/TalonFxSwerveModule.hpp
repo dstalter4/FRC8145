@@ -3,9 +3,10 @@
 /// @author David Stalter
 ///
 /// @details
-/// Implements functionality for a swerve module on a swerve drive robot.
+/// Implements functionality for a TalonFX swerve module on a swerve drive
+/// robot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef TALONFXSWERVEMODULE_HPP
@@ -36,7 +37,7 @@ using namespace ctre::phoenix6::signals;
 ////////////////////////////////////////////////////////////////
 /// @class TalonFxSwerveModule
 ///
-/// Declarations for a swerve module object.
+/// Declarations for a TalonFX swerve module object.
 ///
 ////////////////////////////////////////////////////////////////
 class TalonFxSwerveModule
@@ -44,26 +45,8 @@ class TalonFxSwerveModule
     friend class SwerveDrive;
 
 private:
-    enum ModulePosition
-    {
-        FRONT_LEFT,
-        FRONT_RIGHT,
-        BACK_LEFT,
-        BACK_RIGHT
-    };
-
-    struct SwerveModuleConfig
-    {
-        const char * m_pModuleName;
-        ModulePosition m_Position;
-        int m_DriveMotorCanId;
-        int m_AngleMotorCanId;
-        int m_CanCoderId;
-        const Rotation2d m_CancoderReferenceAbsoluteOffset;
-    };
-
     // Constructor
-    TalonFxSwerveModule(SwerveModuleConfig config);
+    TalonFxSwerveModule(SwerveConfig::ModuleInformation moduleInfo);
 
     // Points the module to zero degrees, which should be straight forward
     inline void HomeModule()
@@ -71,6 +54,12 @@ private:
         (void)m_pAngleTalon->SetControl(m_AnglePositionVoltage.WithPosition(0.0_deg));
         m_LastAngle = 0.0_deg;
     }
+
+    // Point the module wheel in the correct direciton to form an X to prevent movement
+    void LockWheel();
+
+    // Align the swerve module to the absolute encoder
+    void RecalibrateModules();
 
     // Update a swerve module to the desired state
     void SetDesiredState(SwerveModuleState desiredState, bool bIsOpenLoop);
@@ -97,15 +86,15 @@ private:
     DisplayStrings m_DisplayStrings;
     static uint32_t m_DetailedModuleDisplayIndex;
 
-    ModulePosition m_MotorGroupPosition;
+    SwerveConfig::ModulePosition m_MotorGroupPosition;
     TalonFX * m_pDriveTalon;
     TalonFX * m_pAngleTalon;
-    CANcoder * m_pAngleCanCoder;
-    Rotation2d m_LastAngle;
-    SimpleMotorFeedforward<units::meters> * m_pFeedForward;
     DutyCycleOut m_DriveDutyCycleOut;
     VelocityVoltage m_DriveVelocityVoltage;
     PositionVoltage m_AnglePositionVoltage;
+    CANcoder * m_pAngleCanCoder;
+    Rotation2d m_LastAngle;
+    SimpleMotorFeedforward<units::meters> * m_pFeedForward;
     const Rotation2d CANCODER_REFERENCE_ABSOLUTE_OFFSET;
 
     // Divide by 12 on these constants to convert from volts to percent output for CTRE

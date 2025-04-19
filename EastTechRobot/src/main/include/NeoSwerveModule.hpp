@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a Neo swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef NEOSWERVEMODULE_HPP
@@ -25,7 +25,7 @@
 #include "units/voltage.h"                              // for voltage unit user defined literals
 
 // C++ INCLUDES
-// (none)
+#include "SwerveConfig.hpp"                             // for ModuleInformation structure
 
 using namespace ctre::phoenix6::configs;
 using namespace ctre::phoenix6::controls;
@@ -39,7 +39,7 @@ using namespace rev::spark;
 ////////////////////////////////////////////////////////////////
 /// @class NeoSwerveModule
 ///
-/// Declarations for a swerve module object.
+/// Declarations for a Neo swerve module object.
 ///
 ////////////////////////////////////////////////////////////////
 class NeoSwerveModule
@@ -47,29 +47,17 @@ class NeoSwerveModule
     friend class SwerveDrive;
 
 private:
-    enum ModulePosition
-    {
-        FRONT_LEFT,
-        FRONT_RIGHT,
-        BACK_LEFT,
-        BACK_RIGHT
-    };
-
-    struct SwerveModuleConfig
-    {
-        const char * m_pModuleName;
-        ModulePosition m_Position;
-        int m_DriveMotorCanId;
-        int m_AngleMotorCanId;
-        int m_CanCoderId;
-        const Rotation2d m_AngleOffset;
-    };
-
     // Constructor
-    NeoSwerveModule(SwerveModuleConfig config);
+    NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo);
 
     // Point the module to zero degrees (forward)
     void HomeModule();
+
+    // Point the module wheel in the correct direciton to form an X to prevent movement
+    void LockWheel() { /* Not implemented yet. */ }
+
+    // Align the swerve module to the absolute encoder
+    void RecalibrateModules() { /* Not implemented yet. */ }
 
     // Update a swerve module to the desired state
     void SetDesiredState(SwerveModuleState desiredState, bool bIsOpenLoop);
@@ -96,7 +84,7 @@ private:
     DisplayStrings m_DisplayStrings;
     static uint32_t m_DetailedModuleDisplayIndex;
 
-    ModulePosition m_MotorGroupPosition;
+    SwerveConfig::ModulePosition m_MotorGroupPosition;
     SparkMax * m_pDriveSpark;
     SparkMax * m_pAngleSpark;
     SparkRelativeEncoder m_DriveSparkEncoder;
@@ -104,9 +92,9 @@ private:
     SparkClosedLoopController m_DrivePidController;
     SparkClosedLoopController m_AnglePidController;
     CANcoder * m_pAngleCanCoder;
-    Rotation2d m_AngleOffset;
     Rotation2d m_LastAngle;
     SimpleMotorFeedforward<units::meters> * m_pFeedForward;
+    const Rotation2d CANCODER_REFERENCE_ABSOLUTE_OFFSET;
 
     // Divide by 12 on these constants to convert from volts to percent output for CTRE
     using Distance = units::meters;

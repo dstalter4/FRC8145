@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a Neo swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -41,24 +41,24 @@ uint32_t NeoSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 /// 2024: Bevels facing right is 1.0 forward on the Neos.
 ///
 ////////////////////////////////////////////////////////////////
-NeoSwerveModule::NeoSwerveModule(SwerveModuleConfig config) :
-    m_MotorGroupPosition(config.m_Position),
-    m_pDriveSpark(new SparkMax(config.m_DriveMotorCanId, SparkMax::MotorType::kBrushless)),
-    m_pAngleSpark(new SparkMax(config.m_AngleMotorCanId, SparkMax::MotorType::kBrushless)),
+NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo) :
+    m_MotorGroupPosition(moduleInfo.m_Position),
+    m_pDriveSpark(new SparkMax(moduleInfo.m_DriveMotorCanId, SparkMax::MotorType::kBrushless)),
+    m_pAngleSpark(new SparkMax(moduleInfo.m_AngleMotorCanId, SparkMax::MotorType::kBrushless)),
     m_DriveSparkEncoder(m_pDriveSpark->GetEncoder()),
     m_AngleSparkEncoder(m_pAngleSpark->GetEncoder()),
     m_DrivePidController(m_pDriveSpark->GetClosedLoopController()),
     m_AnglePidController(m_pAngleSpark->GetClosedLoopController()),
-    m_pAngleCanCoder(new CANcoder(config.m_CanCoderId, "canivore-8145")),
-    m_AngleOffset(config.m_AngleOffset),
+    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, "canivore-120")),
     m_LastAngle(),
-    m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA))
+    m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA)),
+    CANCODER_REFERENCE_ABSOLUTE_OFFSET(moduleInfo.m_EncoderReferenceAbsoluteOffset)
 {
     // Build the strings to use in the display method
-    std::snprintf(&m_DisplayStrings.m_CancoderAngleString[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "cancoder");
-    std::snprintf(&m_DisplayStrings.m_NeoEncoderAngleString[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "NEO encoder");
-    std::snprintf(&m_DisplayStrings.m_DriveNeoTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "drive temp (F)");
-    std::snprintf(&m_DisplayStrings.m_AngleNeoTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "angle temp (F)");
+    std::snprintf(&m_DisplayStrings.m_CancoderAngleString[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", moduleInfo.m_pModuleName, "cancoder");
+    std::snprintf(&m_DisplayStrings.m_NeoEncoderAngleString[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", moduleInfo.m_pModuleName, "NEO encoder");
+    std::snprintf(&m_DisplayStrings.m_DriveNeoTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", moduleInfo.m_pModuleName, "drive temp (F)");
+    std::snprintf(&m_DisplayStrings.m_AngleNeoTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", moduleInfo.m_pModuleName, "angle temp (F)");
 
     // Configure drive motor controller
     SparkMaxConfig driveConfig;
@@ -121,7 +121,7 @@ NeoSwerveModule::NeoSwerveModule(SwerveModuleConfig config) :
     // commands while the robot is not in an enabled, which is the case
     // when constructors run.  Calling SetReference() here won't do anything.
 
-    double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - m_AngleOffset.Degrees().value();
+    double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - CANCODER_REFERENCE_ABSOLUTE_OFFSET.Degrees().value();
     m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
 
     // Save off the initial angle
@@ -137,7 +137,7 @@ NeoSwerveModule::NeoSwerveModule(SwerveModuleConfig config) :
 ////////////////////////////////////////////////////////////////
 void NeoSwerveModule::HomeModule()
 {
-    double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - m_AngleOffset.Degrees().value();
+    double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - CANCODER_REFERENCE_ABSOLUTE_OFFSET.Degrees().value();
     m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
     m_AnglePidController.SetReference(0.0, SparkMax::ControlType::kPosition);
     m_LastAngle = 0.0_deg;

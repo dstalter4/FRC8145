@@ -176,4 +176,35 @@ inline void EastTechRobot::AutonomousSwerveDriveSequence(RobotSwerveDirections &
     rSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_NO_TRANSLATION, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
 }
 
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::AutonomousRotateByGyroSequence
+///
+/// Turns the robot by the gyro.
+///
+////////////////////////////////////////////////////////////////
+inline void EastTechRobot::AutonomousRotateByGyroSequence(RobotRotation robotRotation, double rotateDegrees, double rotateSpeed, bool bFieldRelative)
+{
+    double startingGyroAngle = m_pPigeon->GetYaw().GetValueAsDouble();
+
+    while (std::abs(m_pPigeon->GetYaw().GetValueAsDouble() - startingGyroAngle) <= rotateDegrees)
+    {
+        if (robotRotation == RobotRotation::ROBOT_CLOCKWISE)
+        {
+            m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, rotateSpeed, bFieldRelative, true);
+        }
+        else if (robotRotation == RobotRotation::ROBOT_COUNTER_CLOCKWISE)
+        {
+            m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, -rotateSpeed, bFieldRelative, true);
+        }
+        else
+        {
+        }
+    }
+
+    // Stop motion
+    m_pSwerveDrive->SetModuleStates({0_m, 0_m}, 0.0, true, true);
+}
+
 #endif // EASTTECHROBOTAUTONOMOUS_HPP

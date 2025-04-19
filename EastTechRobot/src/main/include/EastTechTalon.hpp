@@ -6,7 +6,7 @@
 /// A class designed to work with a group of CAN Talon speed controllers working
 /// in tandem.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef EASTTECHTALON_HPP
@@ -62,13 +62,35 @@ namespace Talon
         TalonFX * m_pTalonFx;
         DutyCycleOut m_DutyCycleOut;
         PositionVoltage m_PositionVoltage;
+        TalonFXConfiguration m_MotorConfiguration;
 
         // Constructor
         TalonFxMotorController(int canId) :
             m_pTalonFx(new TalonFX(canId)),
             m_DutyCycleOut(0.0),
-            m_PositionVoltage(0.0_tr)
-        {}
+            m_PositionVoltage(0.0_tr),
+            m_MotorConfiguration()
+        {
+            m_pTalonFx->GetConfigurator().Apply(m_MotorConfiguration);
+            m_pTalonFx->ClearStickyFaults();
+        }
+
+        // Applies the struct-local configuration, which may have been updated externally
+        void ApplyConfiguration()
+        {
+            (void)m_pTalonFx->GetConfigurator().Apply(m_MotorConfiguration);
+        }
+
+        // Applies a configuration.  This will not update the struct-local
+        // configuration and directly overwrites the configuration on the device.
+        // Template type must match CTRE options.
+        template <typename ConfigType>
+        void ApplyConfiguration(ConfigType config)
+        {
+            // For now, don't let this be used
+            ASSERT(false);
+            (void)m_pTalonFx->GetConfigurator().Apply(config);
+        }
 
         // Set the output using duty cycle
         void SetDutyCycle(double dutyCycle)
@@ -146,6 +168,19 @@ public:
     // Retrieve a specific motor object
     TalonType * GetMotorObject(unsigned canId = GROUP_LEADER_CAN_ID);
 
+    // @todo: This breaks the template parameter since it assumes TalonFX.
+    // Retrieve the configuration for a specific motor object
+    TalonFXConfiguration * GetMotorConfiguration(unsigned canId = GROUP_LEADER_CAN_ID);
+
+    // Applies the struct-local configuration, which may have been updated externally
+    void ApplyConfiguration(unsigned canId = APPLY_TO_ALL_PSEUDO_CAN_ID);
+
+    // Applies a configuration.  This will not update the struct-local
+    // configuration and directly overwrites the configuration on the device.
+    // Template type must match CTRE options.
+    template <typename ConfigType>
+    void ApplyConfiguration(ConfigType config, unsigned canId = APPLY_TO_ALL_PSEUDO_CAN_ID);
+
     // Adds a new motor to a group
     bool AddMotorToGroup(MotorGroupControlMode controlMode, bool bIsDriveMotor = false);
     
@@ -187,6 +222,7 @@ private:
         TalonType * m_pTalon;
         DutyCycleOut m_DutyCycleOut;
         PositionVoltage m_PositionVoltage;
+        TalonFXConfiguration m_MotorConfiguration;
         const char * m_pName;
         MotorGroupControlMode m_ControlMode;
         unsigned m_CanId;
@@ -200,6 +236,7 @@ private:
             m_pTalon(new TalonType(static_cast<int>(canId))),
             m_DutyCycleOut(0.0),
             m_PositionVoltage(0.0_tr),
+            m_MotorConfiguration(),
             m_pName(pName),
             m_ControlMode(controlMode),
             m_CanId(canId),
@@ -208,24 +245,25 @@ private:
             m_bResetOccurred(false),
             m_bIsDriveMotor(bIsDriveMotor)
         {
-            m_pTalon->SetNeutralMode(neutralMode);
+            m_MotorConfiguration.MotorOutput.NeutralMode = neutralMode;
 
             if (controlMode == EastTech::Talon::FOLLOW_INVERSE)
             {
-                m_pTalon->SetInverted(true);
+                m_MotorConfiguration.MotorOutput.Inverted = true;
             }
 
             // @todo: Move in sensor too?
             if (EastTech::Talon::CURRENT_LIMITING_ENABLED && bIsDriveMotor)
             {
                 // Limits were 40.0, 55.0, 0.1
-                CurrentLimitsConfigs driveMotorCurrentLimits;
-                driveMotorCurrentLimits.SupplyCurrentLowerLimit = 55.0_A;
-                driveMotorCurrentLimits.SupplyCurrentLimit = 60.0_A;
-                driveMotorCurrentLimits.SupplyCurrentLowerTime = 0.1_s;
-                driveMotorCurrentLimits.SupplyCurrentLimitEnable = true;
-                (void)m_pTalon->GetConfigurator().Apply(driveMotorCurrentLimits);
+                m_MotorConfiguration.CurrentLimits.SupplyCurrentLowerLimit = 55.0_A;
+                m_MotorConfiguration.CurrentLimits.SupplyCurrentLimit = 60.0_A;
+                m_MotorConfiguration.CurrentLimits.SupplyCurrentLowerTime = 0.1_s;
+                m_MotorConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
             }
+
+            (void)m_pTalon->GetConfigurator().Apply(m_MotorConfiguration);
+            m_pTalon->ClearStickyFaults();
 
             // Build the strings to use in the display method
             std::snprintf(&m_DisplayStrings.m_CurrentTemperatureString[0], DisplayStrings::MAX_MOTOR_DISPLAY_STRING_LENGTH, "%s #%u %s", m_pName, groupNumber, "temperature (F)");
@@ -247,6 +285,7 @@ private:
 
     static const unsigned MAX_NUMBER_OF_MOTORS = 4;
     static const unsigned GROUP_LEADER_CAN_ID = 0xFF;
+    static const unsigned APPLY_TO_ALL_PSEUDO_CAN_ID = 0xFF;
 
     // Member variables
     unsigned m_NumMotors;                                   // Number of motors in the group
@@ -301,6 +340,108 @@ TalonType * TalonMotorGroup<TalonType>::GetMotorObject(unsigned canId)
     }
 
     return pTalonObject;
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method TalonMotorGroup::GetMotorConfiguration
+///
+/// Retrieves a specific Talon motor configuration from the
+/// motor group.  By default it will return the configuration of
+/// the first motor in the group (the leader Talon).  If a CAN
+/// ID is specified, it will retrieve that configuration instead.
+/// The purpose of this function is to allow robot code to make
+/// specific calls on a motor configuration that may only apply
+/// to one motor in a group or for a specific configuration type
+/// since this is a template class.
+///
+////////////////////////////////////////////////////////////////
+template <class TalonType>
+TalonFXConfiguration * TalonMotorGroup<TalonType>::GetMotorConfiguration(unsigned canId)
+{
+    TalonFXConfiguration * pTalonConfig = nullptr;
+
+    // By default, return the first object in the group
+    if (canId == GROUP_LEADER_CAN_ID)
+    {
+        pTalonConfig = &(m_pMotorsInfo[0]->m_MotorConfiguration);
+    }
+    // If a specific CAN ID was given
+    else
+    {
+        // Loop through the motors
+        for (unsigned i = 0U; i < m_NumMotors; i++)
+        {
+            // Check if this is the right motor
+            if (m_pMotorsInfo[i]->m_CanId == canId)
+            {
+                pTalonConfig = &(m_pMotorsInfo[i]->m_MotorConfiguration);
+                break;
+            }
+        }
+    }
+
+    return pTalonConfig;
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method TalonMotorGroup::ApplyConfiguration
+///
+/// Applies an updated configuration to the talon motors in a
+/// group.  Applying a configuration to only a specific motor in
+/// the group should use the GetMotorConfiguration() function.
+///
+////////////////////////////////////////////////////////////////
+template <class TalonType>
+void TalonMotorGroup<TalonType>::ApplyConfiguration(unsigned canId)
+{
+    // Loop through the motors.  This is slightly inefficient because
+    // we can't break out of the loop if we find a match since we have
+    // to consider the 'apply to all' case.
+    for (unsigned i = 0U; i < m_NumMotors; i++)
+    {
+        // If the config is applied to all motors in the group, or we found the CAN ID
+        if ((canId == APPLY_TO_ALL_PSEUDO_CAN_ID) || (m_pMotorsInfo[i]->m_CanId == canId))
+        {
+            // Apply the config
+            (void)m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i]->m_MotorConfiguration);
+        }
+    }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method TalonMotorGroup::ApplyConfiguration
+///
+/// Applies a specific configuration to the talon motors in a
+/// group.  Applying a configuration to only a specific motor in
+/// the group should use the GetMotorConfiguration() function.
+///
+////////////////////////////////////////////////////////////////
+template <class TalonType>
+template <typename ConfigType>
+void TalonMotorGroup<TalonType>::ApplyConfiguration(ConfigType config, unsigned canId)
+{
+    // For now, don't let this be used
+    ASSERT(false);
+
+    // Loop through the motors.  This is slightly inefficient because
+    // we can't break out of the loop if we find a match since we have
+    // to consider the 'apply to all' case.
+    for (unsigned i = 0U; i < m_NumMotors; i++)
+    {
+        // If the config is applied to all motors in the group, or we found the CAN ID
+        if ((canId == APPLY_TO_ALL_PSEUDO_CAN_ID) || (m_pMotorsInfo[i]->m_CanId == canId))
+        {
+            // This doesn't update the local configuration, which can't be done with the template
+            //m_pMotorsInfo[i]->m_MotorConfiguration.<member> = config;
+            (void)m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(config);
+        }
+    }
 }
 
 
@@ -426,11 +567,13 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
             // Update the inverted status.  Only FOLLOW_INVERSE uses the built-in invert.
             if (controlMode == EastTech::Talon::FOLLOW_INVERSE)
             {
-                m_pMotorsInfo[i]->m_pTalon->SetInverted(true);
+                m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput.WithInverted(true);
+                m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i].m_MotorConfiguration.MotorOutput);
             }
             else
             {
-                m_pMotorsInfo[i]->m_pTalon->SetInverted(false);
+                m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput.WithInverted(false);
+                m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i].m_MotorConfiguration.MotorOutput);
             }
             
             // Indicate success
@@ -454,7 +597,8 @@ void TalonMotorGroup<TalonType>::SetCoastMode()
 {
     for (unsigned i = 0U; i < m_NumMotors; i++)
     {
-        m_pMotorsInfo[i]->m_pTalon->SetNeutralMode(NeutralModeValue::Coast);
+        m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput.NeutralMode = NeutralModeValue::Coast;
+        m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput);
     }
 }
 
@@ -471,7 +615,8 @@ void TalonMotorGroup<TalonType>::SetBrakeMode()
 {
     for (unsigned i = 0U; i < m_NumMotors; i++)
     {
-        m_pMotorsInfo[i]->m_pTalon->SetNeutralMode(NeutralModeValue::Brake);
+        m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput.NeutralMode = NeutralModeValue::Brake;
+        m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput);
     }
 }
 
@@ -550,7 +695,7 @@ void TalonMotorGroup<TalonType>::Set(double value, double offset)
         if (bCallSet)
         {
             // Set the value in the Talon
-            m_pMotorsInfo[i]->m_pTalon->SetControl(m_pMotorsInfo[i]->m_DutyCycleOut.WithOutput(valueToSet));
+            (void)m_pMotorsInfo[i]->m_pTalon->SetControl(m_pMotorsInfo[i]->m_DutyCycleOut.WithOutput(valueToSet));
         }
     }
 }
@@ -579,7 +724,7 @@ void TalonMotorGroup<TalonType>::SetAngle(double angle)
     // Set the control output
     units::angle::degree_t degrees(angle);
     units::angle::turn_t turns(degrees);
-    m_pMotorsInfo[0]->m_pTalon->SetControl(m_pMotorsInfo[0]->m_PositionVoltage.WithPosition(turns));
+    (void)m_pMotorsInfo[0]->m_pTalon->SetControl(m_pMotorsInfo[0]->m_PositionVoltage.WithPosition(turns));
 }
 
 
