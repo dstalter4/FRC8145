@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -37,26 +37,26 @@ uint32_t TalonFxSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 /// on the CANivore bus, which requires a 120 ohm terminating
 /// resistor.
 ///
-/// 2024: Bevels facing right is 1.0 forward on the Talons.
+/// 2025: Bevels facing right is 1.0 forward on the Talons.
 ///
 ////////////////////////////////////////////////////////////////
-TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
-    m_MotorGroupPosition(config.m_Position),
-    m_pDriveTalon(new TalonFX(config.m_DriveMotorCanId)),
-    m_pAngleTalon(new TalonFX(config.m_AngleMotorCanId)),
-    m_pAngleCanCoder(new CANcoder(config.m_CanCoderId, "canivore-8145")),
-    m_LastAngle(),
-    m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA)),
+TalonFxSwerveModule::TalonFxSwerveModule(SwerveConfig::ModuleInformation moduleInfo) :
+    m_MotorGroupPosition(moduleInfo.m_Position),
+    m_pDriveTalon(new TalonFX(moduleInfo.m_DriveMotorCanId)),
+    m_pAngleTalon(new TalonFX(moduleInfo.m_AngleMotorCanId)),
     m_DriveDutyCycleOut(0.0),
     m_DriveVelocityVoltage(0.0_tps),
     m_AnglePositionVoltage(0.0_tr),
-    CANCODER_REFERENCE_ABSOLUTE_OFFSET(config.m_CancoderReferenceAbsoluteOffset)
+    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, "canivore-8145")),
+    m_LastAngle(),
+    m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA)),
+    CANCODER_REFERENCE_ABSOLUTE_OFFSET(moduleInfo.m_EncoderReferenceAbsoluteOffset)
 {
     // Build the strings to use in the display method
-    std::snprintf(&m_DisplayStrings.m_CancoderAngleString[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "cancoder");
-    std::snprintf(&m_DisplayStrings.m_FxEncoderAngleString[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "FX encoder");
-    std::snprintf(&m_DisplayStrings.m_DriveTalonTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "drive temp (F)");
-    std::snprintf(&m_DisplayStrings.m_AngleTalonTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", config.m_pModuleName, "angle temp (F)");
+    std::snprintf(&m_DisplayStrings.m_CancoderAngleString[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", moduleInfo.m_pModuleName, "cancoder");
+    std::snprintf(&m_DisplayStrings.m_FxEncoderAngleString[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", moduleInfo.m_pModuleName, "FX encoder");
+    std::snprintf(&m_DisplayStrings.m_DriveTalonTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", moduleInfo.m_pModuleName, "drive temp (F)");
+    std::snprintf(&m_DisplayStrings.m_AngleTalonTemp[0], DisplayStrings::MAX_MODULE_DISPLAY_STRING_LENGTH, "%s %s", moduleInfo.m_pModuleName, "angle temp (F)");
 
     // Configure drive motor controller
     TalonFXConfiguration driveTalonConfig;
@@ -73,8 +73,8 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
     driveTalonConfig.Slot0.kI = 0.0;
     driveTalonConfig.Slot0.kD = 0.0;
 
-    driveTalonConfig.OpenLoopRamps.DutyCycleOpenLoopRampPeriod = 0.25_s;
-    driveTalonConfig.OpenLoopRamps.VoltageOpenLoopRampPeriod = 0.25_s;
+    driveTalonConfig.OpenLoopRamps.DutyCycleOpenLoopRampPeriod = 0.5_s;
+    driveTalonConfig.OpenLoopRamps.VoltageOpenLoopRampPeriod = 0.5_s;
 
     driveTalonConfig.ClosedLoopRamps.DutyCycleClosedLoopRampPeriod = 0.0_s;
     driveTalonConfig.ClosedLoopRamps.VoltageClosedLoopRampPeriod = 0.0_s;
@@ -113,6 +113,19 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
     canCoderConfig.MagnetSensor.SensorDirection = SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.CANCODER_INVERTED_VALUE;
     (void)m_pAngleCanCoder->GetConfigurator().Apply(canCoderConfig);
 
+    RecalibrateModules();
+}
+
+
+////////////////////////////////////////////////////////////////
+/// @method TalonFxSwerveModule::RecalibrateModules
+///
+/// Recalibrates the swerve module by reading the absolute
+/// encoder and setting the appropriate motor controller values.
+///
+////////////////////////////////////////////////////////////////
+void TalonFxSwerveModule::RecalibrateModules()
+{
     // Reset the swerve module to the absolute angle starting position.
     // This reads the current angle from the CANCoder and figures out how
     // far the module is from the config passed in (the predetermined
@@ -126,8 +139,8 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
         canCoderDeltaDegrees += 360.0_deg;
     }
     units::angle::turn_t fxTargetTurns = canCoderDeltaDegrees;
+    units::angle::turn_t fxTargetTurnsStart = fxTargetTurns;
 
-    std::printf("Swerve mod %d fxTargetTurns (start): %f\n", m_MotorGroupPosition, fxTargetTurns.value());
     while (fxTargetTurns > 1.0_tr)
     {
         fxTargetTurns -= 1.0_tr;
@@ -138,10 +151,16 @@ TalonFxSwerveModule::TalonFxSwerveModule(SwerveModuleConfig config) :
         fxTargetTurns += 1.0_tr;
     }
 
-    std::printf("Swerve mod %d fxPosition: %f\n", m_MotorGroupPosition, m_pAngleTalon->GetPosition().GetValueAsDouble());
-    std::printf("Swerve mod %d canCoderDeg: %f\n", m_MotorGroupPosition, currentCanCoderInDegrees.value());
-    std::printf("Swerve mod %d canCoderDelta: %f\n", m_MotorGroupPosition, canCoderDeltaDegrees.value());
-    std::printf("Swerve mod %d fxTargetTurns (final): %f\n", m_MotorGroupPosition, fxTargetTurns.value());
+    static bool bPrintedFirstMeasurement = false;
+    if (!bPrintedFirstMeasurement)
+    {
+        std::printf("Swerve mod %d fxTargetTurns (start): %f\n", m_MotorGroupPosition, fxTargetTurnsStart.value());
+        std::printf("Swerve mod %d fxPosition: %f\n", m_MotorGroupPosition, m_pAngleTalon->GetPosition().GetValueAsDouble());
+        std::printf("Swerve mod %d canCoderDeg: %f\n", m_MotorGroupPosition, currentCanCoderInDegrees.value());
+        std::printf("Swerve mod %d canCoderDelta: %f\n", m_MotorGroupPosition, canCoderDeltaDegrees.value());
+        std::printf("Swerve mod %d fxTargetTurns (final): %f\n", m_MotorGroupPosition, fxTargetTurns.value());
+        bPrintedFirstMeasurement = true;
+    }
 
     m_pAngleTalon->SetPosition(fxTargetTurns);
     m_LastAngle = units::degree_t(m_pAngleTalon->GetPosition().GetValue());
@@ -309,6 +328,48 @@ SwerveModulePosition TalonFxSwerveModule::GetSwerveModulePosition()
     units::angle::degree_t angle = angleTalonPositionInTurns;
 
     return {distance, angle};
+}
+
+
+////////////////////////////////////////////////////////////////
+/// @method TalonFxSwerveModule::LockWheel
+///
+/// Sets the wheel angle of a swerve module to the correct
+/// direction to form an X to prevent movement.
+///
+////////////////////////////////////////////////////////////////
+void TalonFxSwerveModule::LockWheel()
+{
+    units::angle::degree_t targetAngleDegrees = 0.0_deg;
+    switch (m_MotorGroupPosition)
+    {
+        case SwerveConfig::ModulePosition::FRONT_LEFT:
+        {
+            targetAngleDegrees = 45.0_deg;
+            break;
+        }
+        case SwerveConfig::ModulePosition::FRONT_RIGHT:
+        {
+            targetAngleDegrees = -45.0_deg;
+            break;
+        }
+        case SwerveConfig::ModulePosition::BACK_LEFT:
+        {
+            targetAngleDegrees = -45.0_deg;
+            break;
+        }
+        case SwerveConfig::ModulePosition::BACK_RIGHT:
+        {
+            targetAngleDegrees = 45.0_deg;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+    (void)m_pAngleTalon->SetControl(m_AnglePositionVoltage.WithPosition(targetAngleDegrees));
+    m_LastAngle = targetAngleDegrees;
 }
 
 

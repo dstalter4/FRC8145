@@ -5,7 +5,7 @@
 /// @details
 /// Declarations describing the drive configuration.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef DRIVECONFIGURATION_HPP
@@ -43,6 +43,7 @@ namespace Config
     static const DriveStyle DRIVE_STYLE = ARCADE_DRIVE;
 
     static const bool   USE_SWERVE_DRIVE                        = true;
+    static const bool   SWERVE_SLOW_USE_ROTATION_AXIS           = false;
     static const bool   USE_INVERTED_REVERSE_CONTROLS           = true;
     static const bool   DRIVE_MOTOR_COOLING_ENABLED             = true;
     static const bool   DRIVE_SWAP_ENABLED                      = false;

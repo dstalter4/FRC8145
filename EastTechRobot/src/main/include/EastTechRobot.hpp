@@ -9,7 +9,7 @@
 /// right time as controlled by the switches on the driver station or the field
 /// controls.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2025 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef EASTTECHROBOT_HPP
@@ -25,6 +25,7 @@
 #include "frc/DigitalOutput.h"                  // for DigitalOutput type
 #include "frc/DoubleSolenoid.h"                 // for DoubleSolenoid type
 #include "frc/DriverStation.h"                  // for interacting with the driver station
+#include "frc/DutyCycleEncoder.h"               // for interacting with PWM based encoders
 #include "frc/Relay.h"                          // for Relay type
 #include "frc/Solenoid.h"                       // for Solenoid type
 #include "frc/TimedRobot.h"                     // for base class decalartion
@@ -39,9 +40,12 @@
 #include "EastTechTalon.hpp"                    // for custom Talon control
 #include "RobotUtils.hpp"                       // for ASSERT, DEBUG_PRINTS
 #include "SwerveDrive.hpp"                      // for using swerve drive
+#include "ctre/phoenix/led/CANdle.h"            // for interacting with the CANdle
+#include "ctre/phoenix/led/RainbowAnimation.h"  // for interacting with the CANdle
 #include "ctre/phoenix6/Pigeon2.hpp"            // for PigeonIMU
 
 using namespace frc;
+using namespace ctre::phoenix::led;
 
 
 ////////////////////////////////////////////////////////////////
@@ -180,7 +184,10 @@ private:
 
     // Autonomous drive for a specified time
     inline void AutonomousSwerveDriveSequence(RobotSwerveDirections & rSwerveDirections, double translationSpeed, double strafeSpeed, double rotateSpeed, units::second_t time, bool bFieldRelative);
-    
+
+    // Autonomous drive for a specified angle
+    inline void AutonomousRotateByGyroSequence(RobotRotation robotRotation, double rotateDegrees, double rotateSpeed, bool bFieldRelative);
+
     // Autonomous routines
     // @todo: Make EastTechRobotAutonomous a friend and move these out (requires accessor to *this)!
     void AutonomousRoutine1();
@@ -199,6 +206,9 @@ private:
     // Routine to put things in a known state
     void InitialStateSetup();
 
+    // Checks for the RIO pin readings to stabilize
+    void CheckIfRioPinsAreStable();
+
     // Configure motor controller parameters
     void ConfigureMotorControllers();
 
@@ -210,6 +220,12 @@ private:
     
     // Main sequence for vision processing
     void CameraSequence();
+
+    // LED sequence/support
+    inline void SetLedsToAllianceColor();
+
+    // Superstructure sequences
+    // (none)
     
     // MEMBER VARIABLES
     
@@ -229,7 +245,8 @@ private:
     // (none)
 
     // LEDs
-    // (none)
+    CANdle *                        m_pCandle;
+    RainbowAnimation                m_RainbowAnimation;
 
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
@@ -240,14 +257,12 @@ private:
     // Pneumatics
     Compressor *                    m_pCompressor;                          // Object to get info about the compressor
     
-    // Servos
-    // (none)
-    
     // Encoders
     // (none)
     
     // Timers
     Timer *                         m_pMatchModeTimer;                      // Times how long a particular mode (autonomous, teleop) is running
+    Timer *                         m_pRobotProgramTimer;                   // Starts at robot program entry, free runs for program life time
     Timer *                         m_pSafetyTimer;                         // Fail safe in case critical operations don't complete
 
     // Camera
@@ -259,6 +274,7 @@ private:
     RobotMode                       m_RobotMode;                            // Keep track of the current robot state
     std::optional
     <DriverStation::Alliance>       m_AllianceColor;                        // Color reported by driver station during a match
+    bool                            m_bRioPinsStable;                       // Indicates whether the RIO pin measurements (e.g. PWM) are stable
     bool                            m_bCameraAlignInProgress;               // Indicates if an automatic camera align is in progress
     uint32_t                        m_HeartBeat;                            // Incremental counter to indicate the robot code is executing
     
@@ -276,10 +292,9 @@ private:
     static const int                AUX_JOYSTICK_PORT                       = 1;
 
     // Driver inputs
-    static const int                DRIVE_LIFT_ROBOT_BUTTON                 = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
-    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
     static const int                FIELD_RELATIVE_TOGGLE_BUTTON            = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
     static const int                REZERO_SWERVE_BUTTON                    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
+    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_STICK_CLICK;
     static const int                CAMERA_TOGGLE_FULL_PROCESSING_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                CAMERA_TOGGLE_PROCESSED_IMAGE_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                SELECT_FRONT_CAMERA_BUTTON              = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
@@ -290,11 +305,13 @@ private:
 
     // CAN Signals
     // Note: Remember to check the CAN IDs in use in SwerveDrive.hpp.
+    // Superstructure uses IDs starting at 21
 
     // CANivore Signals
     // Note: IDs 1-4 are used by the CANcoders (see the
     //       SwerveModuleConfigs in SwerveDrive.hpp).
     static const int                PIGEON_CAN_ID                           = 5;
+    static const int                CANDLE_CAN_ID                           = 6;
 
     // PWM Signals
     // (none)
@@ -314,7 +331,7 @@ private:
     // Solenoids
     // (none)
 
-    // Motor speeds
+    // Motor speeds and angles
     // (none)
     
     // Misc
@@ -325,6 +342,10 @@ private:
     const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous Test Routine";
     static const int                OFF                                     = 0;
     static const int                ON                                      = 1;
+    static const int                ANGLE_90_DEGREES                        = 90;
+    static const int                ANGLE_180_DEGREES                       = 180;
+    static const int                ANGLE_360_DEGREES                       = 360;
+    static const int                POV_INPUT_TOLERANCE_VALUE               = 30;
     static const int                SCALE_TO_PERCENT                        = 100;
     static const unsigned           SINGLE_MOTOR                            = 1;
     static const unsigned           TWO_MOTORS                              = 2;
@@ -422,6 +443,35 @@ private:
     }
 
 };  // End class
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::SetLedsToAllianceColor
+///
+/// Sets the LEDs to the alliance color.
+///
+////////////////////////////////////////////////////////////////
+inline void EastTechRobot::SetLedsToAllianceColor()
+{
+    switch (m_AllianceColor.value())
+    {
+        case DriverStation::Alliance::kRed:
+        {
+            m_pCandle->SetLEDs(255, 0, 0, 0, 0, NUMBER_OF_LEDS);
+            break;
+        }
+        case DriverStation::Alliance::kBlue:
+        {
+            m_pCandle->SetLEDs(0, 0, 255, 0, 0, NUMBER_OF_LEDS);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+}
 
 
 
