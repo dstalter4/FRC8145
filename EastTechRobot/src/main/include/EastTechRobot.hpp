@@ -9,40 +9,41 @@
 /// right time as controlled by the switches on the driver station or the field
 /// controls.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef EASTTECHROBOT_HPP
 #define EASTTECHROBOT_HPP
 
 // SYSTEM INCLUDES
-#include <cmath>                                // for M_PI
-#include <thread>                               // for std::thread
+#include <cmath>                                            // for M_PI
+#include <thread>                                           // for std::thread
 
 // C INCLUDES
-#include "frc/Compressor.h"                     // for retrieving info on the compressor
-#include "frc/DigitalInput.h"                   // for DigitalInput type
-#include "frc/DigitalOutput.h"                  // for DigitalOutput type
-#include "frc/DoubleSolenoid.h"                 // for DoubleSolenoid type
-#include "frc/DriverStation.h"                  // for interacting with the driver station
-#include "frc/DutyCycleEncoder.h"               // for interacting with PWM based encoders
-#include "frc/Relay.h"                          // for Relay type
-#include "frc/Solenoid.h"                       // for Solenoid type
-#include "frc/TimedRobot.h"                     // for base class decalartion
-#include "frc/livewindow/LiveWindow.h"          // for controlling the LiveWindow
-#include "frc/motorcontrol/Spark.h"             // for creating an object to interact with the rev blinkin
-#include "frc/smartdashboard/SendableChooser.h" // for using the smart dashboard sendable chooser functionality
-#include "frc/smartdashboard/SmartDashboard.h"  // for interacting with the smart dashboard
+#include "frc/Compressor.h"                                 // for retrieving info on the compressor
+#include "frc/DigitalInput.h"                               // for DigitalInput type
+#include "frc/DigitalOutput.h"                              // for DigitalOutput type
+#include "frc/DoubleSolenoid.h"                             // for DoubleSolenoid type
+#include "frc/DriverStation.h"                              // for interacting with the driver station
+#include "frc/DutyCycleEncoder.h"                           // for interacting with PWM based encoders
+#include "frc/Relay.h"                                      // for Relay type
+#include "frc/Solenoid.h"                                   // for Solenoid type
+#include "frc/TimedRobot.h"                                 // for base class decalartion
+#include "frc/livewindow/LiveWindow.h"                      // for controlling the LiveWindow
+#include "frc/motorcontrol/Spark.h"                         // for creating an object to interact with the rev blinkin
+#include "frc/smartdashboard/SendableChooser.h"             // for using the smart dashboard sendable chooser functionality
+#include "frc/smartdashboard/SmartDashboard.h"              // for interacting with the smart dashboard
 
 // C++ INCLUDES
-#include "DriveConfiguration.hpp"               // for information on the drive config
-#include "EastTechController.hpp"               // for controller interaction
-#include "EastTechTalon.hpp"                    // for custom Talon control
-#include "RobotUtils.hpp"                       // for ASSERT, DEBUG_PRINTS
-#include "SwerveDrive.hpp"                      // for using swerve drive
-#include "ctre/phoenix/led/CANdle.h"            // for interacting with the CANdle
-#include "ctre/phoenix/led/RainbowAnimation.h"  // for interacting with the CANdle
-#include "ctre/phoenix6/Pigeon2.hpp"            // for PigeonIMU
+#include "DriveConfiguration.hpp"                           // for information on the drive config
+#include "EastTechController.hpp"                           // for controller interaction
+#include "EastTechTalon.hpp"                                // for custom Talon control
+#include "RobotUtils.hpp"                                   // for ASSERT, DEBUG_PRINTS
+#include "SwerveDrive.hpp"                                  // for using swerve drive
+#include "ctre/phoenix6/CANBus.hpp"                         // for creating CANBus bojects
+#include "ctre/phoenix6/CANdle.hpp"                         // for interacting with the CANdle
+#include "ctre/phoenix6/Pigeon2.hpp"                        // for PigeonIMU
+#include "ctre/phoenix6/controls/RainbowAnimation.hpp"      // for creating animations on the CANdle
 
 using namespace frc;
 using namespace ctre::phoenix::led;
