@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a swerve drive robot base.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SWERVEDRIVE_HPP
@@ -27,8 +27,10 @@
 #include "SwerveConfig.hpp"                             // for swerve configuration and constants
 #include "NeoSwerveModule.hpp"                          // for interacting with a Neo swerve module
 #include "TalonFxSwerveModule.hpp"                      // for interacting with a TalonFX swerve module
+#include "ctre/phoenix6/CANBus.hpp"                     // for CANBus
 #include "ctre/phoenix6/Pigeon2.hpp"                    // for PigeonIMU
 
+using namespace ctre::phoenix6;
 using namespace frc;
 
 
@@ -42,7 +44,7 @@ class SwerveDrive
 {
 public:
     // Constructor
-    SwerveDrive(Pigeon2 * pPigeon);
+    SwerveDrive(Pigeon2 * pPigeon, CANBus & rEncoderCanBus);
 
     // Updates each swerve module based on the inputs
     void SetModuleStates(Translation2d translation, double rotation, bool bFieldRelative, bool bIsOpenLoop);

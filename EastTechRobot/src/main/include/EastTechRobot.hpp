@@ -45,8 +45,12 @@
 #include "ctre/phoenix6/Pigeon2.hpp"                        // for PigeonIMU
 #include "ctre/phoenix6/controls/RainbowAnimation.hpp"      // for creating animations on the CANdle
 
+
 using namespace frc;
-using namespace ctre::phoenix::led;
+using namespace ctre::phoenix6;
+using namespace ctre::phoenix6::controls;
+using namespace ctre::phoenix6::hardware;
+using namespace ctre::phoenix6::signals;
 
 
 ////////////////////////////////////////////////////////////////
@@ -237,6 +241,10 @@ private:
     // User Controls
     DriveControllerType *           m_pDriveController;                     // Drive controller
     AuxControllerType *             m_pAuxController;                       // Auxillary input controller
+
+    // CAN Bus
+    CANBus                          m_RioCanBus;                            // CAN bus object for the RIO
+    CANBus                          m_CanivoreBus;                          // CAN bus object for the canivore
     
     // Swerve Drive
     Pigeon2 *                       m_pPigeon;                              // CTRE Pigeon2 IMU
@@ -246,8 +254,10 @@ private:
     // (none)
 
     // LEDs
-    CANdle *                        m_pCandle;
-    RainbowAnimation                m_RainbowAnimation;
+    CANdle *                        m_pCandle;                              // Controls an RGB LED strip
+    SolidColor                      m_LedStripSolidColor;                   // Used when setting the LEDs to RGB values
+    RainbowAnimation                m_RainbowAnimation;                     // Rainbow animation configuration (brightness, speed, # LEDs)
+    static constexpr const RGBWColor RGBW_OFF{0, 0, 0, 0};                  // Common RGBWColor expression representing LEDs off
 
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
@@ -459,12 +469,14 @@ inline void EastTechRobot::SetLedsToAllianceColor()
     {
         case DriverStation::Alliance::kRed:
         {
-            m_pCandle->SetLEDs(255, 0, 0, 0, 0, NUMBER_OF_LEDS);
+            constexpr const RGBWColor RGBW_RED{255, 0, 0, 0};
+            m_pCandle->SetControl(m_LedStripSolidColor.WithColor(RGBW_RED));
             break;
         }
         case DriverStation::Alliance::kBlue:
         {
-            m_pCandle->SetLEDs(0, 0, 255, 0, 0, NUMBER_OF_LEDS);
+            constexpr const RGBWColor RGBW_BLUE{0, 0, 255, 0};
+            m_pCandle->SetControl(m_LedStripSolidColor.WithColor(RGBW_BLUE));
             break;
         }
         default:

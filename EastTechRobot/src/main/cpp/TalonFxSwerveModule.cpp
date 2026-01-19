@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -40,14 +40,14 @@ uint32_t TalonFxSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 /// 2025: Bevels facing right is 1.0 forward on the Talons.
 ///
 ////////////////////////////////////////////////////////////////
-TalonFxSwerveModule::TalonFxSwerveModule(SwerveConfig::ModuleInformation moduleInfo) :
+TalonFxSwerveModule::TalonFxSwerveModule(SwerveConfig::ModuleInformation moduleInfo, CANBus & rEncoderCanBus) :
     m_MotorGroupPosition(moduleInfo.m_Position),
     m_pDriveTalon(new TalonFX(moduleInfo.m_DriveMotorCanId)),
     m_pAngleTalon(new TalonFX(moduleInfo.m_AngleMotorCanId)),
     m_DriveDutyCycleOut(0.0),
     m_DriveVelocityVoltage(0.0_tps),
     m_AnglePositionVoltage(0.0_tr),
-    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, "canivore-8145")),
+    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, rEncoderCanBus)),
     m_LastAngle(),
     m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA)),
     CANCODER_REFERENCE_ABSOLUTE_OFFSET(moduleInfo.m_EncoderReferenceAbsoluteOffset)

@@ -8,7 +8,7 @@
 /// control routines as well as all necessary support for interacting with all
 /// motors, sensors and input/outputs on the robot.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -38,10 +38,13 @@ EastTechRobot::EastTechRobot() :
     m_AutoSwerveDirections              (),
     m_pDriveController                  (new DriveControllerType(DRIVE_CONTROLLER_MODEL, DRIVE_JOYSTICK_PORT)),
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
-    m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, "canivore-8145")),
-    m_pSwerveDrive                      (new SwerveDrive(m_pPigeon)),
-    m_pCandle                           (new CANdle(CANDLE_CAN_ID, "canivore-8145")),
-    m_RainbowAnimation                  ({1, 0.5, 308}),
+    m_RioCanBus                         ("rio"),
+    m_CanivoreBus                       ("canivore-8145"),
+    m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, m_CanivoreBus)),
+    m_pSwerveDrive                      (new SwerveDrive(m_pPigeon, m_CanivoreBus)),
+    m_pCandle                           (new CANdle(CANDLE_CAN_ID, m_CanivoreBus)),
+    m_LedStripSolidColor                (0, (NUMBER_OF_LEDS - 1)),
+    m_RainbowAnimation                  (0, (NUMBER_OF_LEDS - 1)),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pMatchModeTimer                   (new Timer()),
@@ -75,9 +78,9 @@ EastTechRobot::EastTechRobot() :
     ConfigureMotorControllers();
 
     CANdleConfiguration candleConfig;
-    candleConfig.stripType = LEDStripType::RGB;
-    m_pCandle->ConfigAllSettings(candleConfig);
-    m_pCandle->Animate(m_RainbowAnimation);
+    candleConfig.LED.StripType = StripTypeValue::RGBW;
+    m_pCandle->GetConfigurator().Apply(candleConfig);
+    m_pCandle->SetControl(m_RainbowAnimation);
 
     // Spawn the vision thread
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
@@ -322,9 +325,6 @@ void EastTechRobot::InitialStateSetup()
     
     // Just in case constructor was called before these were set (likely the case)
     m_AllianceColor = DriverStation::GetAlliance();
-
-    // Disable the rainbow animation
-    m_pCandle->ClearAnimation(0);
 
     // Set the LEDs to the alliance color
     SetLedsToAllianceColor();
@@ -602,8 +602,8 @@ void EastTechRobot::DisabledInit()
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
     RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
 
-    // Turn the rainbow animation back on
-    m_pCandle->Animate(m_RainbowAnimation);
+    // Turn the rainbow animation back on    
+    m_pCandle->SetControl(m_RainbowAnimation);
 }
 
 
