@@ -5,7 +5,7 @@
 /// @details
 /// Swerve drive configuration and constants.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SWERVECONFIG_HPP
@@ -54,6 +54,8 @@ namespace SwerveConfig
         int m_AngleMotorCanId;
         int m_CanCoderId;
         const Rotation2d m_EncoderReferenceAbsoluteOffset;
+        std::string_view m_MotorsCanBusName;
+        std::string_view m_CanCoderCanBusName;
     };
 
     // Represents the configurable parameters in a swerve module
@@ -79,9 +81,18 @@ namespace SwerveConfig
     // SDS MK4n L3+ configuration
     static constexpr const ModuleConfiguration SDS_MK4N_CONFIG = {(5.36 / 1.0), (18.75 / 1.0), InvertedValue::CounterClockwise_Positive, InvertedValue::CounterClockwise_Positive, SensorDirectionValue::CounterClockwise_Positive};
 
+    // SDS MK5n configurations
+    static constexpr const ModuleConfiguration SDS_MK5N_R1_CONFIG = {(7.03 / 1.0), (287.0 / 11.0), InvertedValue::CounterClockwise_Positive, InvertedValue::CounterClockwise_Positive, SensorDirectionValue::CounterClockwise_Positive};
+    static constexpr const ModuleConfiguration SDS_MK5N_R2_CONFIG = {(6.03 / 1.0), (287.0 / 11.0), InvertedValue::CounterClockwise_Positive, InvertedValue::CounterClockwise_Positive, SensorDirectionValue::CounterClockwise_Positive};
+    static constexpr const ModuleConfiguration SDS_MK5N_R3_CONFIG = {(5.27 / 1.0), (287.0 / 11.0), InvertedValue::CounterClockwise_Positive, InvertedValue::CounterClockwise_Positive, SensorDirectionValue::CounterClockwise_Positive};
+
     // The swerve module configuration on the robot (change the typedef based on the motors on the module)
     typedef TalonFxSwerveModule SwerveModuleType;
-    static constexpr const ModuleConfiguration & SELECTED_SWERVE_MODULE_CONFIG = SDS_MK4N_CONFIG;
+    static constexpr const ModuleConfiguration & SELECTED_SWERVE_MODULE_CONFIG = SDS_MK5N_R2_CONFIG;
+
+    // Names for the CAN buses that swerve can use
+    static constexpr const std::string_view RIO_CAN_BUS_NAME = "rio";
+    static constexpr const std::string_view CANIVORE_CAN_BUS_NAME = "canivore-8145";
 
     static constexpr const size_t NUM_SWERVE_DRIVE_MODULES = 4U;
 
@@ -92,9 +103,9 @@ namespace SwerveConfig
     static constexpr double WHEEL_CIRCUMFERENCE = 4.0 * METERS_PER_INCH * M_PI;
 
     // Distance between front/back wheel centers
-    static constexpr const units::meter_t WHEEL_BASE = units::meter_t(0.0 * METERS_PER_INCH);
+    static constexpr const units::meter_t WHEEL_BASE = units::meter_t(21.75 * METERS_PER_INCH);
     // Distance between left/right wheel centers
-    static constexpr const units::meter_t TRACK_WIDTH = units::meter_t(0.0 * METERS_PER_INCH);
+    static constexpr const units::meter_t TRACK_WIDTH = units::meter_t(20.25 * METERS_PER_INCH);
 
     // 14.7638 feet per second (conversion *3.28084), 487.0141 degrees per second (conversion *57.2957795131)
     static constexpr units::meters_per_second_t MAX_DRIVE_VELOCITY_MPS = 4.5_mps;

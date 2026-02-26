@@ -35,9 +35,9 @@ using namespace frc;
 /// members.  Note that the IMU is on the canivore bus.
 ///
 ////////////////////////////////////////////////////////////////
-SwerveDrive::SwerveDrive(Pigeon2 * pPigeon, CANBus & rEncoderCanBus) :
+SwerveDrive::SwerveDrive(Pigeon2 * pPigeon, const std::function<const CANBus&(std::string_view)>& rGetCanBusReferenceLambda) :
     m_pPigeon(pPigeon),
-    m_SwerveModules{{FRONT_LEFT_MODULE_INFO, rEncoderCanBus}, {FRONT_RIGHT_MODULE_INFO, rEncoderCanBus}, {BACK_LEFT_MODULE_INFO, rEncoderCanBus}, {BACK_RIGHT_MODULE_INFO, rEncoderCanBus}},
+    m_SwerveModules{{FRONT_LEFT_MODULE_INFO, rGetCanBusReferenceLambda}, {FRONT_RIGHT_MODULE_INFO, rGetCanBusReferenceLambda}, {BACK_LEFT_MODULE_INFO, rGetCanBusReferenceLambda}, {BACK_RIGHT_MODULE_INFO, rGetCanBusReferenceLambda}},
     m_Odometry(SwerveConfig::Kinematics, Rotation2d(units::degree_t(0)), GetModulePositions())
 {
     m_pPigeon->SetYaw(0.0_deg);

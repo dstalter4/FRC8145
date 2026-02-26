@@ -5,7 +5,7 @@
 /// @details
 /// Utility routines for swerve drive conversions.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SWERVECONVERSIONS_HPP
@@ -30,9 +30,18 @@
 namespace SwerveConversions
 {
     // https://docs.ctre-phoenix.com/en/latest/ch14_MCSensor.html#sensor-resolution
-    // Units per rotation: 2048 (FX integrated sensor)
-    // From FX user guide: kMaxRPM = Free Speed RPM = 6380 RPM
-    // Calculate the expect peak sensor velocity (sensor units per 100ms) as:
+    // https://app.readthedocs.org/projects/phoenix-documentation/downloads/pdf/latest/ (V5 documentation)
+    //
+    // Units per rotation: 2048 (Talon FX integrated sensor)
+    // Units per rotation: 4096 (CANCoder)
+    // Units per rotation: 4096 (CTRE Magnetic Encoder)
+    //
+    // From the Falcon 500 user guide: kMaxRPM = Free Speed RPM = 6380 RPM
+    // From the Kraken X60 WCP documentation: kMaxRPM = Free Speed RPM = 5800 RPM (FOC), 6000 RPM (Trapezoidal)
+    // From the Kraken X44 WCP documentation: Free Speed RPM = 7530 RPM (Trapezoidal)
+    //
+    // V5 documentation (consult offline .pdf file) for Talon FX/SRX sensors bring up:
+    // Calculate the expected peak sensor velocity (sensor units per 100ms) as:
     // Vsensor_max = (kMaxRPM  / 600) * (kSensorUnitsPerRotation / kGearRatio)
     // Read sensor velocity and solve above equation for kMaxRPM term for any RPM.
 

@@ -47,7 +47,7 @@ class TalonFxSwerveModule
 
 private:
     // Constructor
-    TalonFxSwerveModule(SwerveConfig::ModuleInformation moduleInfo, CANBus & rEncoderCanBus);
+    TalonFxSwerveModule(SwerveConfig::ModuleInformation moduleInfo, const std::function<const CANBus&(std::string_view)>& rGetCanBusReferenceLambda);
 
     // Points the module to zero degrees, which should be straight forward
     inline void HomeModule()

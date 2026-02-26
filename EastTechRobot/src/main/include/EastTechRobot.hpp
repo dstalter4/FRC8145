@@ -245,6 +245,23 @@ private:
     // CAN Bus
     CANBus                          m_RioCanBus;                            // CAN bus object for the RIO
     CANBus                          m_CanivoreBus;                          // CAN bus object for the canivore
+
+    static constexpr const std::string_view RIO_CAN_BUS_NAME = "rio";
+    static constexpr const std::string_view CANIVORE_CAN_BUS_NAME = "canivore-8145";
+
+    // GetCanBusReferenceLambda
+    // Lambda to retrieve a reference to the CANBus with the specified string name.
+    std::function<const CANBus&(std::string_view)> GetCanBusReferenceLambda = [this](std::string_view canBusName) -> const CANBus&
+    {
+        if (canBusName.compare(CANIVORE_CAN_BUS_NAME) == 0)
+        {
+            return m_CanivoreBus;
+        }
+        else
+        {
+            return m_RioCanBus;
+        }
+    };
     
     // Swerve Drive
     Pigeon2 *                       m_pPigeon;                              // CTRE Pigeon2 IMU
@@ -320,10 +337,10 @@ private:
     // Superstructure uses IDs starting at 21
 
     // CANivore Signals
-    // Note: IDs 1-4 are used by the CANcoders (see the
+    // Note: IDs 21-24 are used by the CANcoders (see the
     //       SwerveModuleConfigs in SwerveDrive.hpp).
-    static const int                PIGEON_CAN_ID                           = 5;
-    static const int                CANDLE_CAN_ID                           = 6;
+    static const int                PIGEON_CAN_ID                           = 25;
+    static const int                CANDLE_CAN_ID                           = 26;
 
     // PWM Signals
     // (none)
