@@ -37,7 +37,10 @@ using namespace frc;
 ////////////////////////////////////////////////////////////////
 SwerveDrive::SwerveDrive(Pigeon2 * pPigeon, const std::function<const CANBus&(std::string_view)>& rGetCanBusReferenceLambda) :
     m_pPigeon(pPigeon),
-    m_SwerveModules{{FRONT_LEFT_MODULE_INFO, rGetCanBusReferenceLambda}, {FRONT_RIGHT_MODULE_INFO, rGetCanBusReferenceLambda}, {BACK_LEFT_MODULE_INFO, rGetCanBusReferenceLambda}, {BACK_RIGHT_MODULE_INFO, rGetCanBusReferenceLambda}},
+    m_SwerveModules{{SwerveConfig::FRONT_LEFT_MODULE_INFO, rGetCanBusReferenceLambda},
+                    {SwerveConfig::FRONT_RIGHT_MODULE_INFO, rGetCanBusReferenceLambda},
+                    {SwerveConfig::BACK_LEFT_MODULE_INFO, rGetCanBusReferenceLambda},
+                    {SwerveConfig::BACK_RIGHT_MODULE_INFO, rGetCanBusReferenceLambda}},
     m_Odometry(SwerveConfig::Kinematics, Rotation2d(units::degree_t(0)), GetModulePositions())
 {
     m_pPigeon->SetYaw(0.0_deg);
