@@ -116,11 +116,11 @@ private:
 
     // Config information on each swerve module.
     // Fields are: Name, Position, Drive TalonFX CAN ID, Angle TalonFX CAN ID, CANCoder ID, Angle Offset, Motor CAN Bus Name, Encoder CAN Bus Name
-    // 2026: Angles measured with bevels facing right.  0.396729, 0.667236, 0.121582, 0.978516
-    static constexpr const SwerveConfig::ModuleInformation FRONT_LEFT_MODULE_INFO = {"Front left", SwerveConfig::ModulePosition::FRONT_LEFT, 11, 12, 21, 142.82244_deg, SwerveConfig::CANIVORE_CAN_BUS_NAME, SwerveConfig::CANIVORE_CAN_BUS_NAME};
-    static constexpr const SwerveConfig::ModuleInformation FRONT_RIGHT_MODULE_INFO = {"Front right", SwerveConfig::ModulePosition::FRONT_RIGHT, 13, 14, 22, 240.20496_deg, SwerveConfig::CANIVORE_CAN_BUS_NAME, SwerveConfig::CANIVORE_CAN_BUS_NAME};
-    static constexpr const SwerveConfig::ModuleInformation BACK_LEFT_MODULE_INFO = {"Back left", SwerveConfig::ModulePosition::BACK_LEFT, 15, 16, 23, 43.76952_deg, SwerveConfig::CANIVORE_CAN_BUS_NAME, SwerveConfig::CANIVORE_CAN_BUS_NAME};
-    static constexpr const SwerveConfig::ModuleInformation BACK_RIGHT_MODULE_INFO = {"Back right", SwerveConfig::ModulePosition::BACK_RIGHT, 17, 18, 24, 352.26576_deg, SwerveConfig::CANIVORE_CAN_BUS_NAME, SwerveConfig::CANIVORE_CAN_BUS_NAME};
+    // 2026: Angles measured with bevels facing right.  0.400391, 0.668213, 0.124756, 0.977539
+    static constexpr const SwerveConfig::ModuleInformation FRONT_LEFT_MODULE_INFO = {"Front left", SwerveConfig::ModulePosition::FRONT_LEFT, 11, 12, 21, 144.14076_deg, SwerveConfig::CANIVORE_CAN_BUS_NAME, SwerveConfig::CANIVORE_CAN_BUS_NAME};
+    static constexpr const SwerveConfig::ModuleInformation FRONT_RIGHT_MODULE_INFO = {"Front right", SwerveConfig::ModulePosition::FRONT_RIGHT, 13, 14, 22, 240.55668_deg, SwerveConfig::CANIVORE_CAN_BUS_NAME, SwerveConfig::CANIVORE_CAN_BUS_NAME};
+    static constexpr const SwerveConfig::ModuleInformation BACK_LEFT_MODULE_INFO = {"Back left", SwerveConfig::ModulePosition::BACK_LEFT, 15, 16, 23, 44.91216_deg, SwerveConfig::CANIVORE_CAN_BUS_NAME, SwerveConfig::CANIVORE_CAN_BUS_NAME};
+    static constexpr const SwerveConfig::ModuleInformation BACK_RIGHT_MODULE_INFO = {"Back right", SwerveConfig::ModulePosition::BACK_RIGHT, 17, 18, 24, 351.91404_deg, SwerveConfig::CANIVORE_CAN_BUS_NAME, SwerveConfig::CANIVORE_CAN_BUS_NAME};
 
     SwerveDrive(const SwerveDrive &) = delete;
     SwerveDrive & operator=(const SwerveDrive &) = delete;

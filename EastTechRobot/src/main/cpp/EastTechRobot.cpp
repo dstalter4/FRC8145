@@ -42,11 +42,27 @@ EastTechRobot::EastTechRobot() :
     m_CanivoreBus                       (CANIVORE_CAN_BUS_NAME),
     m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, m_CanivoreBus)),
     m_pSwerveDrive                      (new SwerveDrive(m_pPigeon, GetCanBusReferenceLambda)),
+
+    //motor initialization          
+    m_pShooterHood                      (new TalonFxMotorController(SHOOTER_HOOD_CAN_ID)),
+    m_pShooterFeed                      (new TalonFxMotorController(SHOOTER_FEED_CAN_ID)),
+    m_pIntake                           (new TalonFxMotorController(INTAKE_CAN_ID)),
+    m_pIntakePivot                      (new TalonFxMotorController(INTAKE_PIVOT_CAN_ID)),
+    m_pHopperFeed                       (new TalonFxMotorController(HOPPER_FEED_CAN_ID)),
+
+    //motor group for all three shooting motors, this is intentionally set to coast due to the flywheels
+    m_pShooterMotors                    (new TalonMotorGroup<TalonFX>("Shooter Motors", THREE_MOTORS, SHOOTER_MOTORS_START_CAN_ID, MotorGroupControlMode::FOLLOW, NeutralModeValue::Coast, false)),
+    
     m_pCandle                           (new CANdle(CANDLE_CAN_ID, m_CanivoreBus)),
     m_LedStripSolidColor                (0, (NUMBER_OF_LEDS - 1)),
     m_RainbowAnimation                  (0, (NUMBER_OF_LEDS - 1)),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
+
+    //encoder initialization
+    m_pHoodCanCoder                     (new CANcoder(HOOD_CANCODER_CAN_ID)),
+    m_pIntakePivotCanCoder              (new CANcoder(INTAKE_PIVOT_CANCODER_CAN_ID)),
+   
     m_pMatchModeTimer                   (new Timer()),
     m_pRobotProgramTimer                (new Timer()),
     m_pSafetyTimer                      (new Timer()),
@@ -66,7 +82,6 @@ EastTechRobot::EastTechRobot() :
     m_AutonomousChooser.SetDefaultOption(AUTO_ROUTINE_1_STRING, AUTO_ROUTINE_1_STRING);
     m_AutonomousChooser.AddOption(AUTO_ROUTINE_2_STRING, AUTO_ROUTINE_2_STRING);
     m_AutonomousChooser.AddOption(AUTO_ROUTINE_3_STRING, AUTO_ROUTINE_3_STRING);
-    m_AutonomousChooser.AddOption(AUTO_ROUTINE_3_STRING, AUTO_ROUTINE_3_STRING);
     m_AutonomousChooser.AddOption(AUTO_NO_ROUTINE_STRING, AUTO_NO_ROUTINE_STRING);
     m_AutonomousChooser.AddOption(AUTO_TEST_ROUTINE_STRING, AUTO_TEST_ROUTINE_STRING);
     SmartDashboard::PutData("Autonomous Modes", &m_AutonomousChooser);
@@ -74,8 +89,6 @@ EastTechRobot::EastTechRobot() :
     RobotUtils::DisplayFormattedMessage("The drive forward axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.RIGHT_TRIGGER);
     RobotUtils::DisplayFormattedMessage("The drive reverse axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_TRIGGER);
     RobotUtils::DisplayFormattedMessage("The drive left/right axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_X_AXIS);
-
-    ConfigureMotorControllers();
 
     CANdleConfiguration candleConfig;
     candleConfig.LED.StripType = StripTypeValue::RGBW;
@@ -160,6 +173,7 @@ void EastTechRobot::RobotPeriodic()
 ////////////////////////////////////////////////////////////////
 void EastTechRobot::CheckIfRioPinsAreStable()
 {
+/*
     // This is the logic to wait to take PWM based sensor readings until the RIO is ready.
     // The behavior of the RIO is that it measures how many microseconds the signal is high
     // every second.  This requires waiting to get stable readings.
@@ -179,14 +193,13 @@ void EastTechRobot::CheckIfRioPinsAreStable()
         static constexpr const units::time::second_t RIO_DUTY_CYCLE_ENCODER_STARTUP_DELAY = 2.0_s;
         if ((currentTimeStamp - enabledTimeStamp) > RIO_DUTY_CYCLE_ENCODER_STARTUP_DELAY)
         {
-            // Example encoder configuration algorithm
-
-            //double encoderValue = m_pEncoder->Get();
-            //units::angle::degree_t encoderValueDegrees(encoderValue * ANGLE_360_DEGREES);
-
+            // Intake pivor encoder configuration algorithm
+            double encoderValue = m_pIntakePivotEncoder->Get();
+            units::angle::degree_t encoderValueDegrees(encoderValue * ANGLE_360_DEGREES);
+          
             // This is the delta between the current mechanism position and the desired starting position (or zero point)
-            //units::angle::degree_t startingOffsetDegrees = encoderValueDegrees - STARTING_POSITION_ENCODER_VALUE;
-            //std::printf("startingOffsetDegrees (start): %f\n", startingOffsetDegrees.value());
+            units::angle::degree_t startingOffsetDegrees = encoderValueDegrees - INTAKE_STARTING_POSITION_DEGREES;
+            std::printf("startingOffsetDegrees (start): %f\n", startingOffsetDegrees.value());
 
             // If the starting offset is negative, we crossed over the absolute encoder boundary
             // We give a tolerance of five degrees in case the mechanism is near where we want to start
@@ -200,10 +213,36 @@ void EastTechRobot::CheckIfRioPinsAreStable()
             //}
 
             // At this point we have the angle we want relative to zero
-            //(void)m_pMotor->m_pTalonFx->GetConfigurator().SetPosition(startingOffsetDegrees);
-            //std::printf("encoderValue: %f\n", encoderValue);
-            //std::printf("encoderValueDegrees: %f\n", encoderValueDegrees.value());
-            //std::printf("startingOffsetDegrees (final): %f\n", startingOffsetDegrees.value());
+            (void)m_pIntakePivot->m_pTalonFx->GetConfigurator().SetPosition(startingOffsetDegrees);
+            std::printf("encoderValue: %f\n", encoderValue);
+            std::printf("encoderValueDegrees: %f\n", encoderValueDegrees.value());
+            std::printf("startingOffsetDegrees (final): %f\n", startingOffsetDegrees.value());
+
+             // Hood encoder configuration algorithm
+
+            encoderValue = m_pHoodEncoder->Get();
+            encoderValueDegrees = units::angle::degree_t(encoderValue * ANGLE_360_DEGREES);
+          
+            // This is the delta between the current mechanism position and the desired starting position (or zero point)
+            startingOffsetDegrees = encoderValueDegrees - HOOD_STARTING_POSITION_DEGREES;
+            std::printf("startingOffsetDegrees (start): %f\n", startingOffsetDegrees.value());
+
+            // If the starting offset is negative, we crossed over the absolute encoder boundary
+            // We give a tolerance of five degrees in case the mechanism is near where we want to start
+            // @todo: Does this need to check for very small readings below zero?
+            // @todo: Boundary conditions here will be difficult
+            //if (startingOffsetDegrees < ENCODER_BOUNDARY_TOLERANCE_DEGREES)
+            //{
+                // the 0/1 boundary is 360, so subtract the starting position to see how many degrees were up to that point
+                // Add in the absolute value of the overage, which was negative
+                //startingOffsetDegrees = (units::angle::degree_t(ANGLE_360_DEGREES) - STARTING_POSITION_ENCODER_VALUE) + encoderValueDegrees;
+            //}
+
+            // At this point we have the angle we want relative to zero
+            (void)m_pShooterHood->m_pTalonFx->GetConfigurator().SetPosition(startingOffsetDegrees);
+            std::printf("encoderValue: %f\n", encoderValue);
+            std::printf("encoderValueDegrees: %f\n", encoderValueDegrees.value());
+            std::printf("startingOffsetDegrees (final): %f\n", startingOffsetDegrees.value());
 
             m_bRioPinsStable = true;
         }
@@ -216,6 +255,7 @@ void EastTechRobot::CheckIfRioPinsAreStable()
         // m_bRioPinsStable exists for the life of the program.  Once we have a stable
         // reading acquired, we don't need to do it again until the robot program restarts.
     }
+*/
 }
 
 
@@ -296,9 +336,67 @@ void EastTechRobot::ConfigureMotorControllers()
     // Configure a single motor
     //(void)m_pMotor->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
     //(void)m_pMotor->m_MotorConfiguration.Feedback.WithSensorToMechanismRatio(135.0 / 1.0);
-    //(void)m_pMotor->m_MotorConfiguration.Slot0.WithKP(50.0).WithKI(0.0).WithKD(2.0);
+    //(void)m_pMotor->m_MotorConfiguration.Slot0.WithKP(18.0).WithKI(0.0).WithKD(0.1);
     //(void)m_pMotor->m_pTalonFx->GetConfigurator().SetPosition(0.0_tr);
     //m_pMotor->ApplyConfiguration();
+
+    //Configuration for Shooter motors x3 (no changes from default right now)
+    //(void)m_pShooterMotors->ApplyConfiguration(SHOOTER_MOTORS_START_CAN_ID);
+
+    //Configuration for shooter feed motor (no changes from default right now)
+    //m_pShooterFeed->ApplyConfiguration();
+
+    //Configuration for intake motor (no changes from default right now)
+    //m_pIntake->ApplyConfiguration();
+
+    //Configuration for hopper feed motor (no changes from default right now)
+    //m_pHopperFeed->ApplyConfiguration();
+
+
+
+    //Configuration for shooter hood motor
+    (void)m_pShooterHood->m_MotorConfiguration.Feedback.WithSensorToMechanismRatio(226.6667 / 1.0);
+    (void)m_pShooterHood->m_MotorConfiguration.Slot0.WithKP(36.0).WithKI(0.0).WithKD(0.1);
+    (void)m_pShooterHood->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
+    (void)m_pShooterHood->m_MotorConfiguration.MotorOutput.WithInverted(InvertedValue::Clockwise_Positive);
+    m_pShooterHood->ApplyConfiguration();
+
+    // These haven't been measured for 8145 yet.
+    // Full down: 0.0 (0.0_deg), full up: 0.0 (0.0_deg)
+    // Starting position: 0.0 (0.0_deg)
+    constexpr const units::angle::degree_t HOOD_STARTING_ANGLE_CANCODER_REF = 0.0_deg;
+    units::angle::degree_t hoodCanCoderDegrees = m_pHoodCanCoder->GetAbsolutePosition().GetValue();
+    units::angle::degree_t hoodAngleDelta = hoodCanCoderDegrees - HOOD_STARTING_ANGLE_CANCODER_REF;
+    SmartDashboard::PutNumber("Hood delta", hoodAngleDelta.value());
+
+    // If delta is positive, we are above the expected starting point
+    //      Upper limit is ~x.0_deg - REF = ~x.0_deg
+    // If delta is negative, we are below the expected starting point
+    //      Lower limit is ~x.0_deg - REF = ~-y.0_deg
+
+    units::angle::turn_t hoodSetPositionTurns = hoodAngleDelta;
+    (void)m_pShooterHood->m_pTalonFx->GetConfigurator().SetPosition(hoodSetPositionTurns);
+
+
+
+    //Configuration for intake pivot motor
+    (void)m_pIntakePivot->m_MotorConfiguration.Feedback.WithSensorToMechanismRatio(39.6 / 1.0);
+    (void)m_pIntakePivot->m_MotorConfiguration.Slot0.WithKP(18.0).WithKI(0.0).WithKD(0.1);
+    (void)m_pIntakePivot->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
+    (void)m_pIntakePivot->m_MotorConfiguration.MotorOutput.WithInverted(InvertedValue::Clockwise_Positive);
+    m_pIntakePivot->ApplyConfiguration();
+
+    // Full down: 0.522461 (188.08596_deg), full up: 0.230469 (82.96884_deg)
+    constexpr const units::angle::degree_t INTAKE_STARTING_ANGLE_CANCODER_REF = 88.0_deg;
+    units::angle::degree_t intakeCanCoderDegrees = m_pIntakePivotCanCoder->GetAbsolutePosition().GetValue();
+    units::angle::degree_t intakeAngleDelta = intakeCanCoderDegrees - INTAKE_STARTING_ANGLE_CANCODER_REF;
+    SmartDashboard::PutNumber("Intake delta", intakeAngleDelta.value());
+
+    // If delta is positive, we are below the expected starting point
+    // If delta is negative, we are above the expected starting point
+
+    units::angle::turn_t intakeSetPositionTurns = intakeAngleDelta;
+    (void)m_pIntakePivot->m_pTalonFx->GetConfigurator().SetPosition(intakeSetPositionTurns);
 }
 
 
@@ -315,6 +413,8 @@ void EastTechRobot::InitialStateSetup()
 {
     // First reset any member data
     ResetMemberData();
+
+    ConfigureMotorControllers();
 
     // Stop/clear any timers, just in case
     // @todo: Make this a dedicated function.
@@ -396,6 +496,9 @@ void EastTechRobot::TeleopPeriodic()
         SwerveDriveSequence();
     }
 
+    IntakeSequence();
+    ShooterSequence();
+
     //PneumaticSequence();
     
     CameraSequence();
@@ -414,8 +517,241 @@ void EastTechRobot::TeleopPeriodic()
 void EastTechRobot::UpdateSmartDashboard()
 {
     // @todo: Check if RobotPeriodic() is called every 20ms and use static counter.
+
+    units::time::second_t matchTime = 0.0_s;
+    double batteryVoltage = DriverStation::GetBatteryVoltage();
+    std::string gameData = DriverStation::GetGameSpecificMessage();
+
+    if (DriverStation::IsFMSAttached())
+    {
+        matchTime = DriverStation::GetMatchTime();
+    }
+    else
+    {
+        matchTime = m_pMatchModeTimer->Get();
+    }
+
+    struct HubShift
+    {
+        bool m_Transition;
+        bool m_bShift1;
+        bool m_bShift2;
+        bool m_bShift3;
+        bool m_bShift4;
+        bool m_EndGame;
+    };
+    constexpr const HubShift ACTIVE_FIRST = {true, true, false, true, false, true};
+    constexpr const HubShift INACTIVE_FIRST = {true, false, true, false, true, true};
+
+    static bool bGotGameData = false;
+    static HubShift allianceHubShift;
+
+    // Look for the game data to be ready
+    if (!bGotGameData)
+    {
+        bool bInactiveFirst = false;
+        if (!gameData.empty())
+        {
+            // For some reason the game data is who is *inactive* first (instead of active)
+            bInactiveFirst = (((gameData.at(0U) == 'R') && (m_AllianceColor == DriverStation::kRed)) ||
+                              ((gameData.at(0U) == 'B') && (m_AllianceColor == DriverStation::kBlue)));
+        }
+
+        allianceHubShift = bInactiveFirst ? INACTIVE_FIRST : ACTIVE_FIRST;
+        bGotGameData = true;
+    }
+
+    // Auto: 20_s, Teleop: 110_s, End Game: 30_s (Driver Control Total: 140_s or 2m20s)
+    constexpr const units::time::second_t TRANSITION_END_TIME_S = 130_s;
+    constexpr const units::time::second_t SHIFT_1_END_TIME_S = 105_s;
+    constexpr const units::time::second_t SHIFT_2_END_TIME_S = 80_s;
+    constexpr const units::time::second_t SHIFT_3_END_TIME_S = 55_s;
+    constexpr const units::time::second_t SHIFT_4_END_TIME_S = 30_s;
+
+    bool bHubActive = false;
+    units::time::second_t shiftTime = 0.0_s;
+    if (matchTime > TRANSITION_END_TIME_S)
+    {
+        bHubActive = allianceHubShift.m_Transition;
+        shiftTime = matchTime - TRANSITION_END_TIME_S;
+    }
+    else if (matchTime > SHIFT_1_END_TIME_S)
+    {
+        bHubActive = allianceHubShift.m_bShift1;
+        shiftTime = matchTime - SHIFT_1_END_TIME_S;
+    }
+    else if (matchTime > SHIFT_2_END_TIME_S)
+    {
+        bHubActive = allianceHubShift.m_bShift2;
+        shiftTime = matchTime - SHIFT_2_END_TIME_S;
+    }
+    else if (matchTime > SHIFT_3_END_TIME_S)
+    {
+        bHubActive = allianceHubShift.m_bShift3;
+        shiftTime = matchTime - SHIFT_3_END_TIME_S;
+    }
+    else if (matchTime > SHIFT_4_END_TIME_S)
+    {
+        bHubActive = allianceHubShift.m_bShift4;
+        shiftTime = matchTime - SHIFT_4_END_TIME_S;
+    }
+    else
+    {
+        bHubActive = allianceHubShift.m_EndGame;
+        shiftTime = matchTime;
+    }
+
     // Give the drive team some state information
     SmartDashboard::PutBoolean("RIO pins stable", m_bRioPinsStable);
+    SmartDashboard::PutNumber("Battery voltage", batteryVoltage);
+    SmartDashboard::PutNumber("Match time", matchTime.value());
+    SmartDashboard::PutNumber("Shift time", shiftTime.value());
+    SmartDashboard::PutBoolean("Hub active", bHubActive);
+}
+
+
+
+//////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::IntakeSequence
+///
+/// This method handles all intake related behavior. This includes
+/// the intake rollers and movement of the physical intake via
+/// throughbore encoder.
+///
+/////////////////////////////////////////////////////////////////
+void EastTechRobot::IntakeSequence()
+{
+    //Turning the motors on and off for intake/outtake
+    if (m_pAuxController->GetButtonState(INTAKE_BUTTON)) //intake fuel
+    {
+        m_pIntake->SetDutyCycle(INTAKE_PIECE_MOTOR_SPEED); 
+    }
+    else if (m_pAuxController->GetButtonState(OUTTAKE_BUTTON)) //outtake fuel
+    {
+        m_pIntake->SetDutyCycle(OUTTAKE_PIECE_MOTOR_SPEED);
+    }
+    else
+    {
+        m_pIntake->SetDutyCycle(0.0);
+    }
+
+    //establishing variable for intake position on dashboard
+    static bool bIntakeUp = true;
+
+    //pivoting intake per the throughbore encoder
+    if (m_pAuxController->DetectButtonChange(INTAKE_PIVOT_UP_BUTTON))
+    {
+        bIntakeUp = true;
+
+        //set intake motor to reference angle for up
+        (void)m_pIntakePivot->SetPositionVoltage(0.0);
+    }
+    else if (m_pAuxController->DetectButtonChange(INTAKE_PIVOT_DOWN_BUTTON))
+    {
+        bIntakeUp = false;
+
+        //set intake motor to reference angle for down
+        (void)m_pIntakePivot->SetPositionVoltage(90.0);
+    }
+    else
+    {
+    }
+
+    //Visual indicator for position of the intake
+    units::angle::degree_t intakeCanCoderDegrees = m_pIntakePivotCanCoder->GetAbsolutePosition().GetValue();
+    units::angle::degree_t intakeFxDegrees = m_pIntakePivot->m_pTalonFx->GetPosition().GetValue();
+    SmartDashboard::PutBoolean("Intake Up?", bIntakeUp);
+    SmartDashboard::PutNumber("Intake CANcoder", intakeCanCoderDegrees.value());
+    SmartDashboard::PutNumber("Intake FX", intakeFxDegrees.value());
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::ShooterSequence
+///
+/// This method handles any shooting related behavior. This
+/// includes shooter spin up, operation of the hopper and
+/// shooter feeder.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::ShooterSequence()
+{
+    static bool bShotInProgress;
+    static Timer shootTimer;
+    static units::time::second_t shootTimeStamp = 0.0_s;
+
+    // Hood movement control
+    units::angle::degree_t hoodFxDegrees = m_pShooterHood->m_pTalonFx->GetPosition().GetValue();
+    EastTech::Controller::PovDirections auxPov = m_pAuxController->GetPovAsDirection();
+    if ((auxPov == HOOD_ADJUST_UP_POV) && (hoodFxDegrees < HOOD_UPPER_LIMIT_DEGREES))
+    {
+        //m_pShooterHood->SetPositionVoltage(HOOD_HIGH_POSITION_DEGREES.value());
+    }
+    else if ((auxPov == HOOD_ADJUST_DOWN_POV) && (hoodFxDegrees > HOOD_LOWER_LIMIT_DEGREES))
+    {
+        //m_pShooterHood->SetPositionVoltage(HOOD_LOW_POSITION_DEGREES.value());
+    }
+    else
+    {
+    }
+
+    units::angle::degree_t hoodCanCoderDegrees = m_pHoodCanCoder->GetAbsolutePosition().GetValue();
+    SmartDashboard::PutNumber("Hood CANcoder", hoodCanCoderDegrees.value());
+    SmartDashboard::PutNumber("Hood FX", hoodFxDegrees.value());
+
+
+    // Allow a manual pre-shot ramp up
+    static bool bPreShoot = false;
+    if (m_pAuxController->GetAxisValue(PRE_SHOOT_AXIS) > AXIS_INPUT_DEAD_BAND)
+    {
+        m_pShooterMotors->Set(SHOOTER_MOTOR_SPEED);
+        bPreShoot = true;
+        bShotInProgress = true;
+    }
+    else
+    {
+        bPreShoot = false;
+    }
+
+    // Control sequence for shooting
+    if (m_pAuxController->GetAxisValue(SHOOT_AXIS) > AXIS_INPUT_DEAD_BAND)
+    {
+        // A shot is requested, check if we are already in progress
+        if (!bShotInProgress)
+        {
+            shootTimer.Reset();
+            shootTimer.Start();
+            m_pShooterMotors->Set(SHOOTER_MOTOR_SPEED);
+            shootTimeStamp = shootTimer.Get();
+            bShotInProgress = true;
+        }
+        // If the ramp time is done, or if pre-shoot was requested
+        else if (((shootTimer.Get() - shootTimeStamp) > 1.0_s) || bPreShoot)
+        {
+            // Turn on motors for fuel movement
+            m_pHopperFeed->SetDutyCycle(HOPPER_FEED_MOTOR_SPEED);
+            m_pShooterFeed->SetDutyCycle(SHOOTER_FEED_MOTOR_SPEED);
+        }
+        else
+        {
+        }
+    }
+    else
+    {
+        // No request, motors off
+        m_pHopperFeed->SetDutyCycle(0.0);
+        m_pShooterFeed->SetDutyCycle(0.0);
+
+        // Only disable the shoot motor if pre-shoot is not active
+        if (!bPreShoot)
+        {
+            m_pShooterMotors->Set(0.0);
+            bShotInProgress = false;
+        }
+    }
+
+    SmartDashboard::PutNumber("Shooter RPM", m_pShooterMotors->GetMotorObject()->GetVelocity().GetValue().value());
 }
 
 

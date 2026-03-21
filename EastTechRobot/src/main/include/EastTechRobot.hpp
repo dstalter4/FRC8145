@@ -40,7 +40,7 @@
 #include "EastTechTalon.hpp"                                // for custom Talon control
 #include "RobotUtils.hpp"                                   // for ASSERT, DEBUG_PRINTS
 #include "SwerveDrive.hpp"                                  // for using swerve drive
-#include "ctre/phoenix6/CANBus.hpp"                         // for creating CANBus bojects
+#include "ctre/phoenix6/CANBus.hpp"                         // for creating CANBus objects
 #include "ctre/phoenix6/CANdle.hpp"                         // for interacting with the CANdle
 #include "ctre/phoenix6/Pigeon2.hpp"                        // for PigeonIMU
 #include "ctre/phoenix6/controls/RainbowAnimation.hpp"      // for creating animations on the CANdle
@@ -230,7 +230,8 @@ private:
     inline void SetLedsToAllianceColor();
 
     // Superstructure sequences
-    // (none)
+    void IntakeSequence();          //deals with piece manipulation, intake configuration
+    void ShooterSequence();         //anything that has to deal with the mechanical operation of the shooter
     
     // MEMBER VARIABLES
     
@@ -268,7 +269,12 @@ private:
     SwerveDrive *                   m_pSwerveDrive;                         // Swerve drive control
     
     // Motors
-    // (none)
+    TalonFxMotorController *        m_pShooterHood;                         //Controls the shooter hood
+    TalonFxMotorController *        m_pShooterFeed;                         //Feeds from HopperFeed to shooter
+    TalonFxMotorController *        m_pIntake;                              //Controls the intake motor
+    TalonFxMotorController *        m_pIntakePivot;                         //Pivots the intake 
+    TalonFxMotorController *        m_pHopperFeed;                          //Feeds from the hopper to the shooter
+    TalonMotorGroup<TalonFX> *      m_pShooterMotors;                       //Controls the 3 motors for shooting
 
     // LEDs
     CANdle *                        m_pCandle;                              // Controls an RGB LED strip
@@ -286,7 +292,8 @@ private:
     Compressor *                    m_pCompressor;                          // Object to get info about the compressor
     
     // Encoders
-    // (none)
+    CANcoder * m_pHoodCanCoder;
+    CANcoder * m_pIntakePivotCanCoder;
     
     // Timers
     Timer *                         m_pMatchModeTimer;                      // Times how long a particular mode (autonomous, teleop) is running
@@ -329,12 +336,33 @@ private:
     static const int                SELECT_FRONT_CAMERA_BUTTON              = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                SELECT_BACK_CAMERA_BUTTON               = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     
-    // Aux inputs
+    // Copilot Inputs
+    static const int                INTAKE_BUTTON                           = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
+    static const int                OUTTAKE_BUTTON                          = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUTTON;
+    static const int                INTAKE_PIVOT_UP_BUTTON                  = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
+    static const int                INTAKE_PIVOT_DOWN_BUTTON                = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
+    static const int                SHOOT_AXIS                              = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.RIGHT_TRIGGER;
+    static const int                PRE_SHOOT_AXIS                          = AUX_CONTROLLER_MAPPINGS->AXIS_MAPPINGS.LEFT_TRIGGER;
     static const int                ESTOP_BUTTON                            = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
+
+    static const EastTech::Controller::PovDirections  HOOD_ADJUST_UP_POV                = EastTech::Controller::PovDirections::POV_UP;
+    static const EastTech::Controller::PovDirections  HOOD_ADJUST_DOWN_POV              = EastTech::Controller::PovDirections::POV_DOWN;
 
     // CAN Signals
     // Note: Remember to check the CAN IDs in use in SwerveDrive.hpp.
     // Superstructure uses IDs starting at 21
+    //These are subject to change as of writing the skeleton code
+    static const unsigned           SHOOTER_HOOD_CAN_ID                     = 27;
+    static const unsigned           SHOOTER_FEED_CAN_ID                     = 28;
+    static const unsigned           INTAKE_CAN_ID                           = 29;
+    static const unsigned           INTAKE_PIVOT_CAN_ID                     = 30;
+    static const unsigned           HOPPER_FEED_CAN_ID                      = 31;
+    //left shooter can id: 32
+    //center shooter can id: 33
+    //right shooter can id: 34
+    static const unsigned           SHOOTER_MOTORS_START_CAN_ID             = 32;
+    static const unsigned           HOOD_CANCODER_CAN_ID                    = 35;
+    static const unsigned           INTAKE_PIVOT_CANCODER_CAN_ID            = 36;
 
     // CANivore Signals
     // Note: IDs 21-24 are used by the CANcoders (see the
@@ -361,7 +389,21 @@ private:
     // (none)
 
     // Motor speeds and angles
-    // (none)
+    static constexpr const units::angle::degree_t INTAKE_STARTING_POSITION_DEGREES      = 0_deg;
+    static constexpr const units::angle::degree_t INTAKE_DOWN_POSITION_DEGREES          = 0_deg;
+    static constexpr const units::angle::degree_t INTAKE_STARTING_ENCODER_VALUE         = 0_deg;
+    static constexpr const units::angle::degree_t HOOD_LOW_POSITION_DEGREES             = -9.0_deg;
+    static constexpr const units::angle::degree_t HOOD_HIGH_POSITION_DEGREES            = 9.0_deg;
+    static constexpr const units::angle::degree_t HOOD_STARTING_ENCODER_VALUE           = 0_deg;
+    static constexpr const units::angle::degree_t HOOD_UPPER_LIMIT_DEGREES              = 18.0_deg;
+    static constexpr const units::angle::degree_t HOOD_LOWER_LIMIT_DEGREES              = -12.5_deg;
+
+    static constexpr const double INTAKE_PIECE_MOTOR_SPEED                              = -1.0;
+    static constexpr const double OUTTAKE_PIECE_MOTOR_SPEED                             = 1.0;
+    static constexpr const double HOOD_MOTOR_SPEED                                      = 0.10;
+    static constexpr const double HOPPER_FEED_MOTOR_SPEED                               = -0.80;
+    static constexpr const double SHOOTER_FEED_MOTOR_SPEED                              = -0.80;
+    static constexpr const double SHOOTER_MOTOR_SPEED                                   = 0.65;
     
     // Misc
     const std::string               AUTO_NO_ROUTINE_STRING                  = "No autonomous routine";
@@ -378,6 +420,7 @@ private:
     static const int                SCALE_TO_PERCENT                        = 100;
     static const unsigned           SINGLE_MOTOR                            = 1;
     static const unsigned           TWO_MOTORS                              = 2;
+    static const unsigned           THREE_MOTORS                            = 3;
     static const unsigned           NUMBER_OF_LEDS                          = 8;
     static const char               NULL_CHARACTER                          = '\0';
 
