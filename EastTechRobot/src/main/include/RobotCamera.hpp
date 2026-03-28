@@ -15,6 +15,7 @@
 // <none>
 
 // C INCLUDES
+#include "frc/controller/PIDController.h"       // for utilizing WPIlib PID controller
 #include "frc/smartdashboard/SmartDashboard.h"  // for smart dashboard support
 #include "frc/Timer.h"                          // for creating a Timer
 #include "networktables/NetworkTable.h"         // for interacting with network tables
@@ -81,7 +82,7 @@ public:
         };
 
         static bool AlignToTarget(SeekDirection seekDirection, const bool bEnableMotors = true);
-        static void AlignToTargetSwerve();
+        static void AlignToTargetSwerve(double currentYawDegrees);
 
     private:
         static Timer m_AutoCameraTimer;
@@ -237,6 +238,9 @@ private:
     };
     
     // Camera related variables
+    static int                                  m_TargetAprilTagId;                 // Track which AprilTag to target
+    static PIDController                        m_VisionPid;                        // PID controller for automated vision targeting, specifically for strafe
+    static PIDController                        m_VisionRotatePid;                  // PID controller for automated vision targeting, rotation
     static std::shared_ptr<nt::NetworkTable>    m_pLimelightNetworkTable;           // Network table for the limelight camera
     static UsbCameraStorage                     m_UsbCameras;                       // Memory for storing the USB camera objects
     static UsbCameraInfo *                      m_pCurrentUsbCamera;                // Pointer to the currently selected USB camera object   

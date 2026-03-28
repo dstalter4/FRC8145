@@ -783,49 +783,11 @@ void EastTechRobot::CameraSequence()
     if (m_pDriveController->GetButtonState(DRIVE_ALIGN_WITH_CAMERA_BUTTON))
     {
         m_bCameraAlignInProgress = true;
-        RobotCamera::SetLimelightPipeline(1);
-        RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::VISION_PROCESSOR);
-        RobotCamera::AutonomousCamera::AlignToTargetSwerve();
+        RobotCamera::AutonomousCamera::AlignToTargetSwerve(m_pPigeon->GetYaw().GetValue().value());
     }
     else
     {
         m_bCameraAlignInProgress = false;
-        RobotCamera::SetLimelightPipeline(0);
-        RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
-    }
-    return;
-
-    // 2024: Go no further
-
-    static bool bFullProcessing = false;
-    
-    // @note: Use std::chrono if precise time control is needed.
-    
-    // Check for any change in camera
-    if (m_pDriveController->GetButtonState(SELECT_FRONT_CAMERA_BUTTON))
-    {
-        RobotCamera::SetCamera(RobotCamera::FRONT_USB);
-    }
-    else if (m_pDriveController->GetButtonState(SELECT_BACK_CAMERA_BUTTON))
-    {
-        RobotCamera::SetCamera(RobotCamera::BACK_USB);
-    }
-    else
-    {
-    }
-    
-    // Look for full processing to be enabled/disabled
-    if (m_pDriveController->DetectButtonChange(CAMERA_TOGGLE_FULL_PROCESSING_BUTTON))
-    {
-        // Change state first, because the default is set before this code runs
-        bFullProcessing = !bFullProcessing;
-        RobotCamera::SetFullProcessing(bFullProcessing);
-    }
-    
-    // Look for the displayed processed image to be changed
-    if (m_pDriveController->DetectButtonChange(CAMERA_TOGGLE_PROCESSED_IMAGE_BUTTON))
-    {
-        RobotCamera::ToggleCameraProcessedImage();
     }
 }
 
