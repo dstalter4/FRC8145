@@ -401,9 +401,11 @@ private:
     static constexpr const double INTAKE_PIECE_MOTOR_SPEED                              = -1.0;
     static constexpr const double OUTTAKE_PIECE_MOTOR_SPEED                             = 1.0;
     static constexpr const double HOOD_MOTOR_SPEED                                      = 0.10;
-    static constexpr const double HOPPER_FEED_MOTOR_SPEED                               = -0.80;
+
+    //Stuff to change
+    static constexpr const double HOPPER_FEED_MOTOR_SPEED                               = -0.75;
     static constexpr const double SHOOTER_FEED_MOTOR_SPEED                              = -0.80;
-    static constexpr const double SHOOTER_MOTOR_SPEED                                   = 0.65;
+    static constexpr const double SHOOTER_MOTOR_SPEED                                   = 0.55;
     
     // Misc
     const std::string               AUTO_NO_ROUTINE_STRING                  = "No autonomous routine";

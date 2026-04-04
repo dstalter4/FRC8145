@@ -651,7 +651,7 @@ void EastTechRobot::IntakeSequence()
         bIntakeUp = false;
 
         //set intake motor to reference angle for down
-        (void)m_pIntakePivot->SetPositionVoltage(90.0);
+        (void)m_pIntakePivot->SetPositionVoltage(105.0);
     }
     else
     {

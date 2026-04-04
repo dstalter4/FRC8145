@@ -31,7 +31,7 @@ void EastTechRobot::AutonomousRoutine1()
 {
     //drive forward
     m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_REVERSE, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.15, 0.0, 0.0, 1.5_s, true);
+    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.20, 0.0, 0.0, 1.5_s, true);
     //shooter ramp up
     m_pShooterMotors->Set(SHOOTER_MOTOR_SPEED);
     AutonomousDelay(2.0_s);
