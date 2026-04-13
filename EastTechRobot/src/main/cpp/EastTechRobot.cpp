@@ -386,8 +386,8 @@ void EastTechRobot::ConfigureMotorControllers()
     (void)m_pIntakePivot->m_MotorConfiguration.MotorOutput.WithInverted(InvertedValue::Clockwise_Positive);
     m_pIntakePivot->ApplyConfiguration();
 
-    // Full down: 0.522461 (188.08596_deg), full up: 0.230469 (82.96884_deg)
-    constexpr const units::angle::degree_t INTAKE_STARTING_ANGLE_CANCODER_REF = 88.0_deg;
+    // Full down: 0.531982 (191.51352), 0.522461 (188.08596_deg), full up: 0.248779 (89.56044), 0.230469 (82.96884_deg)
+    constexpr const units::angle::degree_t INTAKE_STARTING_ANGLE_CANCODER_REF = 94.0_deg;
     units::angle::degree_t intakeCanCoderDegrees = m_pIntakePivotCanCoder->GetAbsolutePosition().GetValue();
     units::angle::degree_t intakeAngleDelta = intakeCanCoderDegrees - INTAKE_STARTING_ANGLE_CANCODER_REF;
     SmartDashboard::PutNumber("Intake delta", intakeAngleDelta.value());
