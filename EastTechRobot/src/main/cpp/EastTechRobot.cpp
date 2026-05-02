@@ -71,6 +71,7 @@ EastTechRobot::EastTechRobot() :
     m_AllianceColor                     (DriverStation::GetAlliance()),
     m_bRioPinsStable                    (false),
     m_bCameraAlignInProgress            (false),
+    m_HoodAngleDegrees                  (0.0_deg),
     m_HeartBeat                         (0U)
 {
     RobotUtils::DisplayMessage("Robot constructor.");
@@ -362,20 +363,23 @@ void EastTechRobot::ConfigureMotorControllers()
     m_pShooterHood->ApplyConfiguration();
 
     // These haven't been measured for 8145 yet.
-    // Full down: 0.0 (0.0_deg), full up: 0.0 (0.0_deg)
+    // Full down: 0.602278 (216.82_deg), full up: 0.701889 (252.68_deg)
     // Starting position: 0.0 (0.0_deg)
-    constexpr const units::angle::degree_t HOOD_STARTING_ANGLE_CANCODER_REF = 0.0_deg;
+    constexpr const units::angle::degree_t HOOD_STARTING_ANGLE_CANCODER_REF = 227.0_deg;
     units::angle::degree_t hoodCanCoderDegrees = m_pHoodCanCoder->GetAbsolutePosition().GetValue();
     units::angle::degree_t hoodAngleDelta = hoodCanCoderDegrees - HOOD_STARTING_ANGLE_CANCODER_REF;
     SmartDashboard::PutNumber("Hood delta", hoodAngleDelta.value());
 
     // If delta is positive, we are above the expected starting point
-    //      Upper limit is ~x.0_deg - REF = ~x.0_deg
+    //      Upper limit is ~250.0_deg - 227.0_deg = ~23.0_deg
     // If delta is negative, we are below the expected starting point
-    //      Lower limit is ~x.0_deg - REF = ~-y.0_deg
+    //      Lower limit is ~220.0_deg - 227.0_deg = ~-7.0_deg
 
     units::angle::turn_t hoodSetPositionTurns = hoodAngleDelta;
     (void)m_pShooterHood->m_pTalonFx->GetConfigurator().SetPosition(hoodSetPositionTurns);
+    // Return the hood to the middle (in case it wasn't)
+    m_HoodAngleDegrees = HOOD_START_OR_TOWER_ANGLE_DEGREES;
+    m_pShooterHood->SetPositionVoltage(m_HoodAngleDegrees.value());
 
 
 
@@ -644,14 +648,14 @@ void EastTechRobot::IntakeSequence()
         bIntakeUp = true;
 
         //set intake motor to reference angle for up
-        (void)m_pIntakePivot->SetPositionVoltage(0.0);
+        (void)m_pIntakePivot->SetPositionVoltage(INTAKE_UP_POSITION_DEGREES.value());
     }
     else if (m_pAuxController->DetectButtonChange(INTAKE_PIVOT_DOWN_BUTTON))
     {
         bIntakeUp = false;
 
         //set intake motor to reference angle for down
-        (void)m_pIntakePivot->SetPositionVoltage(105.0);
+        (void)m_pIntakePivot->SetPositionVoltage(INTAKE_DOWN_POSITION_DEGREES.value());
     }
     else
     {
@@ -677,35 +681,39 @@ void EastTechRobot::IntakeSequence()
 ////////////////////////////////////////////////////////////////
 void EastTechRobot::ShooterSequence()
 {
-    static bool bShotInProgress;
-    static Timer shootTimer;
-    static units::time::second_t shootTimeStamp = 0.0_s;
-
-    // Hood movement control
-    units::angle::degree_t hoodFxDegrees = m_pShooterHood->m_pTalonFx->GetPosition().GetValue();
-    EastTech::Controller::PovDirections auxPov = m_pAuxController->GetPovAsDirection();
-    if ((auxPov == HOOD_ADJUST_UP_POV) && (hoodFxDegrees < HOOD_UPPER_LIMIT_DEGREES))
+    // Check for a request to change the hood position (outside of passing, which is fixed)
+    static bool bHoodAtMidRangePosition = false;
+    if (m_pAuxController->DetectButtonChange(AUTOMATIC_HOOD_ADJUST))
     {
-        //m_pShooterHood->SetPositionVoltage(HOOD_HIGH_POSITION_DEGREES.value());
-    }
-    else if ((auxPov == HOOD_ADJUST_DOWN_POV) && (hoodFxDegrees > HOOD_LOWER_LIMIT_DEGREES))
-    {
-        //m_pShooterHood->SetPositionVoltage(HOOD_LOW_POSITION_DEGREES.value());
-    }
-    else
-    {
+        bHoodAtMidRangePosition = !bHoodAtMidRangePosition;
     }
 
+    // Check for a request to change passing state
+    static bool bPassing = false;
+    if (m_pAuxController->DetectButtonChange(PASSING_SHOOTING_CHANGE))
+    {
+        bPassing = !bPassing;
+    }
+
+    // Set the hood angle based on current state
+    m_HoodAngleDegrees = bPassing ? HOOD_PASSING_ANGLE_DEGREES : (bHoodAtMidRangePosition ? HOOD_SHOOT_MID_RANGE_ANGLE_DEGREES : HOOD_START_OR_TOWER_ANGLE_DEGREES);
+    m_pShooterHood->SetPositionVoltage(m_HoodAngleDegrees.value());
+    SmartDashboard::PutNumber("Hood target", m_HoodAngleDegrees.value());
     units::angle::degree_t hoodCanCoderDegrees = m_pHoodCanCoder->GetAbsolutePosition().GetValue();
     SmartDashboard::PutNumber("Hood CANcoder", hoodCanCoderDegrees.value());
-    SmartDashboard::PutNumber("Hood FX", hoodFxDegrees.value());
 
+    // Shooter motors speed change based on passing
+    static double shooterMotorSpeed = 0.0;
+    shooterMotorSpeed = bPassing ? SHOOTER_PASSING_MOTOR_SPEED : SHOOTER_MOTOR_SPEED;
 
     // Allow a manual pre-shot ramp up
     static bool bPreShoot = false;
+    static bool bShotInProgress;
+    static Timer shootTimer;
+    static units::time::second_t shootTimeStamp = 0.0_s;
     if (m_pAuxController->GetAxisValue(PRE_SHOOT_AXIS) > AXIS_INPUT_DEAD_BAND)
     {
-        m_pShooterMotors->Set(SHOOTER_MOTOR_SPEED);
+        m_pShooterMotors->Set(shooterMotorSpeed);
         bPreShoot = true;
         bShotInProgress = true;
     }
@@ -714,7 +722,7 @@ void EastTechRobot::ShooterSequence()
         bPreShoot = false;
     }
 
-    // Control sequence for shooting
+    // Control sequence for shooting or passing
     if (m_pAuxController->GetAxisValue(SHOOT_AXIS) > AXIS_INPUT_DEAD_BAND)
     {
         // A shot is requested, check if we are already in progress
@@ -722,7 +730,7 @@ void EastTechRobot::ShooterSequence()
         {
             shootTimer.Reset();
             shootTimer.Start();
-            m_pShooterMotors->Set(SHOOTER_MOTOR_SPEED);
+            m_pShooterMotors->Set(shooterMotorSpeed);
             shootTimeStamp = shootTimer.Get();
             bShotInProgress = true;
         }
@@ -751,6 +759,8 @@ void EastTechRobot::ShooterSequence()
         }
     }
 
+    SmartDashboard::PutBoolean("Passing?", bPassing);
+    SmartDashboard::PutBoolean("Shooting close?", bHoodAtMidRangePosition);
     SmartDashboard::PutNumber("Shooter RPM", m_pShooterMotors->GetMotorObject()->GetVelocity().GetValue().value());
 }
 
