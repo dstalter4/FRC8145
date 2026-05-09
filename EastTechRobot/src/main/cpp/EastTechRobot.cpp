@@ -391,9 +391,19 @@ void EastTechRobot::ConfigureMotorControllers()
     m_pIntakePivot->ApplyConfiguration();
 
     // Full down: 0.531982 (191.51352), 0.522461 (188.08596_deg), full up: 0.248779 (89.56044), 0.230469 (82.96884_deg)
-    constexpr const units::angle::degree_t INTAKE_STARTING_ANGLE_CANCODER_REF = 94.0_deg;
+    // 5/9/26: full down (41.484375_deg), full up (297.68554687_deg), crosses 0/360 boundary
+    constexpr const units::angle::degree_t INTAKE_STARTING_ANGLE_CANCODER_REF = 302.0_deg;
     units::angle::degree_t intakeCanCoderDegrees = m_pIntakePivotCanCoder->GetAbsolutePosition().GetValue();
     units::angle::degree_t intakeAngleDelta = intakeCanCoderDegrees - INTAKE_STARTING_ANGLE_CANCODER_REF;
+
+    // Since this crosses the zero point, we have to adjust for the negative values in the
+    // allowed mechanism range of motion.  The full range of motion is ~297 -> ~41, which is
+    // ~104 degrees.  This means (104 - 360 = -256) is the negative point where the intake
+    // is fully down.  Add a little padding to the angle we check for to do a positive adjust.
+    if (intakeAngleDelta < -250.0_deg)
+    {
+        intakeAngleDelta += 360.0_deg;
+    }
     SmartDashboard::PutNumber("Intake delta", intakeAngleDelta.value());
 
     // If delta is positive, we are below the expected starting point

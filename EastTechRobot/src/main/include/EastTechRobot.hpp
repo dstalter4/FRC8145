@@ -393,7 +393,7 @@ private:
 
     // Motor speeds and angles
     static constexpr const units::angle::degree_t INTAKE_STARTING_POSITION_DEGREES      = 0.0_deg;
-    static constexpr const units::angle::degree_t INTAKE_DOWN_POSITION_DEGREES          = 105.0_deg;
+    static constexpr const units::angle::degree_t INTAKE_DOWN_POSITION_DEGREES          = 100.0_deg;
     static constexpr const units::angle::degree_t INTAKE_UP_POSITION_DEGREES            = 0.0_deg;
     static constexpr const units::angle::degree_t HOOD_START_OR_TOWER_ANGLE_DEGREES     = 0.0_deg;
     static constexpr const units::angle::degree_t HOOD_SHOOT_MID_RANGE_ANGLE_DEGREES    = -6.0_deg;
