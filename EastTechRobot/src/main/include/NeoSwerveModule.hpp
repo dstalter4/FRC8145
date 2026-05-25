@@ -50,7 +50,7 @@ class NeoSwerveModule
 
 private:
     // Constructor
-    NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo, CANBus & rEncoderCanBus);
+    NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo, const std::function<const CANBus&(std::string_view)>& rGetCanBusReferenceLambda);
 
     // Point the module to zero degrees (forward)
     void HomeModule();

@@ -37,7 +37,7 @@ uint32_t TalonFxSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 /// on the CANivore bus, which requires a 120 ohm terminating
 /// resistor.
 ///
-/// 2026: Bevels facing right is 1.0 forward on the Talons.
+/// 20xx: Bevels facing right is 1.0 forward on the Talons.
 ///
 ////////////////////////////////////////////////////////////////
 TalonFxSwerveModule::TalonFxSwerveModule(SwerveConfig::ModuleInformation moduleInfo, const std::function<const CANBus&(std::string_view)>& rGetCanBusReferenceLambda) :
@@ -188,7 +188,7 @@ void TalonFxSwerveModule::RecalibrateModules()
         numPrintedModules++;
         if (numPrintedModules == SwerveConfig::NUM_SWERVE_DRIVE_MODULES)
         {
-            //bPrintedFirstMeasurement = true;
+            bPrintedFirstMeasurement = true;
         }
     }
 }
@@ -249,6 +249,7 @@ void TalonFxSwerveModule::SetDesiredState(SwerveModuleState desiredState, bool b
     }
     else
     {
+        // @todo: This needs validation (partially works, but max speed is inaccurate).
         units::angular_velocity::turns_per_second_t driveTalonDesiredVelocityTps = units::angular_velocity::turns_per_second_t(SwerveConversions::MpsToRps(desiredState.speed.value(), SwerveConfig::WHEEL_CIRCUMFERENCE));
         m_DriveVelocityVoltage.Velocity = driveTalonDesiredVelocityTps;
         m_DriveVelocityVoltage.FeedForward = m_pFeedForward->Calculate(desiredState.speed);
@@ -274,45 +275,6 @@ void TalonFxSwerveModule::SetDesiredState(SwerveModuleState desiredState, bool b
 
     // Save off the updated last angle
     m_LastAngle = angle;
-
-/*
-    units::angle::degree_t d = m_pAngleTalon->GetPosition().GetValue();
-    switch (m_MotorGroupPosition)
-    {
-        case 0:
-        {
-            SmartDashboard::PutNumber("Debug A", targetAngle.value());
-            SmartDashboard::PutNumber("Debug E", angle.Degrees().value());
-            SmartDashboard::PutNumber("Debug I", d.value());
-            break;
-        }
-        case 1:
-        {
-            SmartDashboard::PutNumber("Debug B", targetAngle.value());
-            SmartDashboard::PutNumber("Debug F", angle.Degrees().value());
-            SmartDashboard::PutNumber("Debug J", d.value());
-            break;
-        }
-        case 2:
-        {
-            SmartDashboard::PutNumber("Debug C", targetAngle.value());
-            SmartDashboard::PutNumber("Debug G", angle.Degrees().value());
-            SmartDashboard::PutNumber("Debug K", d.value());
-            break;
-        }
-        case 3:
-        {
-            SmartDashboard::PutNumber("Debug D", targetAngle.value());
-            SmartDashboard::PutNumber("Debug H", angle.Degrees().value());
-            SmartDashboard::PutNumber("Debug L", d.value());
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-*/
 }
 
 

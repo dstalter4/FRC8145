@@ -14,6 +14,7 @@
 // C INCLUDES
 #include "frc/Timer.h"                              // for timers
 #include "frc/smartdashboard/SmartDashboard.h"      // for interacting with the smart dashboard
+#include "rev/ClosedLoopTypes.h"                    // for FeedbackSensor
 #include "rev/config/SparkMaxConfig.h"              // for creating and applying SparkMax configs
 #include "units/length.h"                           // for units::meters
 
@@ -38,10 +39,10 @@ uint32_t NeoSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 /// on the CANivore bus, which requires a 120 ohm terminating
 /// resistor.
 ///
-/// 2024: Bevels facing right is 1.0 forward on the Neos.
+/// 20xx: Bevels facing right is 1.0 forward on the Neos.
 ///
 ////////////////////////////////////////////////////////////////
-NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo, CANBus & rEncoderCanBus) :
+NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo, const std::function<const CANBus&(std::string_view)>& rGetCanBusReferenceLambda) :
     m_MotorGroupPosition(moduleInfo.m_Position),
     m_pDriveSpark(new SparkMax(moduleInfo.m_DriveMotorCanId, SparkMax::MotorType::kBrushless)),
     m_pAngleSpark(new SparkMax(moduleInfo.m_AngleMotorCanId, SparkMax::MotorType::kBrushless)),
@@ -49,7 +50,7 @@ NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo, CAN
     m_AngleSparkEncoder(m_pAngleSpark->GetEncoder()),
     m_DrivePidController(m_pDriveSpark->GetClosedLoopController()),
     m_AnglePidController(m_pAngleSpark->GetClosedLoopController()),
-    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, rEncoderCanBus)),
+    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, rGetCanBusReferenceLambda(moduleInfo.m_CanCoderCanBusName))),
     m_LastAngle(),
     m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA)),
     CANCODER_REFERENCE_ABSOLUTE_OFFSET(moduleInfo.m_EncoderReferenceAbsoluteOffset)
@@ -137,6 +138,7 @@ NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo, CAN
 ////////////////////////////////////////////////////////////////
 void NeoSwerveModule::HomeModule()
 {
+    // @todo: This actually combines recalibrate and home functionality.
     double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - CANCODER_REFERENCE_ABSOLUTE_OFFSET.Degrees().value();
     m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
     m_AnglePidController.SetSetpoint(0.0, SparkMax::ControlType::kPosition);

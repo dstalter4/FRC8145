@@ -220,7 +220,7 @@ public:
     }
 
     ////////////////////////////////////////////////////////////////
-    /// @method YtaController<ControllerType>::DetectPovChange
+    /// @method EastTechController<ControllerType>::DetectPovChange
     ///
     /// This method is used to check if the POV input has undergone
     /// a state change.  Some robot program my logic may only want

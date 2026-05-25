@@ -5,22 +5,28 @@
 /// @details
 /// Implementation of an autonomous test routines for EastTechRobot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
 // <none>
 
 // C INCLUDES
+#include "frc/controller/ProfiledPIDController.h"   // for type declaration
 #include "frc/geometry/Pose2d.h"                    // for type declaration
 #include "frc/geometry/Rotation2d.h"                // for type declaration
 #include "frc/geometry/Translation2d.h"             // for type declaration
 #include "frc/trajectory/Trajectory.h"              // for working with trajectories
 #include "frc/trajectory/TrajectoryConfig.h"        // for creating a trajectory config
 #include "frc/trajectory/TrajectoryGenerator.h"     // for generating a trajectory
+#include "frc/trajectory/TrapezoidProfile.h"        // for type declaration
+#include "frc2/command/Commands.h"                  // for different commands (e.g. Sequence())
+#include "frc2/command/SwerveControllerCommand.h"   // for creating a swerve controller command
 
 // C++ INCLUDES
 #include "RobotUtils.hpp"                           // for DisplayMessage()
+#include "SwerveConfig.hpp"                         // for kinematics and constants
+#include "SwerveDrive.hpp"                          // for calling autonomous swerve functions
 #include "EastTechRobot.hpp"                        // for robot class declaration
 #include "EastTechRobotAutonomous.hpp"              // for autonomous declarations
 
@@ -47,22 +53,23 @@ void EastTechRobot::AutonomousTestRoutine()
 void EastTechRobot::AutonomousTestSwerveRoutine()
 {
     // Simple demonstration of directional movements
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_FORWARD, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.10, 0.0, 0.0, 1.0_s, true);
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_NO_TRANSLATION, RobotStrafe::ROBOT_STRAFE_LEFT, RobotRotation::ROBOT_NO_ROTATION);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.10, 0.0, 0.0, 1.0_s, true);
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_REVERSE, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_NO_ROTATION);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.10, 0.0, 0.0, 1.0_s, true);
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_NO_TRANSLATION, RobotStrafe::ROBOT_STRAFE_RIGHT, RobotRotation::ROBOT_NO_ROTATION);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.10, 0.0, 0.0, 1.0_s, true);
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_NO_TRANSLATION, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_CLOCKWISE);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.0, 0.10, 0.0, 1.0_s, true);
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_NO_TRANSLATION, RobotStrafe::ROBOT_NO_STRAFE, RobotRotation::ROBOT_COUNTER_CLOCKWISE);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.0, 0.10, 0.0, 1.0_s, true);
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_FORWARD, RobotStrafe::ROBOT_STRAFE_RIGHT, RobotRotation::ROBOT_CLOCKWISE);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.10, 0.10, 0.10, 1.0_s, true);
-    m_AutoSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_REVERSE, RobotStrafe::ROBOT_STRAFE_LEFT, RobotRotation::ROBOT_COUNTER_CLOCKWISE);
-    AutonomousSwerveDriveSequence(m_AutoSwerveDirections, 0.10, 0.10, 0.10, 1.0_s, true);
+    static SwerveDrive::SwerveDirections swerveDirections;
+    swerveDirections.SetSwerveDirections(SwerveDrive::RobotTranslation::ROBOT_TRANSLATION_FORWARD, SwerveDrive::RobotStrafe::ROBOT_STRAFE_NONE, SwerveDrive::RobotRotation::ROBOT_ROTATION_NONE);
+    m_pSwerveDrive->AutonomousDrive(swerveDirections, 0.10, 0.0, 0.0, 1.0_s, true);
+    swerveDirections.SetSwerveDirections(SwerveDrive::RobotTranslation::ROBOT_TRANSLATION_NONE, SwerveDrive::RobotStrafe::ROBOT_STRAFE_LEFT, SwerveDrive::RobotRotation::ROBOT_ROTATION_NONE);
+    m_pSwerveDrive->AutonomousDrive(swerveDirections, 0.10, 0.0, 0.0, 1.0_s, true);
+    swerveDirections.SetSwerveDirections(SwerveDrive::RobotTranslation::ROBOT_TRANSLATION_REVERSE, SwerveDrive::RobotStrafe::ROBOT_STRAFE_NONE, SwerveDrive::RobotRotation::ROBOT_ROTATION_NONE);
+    m_pSwerveDrive->AutonomousDrive(swerveDirections, 0.10, 0.0, 0.0, 1.0_s, true);
+    swerveDirections.SetSwerveDirections(SwerveDrive::RobotTranslation::ROBOT_TRANSLATION_NONE, SwerveDrive::RobotStrafe::ROBOT_STRAFE_RIGHT, SwerveDrive::RobotRotation::ROBOT_ROTATION_NONE);
+    m_pSwerveDrive->AutonomousDrive(swerveDirections, 0.10, 0.0, 0.0, 1.0_s, true);
+    swerveDirections.SetSwerveDirections(SwerveDrive::RobotTranslation::ROBOT_TRANSLATION_NONE, SwerveDrive::RobotStrafe::ROBOT_STRAFE_NONE, SwerveDrive::RobotRotation::ROBOT_ROTATION_CLOCKWISE);
+    m_pSwerveDrive->AutonomousDrive(swerveDirections, 0.0, 0.10, 0.0, 1.0_s, true);
+    swerveDirections.SetSwerveDirections(SwerveDrive::RobotTranslation::ROBOT_TRANSLATION_NONE, SwerveDrive::RobotStrafe::ROBOT_STRAFE_NONE, SwerveDrive::RobotRotation::ROBOT_ROTATION_COUNTER_CLOCKWISE);
+    m_pSwerveDrive->AutonomousDrive(swerveDirections, 0.0, 0.10, 0.0, 1.0_s, true);
+    swerveDirections.SetSwerveDirections(SwerveDrive::RobotTranslation::ROBOT_TRANSLATION_FORWARD, SwerveDrive::RobotStrafe::ROBOT_STRAFE_RIGHT, SwerveDrive::RobotRotation::ROBOT_ROTATION_CLOCKWISE);
+    m_pSwerveDrive->AutonomousDrive(swerveDirections, 0.10, 0.10, 0.10, 1.0_s, true);
+    swerveDirections.SetSwerveDirections(SwerveDrive::RobotTranslation::ROBOT_TRANSLATION_REVERSE, SwerveDrive::RobotStrafe::ROBOT_STRAFE_LEFT, SwerveDrive::RobotRotation::ROBOT_ROTATION_COUNTER_CLOCKWISE);
+    m_pSwerveDrive->AutonomousDrive(swerveDirections, 0.10, 0.10, 0.10, 1.0_s, true);
 
     // Returning from here will enter the idle state until autonomous is over
     RobotUtils::DisplayMessage("Auto test swerve routine done.");
@@ -72,56 +79,63 @@ void EastTechRobot::AutonomousTestSwerveRoutine()
 ////////////////////////////////////////////////////////////////
 /// @method EastTechRobot::AutonomousTestTrajectoryRoutine
 ///
-/// Autonomous swerve test routine.
+/// Autonomous swerve test trajectory routine.
 ///
 ////////////////////////////////////////////////////////////////
-void EastTechRobot::AutonomousTestTrajectoryRoutine()
+CommandPtr EastTechRobot::AutonomousTestTrajectoryRoutine()
 {
-    // Swerve trajectory routine, but requires switching to command based robot.
+    // Swerve trajectory routine.  Still needs some in depth tuning.
 
-    //TrajectoryConfig config =
-    //new TrajectoryConfig(
-    //        Constants.AutoConstants.kMaxSpeedMetersPerSecond,
-    //        Constants.AutoConstants.kMaxAccelerationMetersPerSecondSquared)
-    //    .setKinematics(Constants.Swerve.swerveKinematics);
-    TrajectoryConfig trajectoryConfig = {0.5_mps, 1.0_mps_sq};
+    // Constructed with max velocity, max acceleration
+    TrajectoryConfig trajectoryConfig = {1.5_mps, 3.0_mps_sq};
     trajectoryConfig.SetKinematics(SwerveConfig::Kinematics);
 
     // An example trajectory to follow.  All units in meters.
-    //Trajectory exampleTrajectory =
-    //TrajectoryGenerator.generateTrajectory(
-        // Start at the origin facing the +X direction
-        //new Pose2d(0, 0, new Rotation2d(0)),
-        // Pass through these two interior waypoints, making an 's' curve path
-        //List.of(new Translation2d(1, 1), new Translation2d(2, -1)),
-        // End 3 meters straight ahead of where we started, facing forward
-        //new Pose2d(3, 0, new Rotation2d(0)),
-        //config);
+    // 1. Start at the origin facing the +X direction (INITIAL_POSE)
+    // 2. Pass through these two interior waypoints, making an 's' curve path (WAY_POINTS)
+    // 3. End three meters straight ahead of the start position, facing forward (FINAL_POSE)
+    // Note: First pose parameter is field y-axis (positive is forward)
+    //       Second pose parameter is field x-axis (positive is left)
     const Pose2d INITIAL_POSE = {0_m, 0_m, 0_deg};
-    const Pose2d FINAL_POSE = {2_m, 0_m, 0_deg};
+    const Pose2d FINAL_POSE = {3_m, 0_m, 0_deg};
     const std::vector<Translation2d> WAY_POINTS = 
     {
-        {0_m, 0_m}
+        {1.0_m,  1.0_m},
+        {2.0_m, -1.0_m}
     };
     Trajectory testTrajectory = TrajectoryGenerator::GenerateTrajectory(INITIAL_POSE, WAY_POINTS, FINAL_POSE, trajectoryConfig);
-    (void)testTrajectory;
 
-    //var thetaController =
-    //new ProfiledPIDController(
-    //    Constants.AutoConstants.kPThetaController, 0, 0, Constants.AutoConstants.kThetaControllerConstraints);
-    //thetaController.enableContinuousInput(-Math.PI, Math.PI);
+    // Translation PID controllers
+    PIDController xPidController(1.0, 0.0, 0.0);
+    PIDController yPidController(1.0, 0.0, 0.0);
 
-    //SwerveControllerCommand swerveControllerCommand =
-    //new SwerveControllerCommand(
-    //    exampleTrajectory,
-    //    s_Swerve::getPose,
-    //    Constants.Swerve.swerveKinematics,
-    //    new PIDController(Constants.AutoConstants.kPXController, 0, 0),
-    //    new PIDController(Constants.AutoConstants.kPYController, 0, 0),
-    //    thetaController,
-    //    s_Swerve::setModuleStates,
-    //    s_Swerve);
+    // Values are max angular velocity, max angular acceleration
+    TrapezoidProfile<units::radians>::Constraints thetaPidControllerConstraints(3.1415_rad_per_s, 3.1415_rad_per_s_sq);
+    
+    // Parameters are P, I, D, TrapezoidProfile<>::Constraints
+    ProfiledPIDController<units::radians> thetaPidController(0.5, 0.0, 0.0, thetaPidControllerConstraints);
 
-    // Returning from here will enter the idle state until autonomous is over
-    RobotUtils::DisplayMessage("Auto test trajectory routine done.");
+    thetaPidController.EnableContinuousInput(units::radian_t(-std::numbers::pi), units::radian_t(std::numbers::pi));
+
+    // Construct the swerve controller command
+    CommandPtr swerveControllerCommand = 
+    SwerveControllerCommand<SwerveConfig::NUM_SWERVE_DRIVE_MODULES>
+    (
+        testTrajectory,
+        [this](){return m_pSwerveDrive->GetPose();},
+        SwerveConfig::Kinematics,
+        xPidController,
+        yPidController,
+        thetaPidController,
+        [this](auto moduleStates){ m_pSwerveDrive->SetModuleStates(moduleStates); }
+        // Last parameter is requirements and (maybe?) can be defaulted
+    ).ToPtr();
+
+    // Build the command sequence and return it
+    return cmd::Sequence
+    (
+        InstantCommand([this, initialPose = testTrajectory.InitialPose()]() { m_pSwerveDrive->SetPose(initialPose); }, {}).ToPtr(),
+        std::move(swerveControllerCommand),
+        InstantCommand([this] { m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, 0.0, false, false); }, {}).ToPtr()
+    );
 }

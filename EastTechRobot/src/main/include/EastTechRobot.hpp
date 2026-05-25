@@ -16,8 +16,7 @@
 #define EASTTECHROBOT_HPP
 
 // SYSTEM INCLUDES
-#include <cmath>                                            // for M_PI
-#include <thread>                                           // for std::thread
+// <none>
 
 // C INCLUDES
 #include "frc/Compressor.h"                                 // for retrieving info on the compressor
@@ -26,31 +25,31 @@
 #include "frc/DoubleSolenoid.h"                             // for DoubleSolenoid type
 #include "frc/DriverStation.h"                              // for interacting with the driver station
 #include "frc/DutyCycleEncoder.h"                           // for interacting with PWM based encoders
+#include "frc/PWM.h"                                        // for interacting with PWM based sensors (e.g. actuators)
 #include "frc/Relay.h"                                      // for Relay type
 #include "frc/Solenoid.h"                                   // for Solenoid type
 #include "frc/TimedRobot.h"                                 // for base class decalartion
 #include "frc/livewindow/LiveWindow.h"                      // for controlling the LiveWindow
-#include "frc/motorcontrol/Spark.h"                         // for creating an object to interact with the rev blinkin
 #include "frc/smartdashboard/SendableChooser.h"             // for using the smart dashboard sendable chooser functionality
 #include "frc/smartdashboard/SmartDashboard.h"              // for interacting with the smart dashboard
+#include "frc2/command/CommandPtr.h"                        // for CommandPtr
 
 // C++ INCLUDES
 #include "DriveConfiguration.hpp"                           // for information on the drive config
 #include "EastTechController.hpp"                           // for controller interaction
+#include "EastTechLed.hpp"                                  // for LED interaction
 #include "EastTechTalon.hpp"                                // for custom Talon control
+#include "LimelightCamera.hpp"                              // for creating and interacting with limelight cameras
 #include "RobotUtils.hpp"                                   // for ASSERT, DEBUG_PRINTS
 #include "SwerveDrive.hpp"                                  // for using swerve drive
 #include "ctre/phoenix6/CANBus.hpp"                         // for creating CANBus objects
-#include "ctre/phoenix6/CANdle.hpp"                         // for interacting with the CANdle
 #include "ctre/phoenix6/Pigeon2.hpp"                        // for PigeonIMU
-#include "ctre/phoenix6/controls/RainbowAnimation.hpp"      // for creating animations on the CANdle
+#include "ctre/phoenix6/SignalLogger.hpp"                   // for disabling automatic signal logging
 
 
 using namespace frc;
-using namespace ctre::phoenix6;
-using namespace ctre::phoenix6::controls;
+using namespace frc2;
 using namespace ctre::phoenix6::hardware;
-using namespace ctre::phoenix6::signals;
 
 
 ////////////////////////////////////////////////////////////////
@@ -63,7 +62,6 @@ using namespace ctre::phoenix6::signals;
 class EastTechRobot : public TimedRobot
 {
 public:
-    friend class RobotCamera;
     friend class EastTechRobotTest;
 
     // MEMBER FUNCTIONS
@@ -114,56 +112,9 @@ private:
         ROBOT_MODE_NOT_SET
     };
 
-    enum class RobotDirection
-    {
-        ROBOT_NO_DIRECTION,
-        ROBOT_FORWARD,
-        ROBOT_REVERSE,
-        ROBOT_LEFT,
-        ROBOT_RIGHT
-    };
-
-    enum class RobotTranslation
-    {
-        ROBOT_NO_TRANSLATION,
-        ROBOT_TRANSLATION_FORWARD,
-        ROBOT_TRANSLATION_REVERSE
-    };
-
-    enum class RobotStrafe
-    {
-        ROBOT_NO_STRAFE,
-        ROBOT_STRAFE_LEFT,
-        ROBOT_STRAFE_RIGHT
-    };
-
-    enum class RobotRotation
-    {
-        ROBOT_NO_ROTATION,
-        ROBOT_CLOCKWISE,
-        ROBOT_COUNTER_CLOCKWISE
-    };
-
     // STRUCTS
-    struct RobotSwerveDirections
-    {
-      public:
-        RobotSwerveDirections() : m_Translation(RobotTranslation::ROBOT_NO_TRANSLATION), m_Strafe(RobotStrafe::ROBOT_NO_STRAFE), m_Rotation(RobotRotation::ROBOT_NO_ROTATION) {}
-        inline void SetSwerveDirections(RobotTranslation translationDirection, RobotStrafe strafeDirection, RobotRotation rotationDirection)
-        {
-            m_Translation = translationDirection;
-            m_Strafe = strafeDirection;
-            m_Rotation = rotationDirection;
-        }
-        inline RobotTranslation GetTranslation() { return m_Translation; }
-        inline RobotStrafe GetStrafe() { return m_Strafe; }
-        inline RobotRotation GetRotation() { return m_Rotation; }
-      private:
-        RobotTranslation m_Translation;
-        RobotStrafe m_Strafe;
-        RobotRotation m_Rotation;
-    };
-    
+    // (none)
+
     // This is a hacky way of retrieving a pointer to the robot object
     // outside of the robot class.  The robot object itself is a static
     // variable inside the function StartRobot() in the RobotBase class.
@@ -177,33 +128,28 @@ private:
 
     // Increments a variable to indicate the robot code is successfully running
     inline void HeartBeat();
-    
+
     // Checks for a robot state change and logs a message if so
     inline void CheckAndUpdateRobotMode(RobotMode robotMode);
 
     // Updates information on the smart dashboard for the drive team
     void UpdateSmartDashboard();
 
-    // Autonomous wait for something to complete delay routine
-    inline void AutonomousDelay(units::second_t time);
-
-    // Autonomous drive for a specified time
-    inline void AutonomousSwerveDriveSequence(RobotSwerveDirections & rSwerveDirections, double translationSpeed, double strafeSpeed, double rotateSpeed, units::second_t time, bool bFieldRelative);
-
-    // Autonomous drive for a specified angle
-    inline void AutonomousRotateByGyroSequence(RobotRotation robotRotation, double rotateDegrees, double rotateSpeed, bool bFieldRelative);
-
     // Autonomous routines
-    // @todo: Make EastTechRobotAutonomous a friend and move these out (requires accessor to *this)!
+    // @todo: Make EastTechRobotAutonomous a friend and move these out (requires accessor to *this, or lambdas)!
+    void AutonomousPeriodicTimed();
+    void AutonomousPeriodicCommand();
+    void AutonomousCommon();
+    void AutonomousCommonRed();
+    void AutonomousCommonBlue();
     void AutonomousRoutine1();
     void AutonomousRoutine2();
     void AutonomousRoutine3();
     void AutonomousTestRoutine();
     void AutonomousTestSwerveRoutine();
-    void AutonomousTestTrajectoryRoutine();
-    void AutonomousCommon();
-    void AutonomousCommonRed();
-    void AutonomousCommonBlue();
+    CommandPtr AutonomousTestCommandDashboardRoutine();
+    CommandPtr AutonomousTestCommandMotionRoutine();
+    CommandPtr AutonomousTestTrajectoryRoutine();
 
     // Resets member variables
     void ResetMemberData();
@@ -222,22 +168,18 @@ private:
 
     // Main sequence for controlling pneumatics
     void PneumaticSequence();
-    
+
     // Main sequence for vision processing
     void CameraSequence();
 
-    // LED sequence/support
-    inline void SetLedsToAllianceColor();
-
     // Superstructure sequences
     // (none)
-    
+
     // MEMBER VARIABLES
-    
+
     // Autonomous
     SendableChooser<std::string>    m_AutonomousChooser;                    // Selects from the dashboard which auto routine to run
-    RobotSwerveDirections           m_AutoSwerveDirections;                 // Used by autonomous routines to control swerve drive movements
-    
+
     // User Controls
     DriveControllerType *           m_pDriveController;                     // Drive controller
     AuxControllerType *             m_pAuxController;                       // Auxillary input controller
@@ -251,7 +193,7 @@ private:
 
     // GetCanBusReferenceLambda
     // Lambda to retrieve a reference to the CANBus with the specified string name.
-    std::function<const CANBus&(std::string_view)> GetCanBusReferenceLambda = [this](std::string_view canBusName) -> const CANBus&
+    std::function<const CANBus&(std::string_view)> m_GetCanBusReferenceLambda = [this](std::string_view canBusName) -> const CANBus&
     {
         if (canBusName.compare(CANIVORE_CAN_BUS_NAME) == 0)
         {
@@ -262,52 +204,66 @@ private:
             return m_RioCanBus;
         }
     };
-    
+
     // Swerve Drive
     Pigeon2 *                       m_pPigeon;                              // CTRE Pigeon2 IMU
     SwerveDrive *                   m_pSwerveDrive;                         // Swerve drive control
-    
+
     // Motors
     // (none)
 
     // LEDs
-    CANdle *                        m_pCandle;                              // Controls an RGB LED strip
-    SolidColor                      m_LedStripSolidColor;                   // Used when setting the LEDs to RGB values
-    RainbowAnimation                m_RainbowAnimation;                     // Rainbow animation configuration (brightness, speed, # LEDs)
-    static constexpr const RGBWColor RGBW_OFF{0, 0, 0, 0};                  // Common RGBWColor expression representing LEDs off
+    EastTechLedController *         m_pLedController;                       // Interfacing to the LEDs
 
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
-    
+
     // Analog I/O
     // (none)
-    
+
+    // PWM
+    // (none)
+
     // Pneumatics
     Compressor *                    m_pCompressor;                          // Object to get info about the compressor
-    
+
+    // Solenoids
+    // (none)
+
     // Encoders
     // (none)
-    
+
     // Timers
     Timer *                         m_pMatchModeTimer;                      // Times how long a particular mode (autonomous, teleop) is running
     Timer *                         m_pRobotProgramTimer;                   // Starts at robot program entry, free runs for program life time
-    Timer *                         m_pSafetyTimer;                         // Fail safe in case critical operations don't complete
+
+    // Accelerometer
+    // (none)
+
+    // Gyro
+    // (none)
 
     // Camera
-    // Note: Only need to have a thread here and tie it to
-    // the RobotCamera class, which handles everything else.
-    std::thread                     m_CameraThread;
-    
+    LimelightCamera *               m_pLimelightCamera;                     // The limelight camera object
+    bool                            m_bLimelightFound;                      // Indicates whether or not the limelight was found
+
+    // LimelightDriveLambda
+    // Lambda to drive the robot via swerve.
+    LimelightCamera::SwerveDriveLambdaType m_LimelightDriveLambda = [this](Translation2d translation, double rotation)
+    {
+        m_pSwerveDrive->SetModuleStates(translation, rotation, true, true);
+    };
+
     // Misc
     RobotMode                       m_RobotMode;                            // Keep track of the current robot state
     std::optional
     <DriverStation::Alliance>       m_AllianceColor;                        // Color reported by driver station during a match
     bool                            m_bRioPinsStable;                       // Indicates whether the RIO pin measurements (e.g. PWM) are stable
-    bool                            m_bCameraAlignInProgress;               // Indicates if an automatic camera align is in progress
+    bool                            m_bCameraAlignInProgress;               // Indicates if an automatic camera align is in progres
     uint32_t                        m_HeartBeat;                            // Incremental counter to indicate the robot code is executing
-    
+
     // CONSTS
-    
+
     // Joysticks/Buttons
     // Note: Don't forget to update the controller object typedefs if
     //       necessary when changing these types!
@@ -315,7 +271,7 @@ private:
     static const ControllerModels AUX_CONTROLLER_MODEL                          = ControllerModels::CUSTOM_XBOX;
     static constexpr const ControllerMappings * const DRIVE_CONTROLLER_MAPPINGS = EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL);
     static constexpr const ControllerMappings * const AUX_CONTROLLER_MAPPINGS   = EastTech::Controller::Config::GetControllerMapping(AUX_CONTROLLER_MODEL);
-    
+
     static const int                DRIVE_JOYSTICK_PORT                     = 0;
     static const int                AUX_JOYSTICK_PORT                       = 1;
 
@@ -323,187 +279,69 @@ private:
     static const int                FIELD_RELATIVE_TOGGLE_BUTTON            = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
     static const int                REZERO_SWERVE_BUTTON                    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
     static const int                LOCK_SWERVE_WHEELS_BUTTON               = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUTTON;
-    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
-    static const int                CAMERA_TOGGLE_FULL_PROCESSING_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
-    static const int                CAMERA_TOGGLE_PROCESSED_IMAGE_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
-    static const int                SELECT_FRONT_CAMERA_BUTTON              = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
-    static const int                SELECT_BACK_CAMERA_BUTTON               = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
-    
-    // Copilot Inputs
+    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_STICK_CLICK;
+
+    static const EastTech::Controller::PovDirections  DRIVE_CONTROLS_SWERVE_FORWARD_SLOW_POV     = EastTech::Controller::PovDirections::POV_UP;
+    static const EastTech::Controller::PovDirections  DRIVE_CONTROLS_SWERVE_REVERSE_SLOW_POV     = EastTech::Controller::PovDirections::POV_DOWN;
+    static const EastTech::Controller::PovDirections  DRIVE_CONTROLS_SWERVE_LEFT_OR_CCW_SLOW_POV = EastTech::Controller::PovDirections::POV_LEFT;
+    static const EastTech::Controller::PovDirections  DRIVE_CONTROLS_SWERVE_RIGHT_OR_CW_SLOW_POV = EastTech::Controller::PovDirections::POV_RIGHT;
+
+
+    // Aux inputs
     static const int                ESTOP_BUTTON                            = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
 
-    // CAN Signals
-    // Note: Remember to check the CAN IDs in use in SwerveDrive.hpp.
-    // Superstructure uses IDs starting at 21
+    // CAN RIO Signals
+    // Note: When using swerve drive, the swerve devices are expected
+    //       to be on the CANivore bus (see IDs below).  When using
+    //       differential drive, check the IDs in DifferentialDrive.hpp.
+    //       In general, unique CAN IDs are used regardless of CAN bus
+    //       to avoid confusion.  The super structure IDs start at 31.
+    // (none)
 
     // CANivore Signals
-    // Note: IDs 21-24 are used by the CANcoders (see the
-    //       SwerveModuleConfigs in SwerveDrive.hpp).
+    // Note: IDs 11-18 are used by the swerve module motors.
+    //       IDs 21-24 are used by the CANcoders.
+    //       See the SwerveModuleConfigs in SwerveConfig.hpp.
     static const int                PIGEON_CAN_ID                           = 25;
     static const int                CANDLE_CAN_ID                           = 26;
 
     // PWM Signals
     // (none)
-    
+
     // Relays
     // (none)
-    
+
     // Digital I/O Signals
-    static const int                DEBUG_OUTPUT_DIO_CHANNEL                = 7;
-    
+    static const int                SENSOR_TEST_CODE_DIO_CHANNEL            = 8;
+    static const int                DEBUG_OUTPUT_DIO_CHANNEL                = 9;
+
     // Analog I/O Signals
     // (none)
-    
-    // Solenoid Signals
-    // (none)
 
-    // Solenoids
+    // Solenoid Signals
     // (none)
 
     // Motor speeds and angles
     // (none)
-    
+
     // Misc
     const std::string               AUTO_NO_ROUTINE_STRING                  = "No autonomous routine";
-    const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous Routine 1";
-    const std::string               AUTO_ROUTINE_2_STRING                   = "Autonomous Routine 2";
-    const std::string               AUTO_ROUTINE_3_STRING                   = "Autonomous Routine 3";
-    const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous Test Routine";
-    static const int                OFF                                     = 0;
-    static const int                ON                                      = 1;
-    static const int                ANGLE_90_DEGREES                        = 90;
-    static const int                ANGLE_180_DEGREES                       = 180;
-    static const int                ANGLE_360_DEGREES                       = 360;
-    static const int                POV_INPUT_TOLERANCE_VALUE               = 30;
+    const std::string               AUTO_ROUTINE_1_STRING                   = "Autonomous routine 1";
+    const std::string               AUTO_ROUTINE_2_STRING                   = "Autonomous routine 2";
+    const std::string               AUTO_ROUTINE_3_STRING                   = "Autonomous routine 3";
+    const std::string               AUTO_TEST_ROUTINE_STRING                = "Autonomous test routine";
+
     static const int                SCALE_TO_PERCENT                        = 100;
     static const unsigned           SINGLE_MOTOR                            = 1;
     static const unsigned           TWO_MOTORS                              = 2;
-    static const unsigned           THREE_MOTORS                            = 3;
-    static const unsigned           NUMBER_OF_LEDS                          = 8;
-    static const char               NULL_CHARACTER                          = '\0';
+    static const unsigned           NUMBER_OF_LEDS                          = 0 + 8;
 
-    static const unsigned           CAMERA_RUN_INTERVAL_MS                  = 1000U;
-    
-    static constexpr double         JOYSTICK_TRIM_UPPER_LIMIT               =  0.10;
-    static constexpr double         JOYSTICK_TRIM_LOWER_LIMIT               = -0.10;
-    static constexpr double         SWERVE_ROTATE_SLOW_JOYSTICK_THRESHOLD   =  0.10;
+    static constexpr double         JOYSTICK_AXIS_INPUT_DEAD_BAND           =  0.10;
+    static constexpr double         DRIVE_TRIM_UPPER_LIMIT                  =  0.05;
+    static constexpr double         DRIVE_TRIM_LOWER_LIMIT                  = -0.05;
     static constexpr double         SWERVE_DRIVE_SLOW_SPEED                 =  0.10;
     static constexpr double         SWERVE_ROTATE_SLOW_SPEED                =  0.10;
-    static constexpr double         AXIS_INPUT_DEAD_BAND                    =  0.10;
-
-    static constexpr units::second_t    SAFETY_TIMER_MAX_VALUE_S            =  5.00_s;
-
-
-    // The below code/equations are for arcade drive, not swerve drive.
-
-    // These indicate which motor value (+1/-1) represent
-    // forward/reverse in the robot.  They are used to keep
-    // autonomous movement code common without yearly updates.
-
-    static constexpr double         LEFT_DRIVE_FORWARD_SCALAR               = -1.00;
-    static constexpr double         LEFT_DRIVE_REVERSE_SCALAR               = +1.00;
-    static constexpr double         RIGHT_DRIVE_FORWARD_SCALAR              = +1.00;
-    static constexpr double         RIGHT_DRIVE_REVERSE_SCALAR              = -1.00;
-
-    ////////////////////////////////////////////////////////////////
-    // Inputs from joystick:
-    //
-    // Forward:     (0, -1)
-    // Reverse:     (0, +1)
-    // Left:        (-1, 0)
-    // Right:       (+1, 0)
-    //
-    // Equations:
-    //
-    //     x+y   x-y   -x+y   -x-y
-    // F:   -1    +1     -1     +1
-    // B:   +1    -1     +1     -1
-    // L:   -1    -1     +1     +1
-    // R:   +1    +1     -1     -1
-    //
-    // Output to motors:
-    //
-    // Left forward/right = +1, Right forward/left  = +1:
-    // Left reverse/left  = -1, Right reverse/right = -1:
-    // x-y, -x-y
-    //
-    // Left forward/right = -1, Right forward/left  = -1:
-    // Left reverse/left  = +1, Right reverse/right = +1:
-    // -x+y, x+y
-    //
-    // Left forward/right = +1, Right forward/left  = -1:
-    // Left reverse/left  = -1, Right reverse/right = +1:
-    // x-y, x+y
-    //
-    // Left forward/right = -1, Right forward/left  = +1:
-    // Left reverse/left  = +1, Right reverse/right = -1:
-    // -x+y, -x-y
-    ////////////////////////////////////////////////////////////////
-
-    inline static constexpr double LeftDriveEquation(double xInput, double yInput)
-    {
-        double leftValue = 0.0;
-
-        if (static_cast<int>(LEFT_DRIVE_FORWARD_SCALAR) == 1)
-        {
-            leftValue = xInput - yInput;
-        }
-        else
-        {
-            leftValue = -xInput + yInput;
-        }
-        
-        return leftValue;
-    }
-
-    inline static constexpr double RightDriveEquation(double xInput, double yInput)
-    {
-        double rightValue = 0.0;
-
-        if (static_cast<int>(RIGHT_DRIVE_FORWARD_SCALAR) == 1)
-        {
-            rightValue = -xInput - yInput;
-        }
-        else
-        {
-            rightValue = xInput + yInput;
-        }
-        
-        return rightValue;
-    }
-
 };  // End class
-
-
-
-////////////////////////////////////////////////////////////////
-/// @method EastTechRobot::SetLedsToAllianceColor
-///
-/// Sets the LEDs to the alliance color.
-///
-////////////////////////////////////////////////////////////////
-inline void EastTechRobot::SetLedsToAllianceColor()
-{
-    switch (m_AllianceColor.value())
-    {
-        case DriverStation::Alliance::kRed:
-        {
-            constexpr const RGBWColor RGBW_RED{255, 0, 0, 0};
-            m_pCandle->SetControl(m_LedStripSolidColor.WithColor(RGBW_RED));
-            break;
-        }
-        case DriverStation::Alliance::kBlue:
-        {
-            constexpr const RGBWColor RGBW_BLUE{0, 0, 255, 0};
-            m_pCandle->SetControl(m_LedStripSolidColor.WithColor(RGBW_BLUE));
-            break;
-        }
-        default:
-        {
-            break;
-        }
-    }
-}
 
 
 

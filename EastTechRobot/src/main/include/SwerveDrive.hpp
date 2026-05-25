@@ -100,6 +100,58 @@ public:
         }
     }
 
+
+    // The rest of the public declarations are intended for use by autonomous actions
+    enum class RobotTranslation
+    {
+        ROBOT_TRANSLATION_NONE,
+        ROBOT_TRANSLATION_FORWARD,
+        ROBOT_TRANSLATION_REVERSE
+    };
+
+    enum class RobotStrafe
+    {
+        ROBOT_STRAFE_NONE,
+        ROBOT_STRAFE_LEFT,
+        ROBOT_STRAFE_RIGHT
+    };
+
+    enum class RobotRotation
+    {
+        ROBOT_ROTATION_NONE,
+        ROBOT_ROTATION_CLOCKWISE,
+        ROBOT_ROTATION_COUNTER_CLOCKWISE
+    };
+
+    struct SwerveDirections
+    {
+      public:
+        SwerveDirections() : m_Translation(RobotTranslation::ROBOT_TRANSLATION_NONE), m_Strafe(RobotStrafe::ROBOT_STRAFE_NONE), m_Rotation(RobotRotation::ROBOT_ROTATION_NONE) {}
+        SwerveDirections(RobotTranslation translationDirection, RobotStrafe strafeDirection, RobotRotation rotationDirection) : m_Translation(translationDirection), m_Strafe(strafeDirection), m_Rotation(rotationDirection) {}
+
+        inline void SetSwerveDirections(RobotTranslation translationDirection, RobotStrafe strafeDirection, RobotRotation rotationDirection)
+        {
+            m_Translation = translationDirection;
+            m_Strafe = strafeDirection;
+            m_Rotation = rotationDirection;
+        }
+
+        inline RobotTranslation GetTranslation() { return m_Translation; }
+        inline RobotStrafe GetStrafe() { return m_Strafe; }
+        inline RobotRotation GetRotation() { return m_Rotation; }
+
+      private:
+        RobotTranslation m_Translation;
+        RobotStrafe m_Strafe;
+        RobotRotation m_Rotation;
+    };
+
+    // Autonomous drive for a specified time
+    void AutonomousDrive(SwerveDirections & rSwerveDirections, double translationSpeed, double strafeSpeed, double rotateSpeed, units::second_t time, bool bFieldRelative);
+
+    // Autonomous drive for a specified angle
+    void AutonomousRotateByGyro(RobotRotation robotRotation, double rotateDegrees, double rotateSpeed, bool bFieldRelative);
+
 private:
     wpi::array<SwerveModulePosition, SwerveConfig::NUM_SWERVE_DRIVE_MODULES> GetModulePositions();
 

@@ -20,6 +20,7 @@
 #include "frc/smartdashboard/SmartDashboard.h"          // for interacting with the smart dashboard
 
 // C++ INCLUDES
+#include "RobotUtils.hpp"                               // for ASSERT
 #include "SwerveConfig.hpp"                             // for swerve configuration and constants
 #include "SwerveDrive.hpp"                              // for class declaration
 
@@ -44,6 +45,10 @@ SwerveDrive::SwerveDrive(Pigeon2 * pPigeon, const std::function<const CANBus&(st
     m_Odometry(SwerveConfig::Kinematics, Rotation2d(units::degree_t(0)), GetModulePositions())
 {
     m_pPigeon->SetYaw(0.0_deg);
+
+    // Sanity check that these were set in SwerveConfig.hpp
+    ASSERT(SwerveConfig::WHEEL_BASE != 0.0_m);
+    ASSERT(SwerveConfig::TRACK_WIDTH != 0.0_m);
 }
 
 
@@ -184,4 +189,123 @@ void SwerveDrive::UpdateSmartDashboard()
     {
         m_SwerveModules[i].UpdateSmartDashboard();
     }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method SwerveDrive::AutonomousDriveSequence
+///
+/// Drives autonomously for a specified amount of time.
+///
+////////////////////////////////////////////////////////////////
+void SwerveDrive::AutonomousDrive(SwerveDirections & rSwerveDirections, double translationSpeed, double strafeSpeed, double rotateSpeed, units::second_t time, bool bFieldRelative)
+{
+    units::meter_t translation = 0.0_m;
+    units::meter_t strafe = 0.0_m;
+
+    switch (rSwerveDirections.GetTranslation())
+    {
+        case RobotTranslation::ROBOT_TRANSLATION_FORWARD:
+        {
+            translation = units::meter_t(translationSpeed);
+            break;
+        }
+        case RobotTranslation::ROBOT_TRANSLATION_REVERSE:
+        {
+            translation = units::meter_t(-translationSpeed);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    switch (rSwerveDirections.GetStrafe())
+    {
+        case RobotStrafe::ROBOT_STRAFE_LEFT:
+        {
+            strafe = units::meter_t(strafeSpeed);
+            break;
+        }
+        case RobotStrafe::ROBOT_STRAFE_RIGHT:
+        {
+            strafe = units::meter_t(-strafeSpeed);
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
+
+    switch (rSwerveDirections.GetRotation())
+    {
+        case RobotRotation::ROBOT_ROTATION_NONE:
+        {
+            // Just in case the user decided to pass a speed anyway
+            rotateSpeed = 0.0;
+            break;
+        }
+        case RobotRotation::ROBOT_ROTATION_CLOCKWISE:
+        {
+            rotateSpeed *= -1.0;
+            break;
+        }
+        case RobotRotation::ROBOT_ROTATION_COUNTER_CLOCKWISE:
+        default:
+        {
+            break;
+        }
+    }
+
+    Translation2d translation2d = {translation, strafe};
+    units::second_t duration = 0.0_s;
+    while (duration < time)
+    {
+        SetModuleStates(translation2d, rotateSpeed, bFieldRelative, true);
+
+        static constexpr units::second_t SWERVE_OP_STEP_TIME_S      =  0.10_s;
+        Wait(SWERVE_OP_STEP_TIME_S);
+        duration += SWERVE_OP_STEP_TIME_S;
+    }
+
+    // Stop motion
+    SetModuleStates({0_m, 0_m}, 0.0, true, true);
+
+    // Clear the swerve directions to prevent the caller from
+    // accidentally reusing them without explicitly setting them again.
+    rSwerveDirections.SetSwerveDirections(RobotTranslation::ROBOT_TRANSLATION_NONE, RobotStrafe::ROBOT_STRAFE_NONE, RobotRotation::ROBOT_ROTATION_NONE);
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method SwerveDrive::AutonomousRotateByGyro
+///
+/// Turns the robot autonomously by the gyro.
+///
+////////////////////////////////////////////////////////////////
+void SwerveDrive::AutonomousRotateByGyro(RobotRotation robotRotation, double rotateDegrees, double rotateSpeed, bool bFieldRelative)
+{
+    double startingGyroAngle = m_pPigeon->GetYaw().GetValueAsDouble();
+
+    while (std::abs(m_pPigeon->GetYaw().GetValueAsDouble() - startingGyroAngle) <= rotateDegrees)
+    {
+        if (robotRotation == RobotRotation::ROBOT_ROTATION_CLOCKWISE)
+        {
+            SetModuleStates({0.0_m, 0.0_m}, rotateSpeed, bFieldRelative, true);
+        }
+        else if (robotRotation == RobotRotation::ROBOT_ROTATION_COUNTER_CLOCKWISE)
+        {
+            SetModuleStates({0.0_m, 0.0_m}, -rotateSpeed, bFieldRelative, true);
+        }
+        else
+        {
+        }
+    }
+
+    // Stop motion
+    SetModuleStates({0_m, 0_m}, 0.0, true, true);
 }
