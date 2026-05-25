@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a Neo swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef NEOSWERVEMODULE_HPP
@@ -15,6 +15,7 @@
 #include <cmath>                                        // for M_PI
 
 // C INCLUDES
+#include "ctre/phoenix6/CANBus.hpp"                     // for CTRE CANBus API
 #include "ctre/phoenix6/CANcoder.hpp"                   // for CTRE CANcoder API
 #include "frc/controller/SimpleMotorFeedForward.h"      // for feedforward control
 #include "frc/kinematics/SwerveModulePosition.h"        // for struct declaration
@@ -27,6 +28,7 @@
 // C++ INCLUDES
 #include "SwerveConfig.hpp"                             // for ModuleInformation structure
 
+using namespace ctre::phoenix6;
 using namespace ctre::phoenix6::configs;
 using namespace ctre::phoenix6::controls;
 using namespace ctre::phoenix6::hardware;
@@ -48,7 +50,7 @@ class NeoSwerveModule
 
 private:
     // Constructor
-    NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo);
+    NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo, const std::function<const CANBus&(std::string_view)>& rGetCanBusReferenceLambda);
 
     // Point the module to zero degrees (forward)
     void HomeModule();

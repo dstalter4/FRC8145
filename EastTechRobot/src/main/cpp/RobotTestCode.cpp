@@ -6,7 +6,7 @@
 /// Implementation of the EastTechRobot test functions.  This keeps official
 /// stable robot code isolated.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -162,55 +162,6 @@ void EastTechRobotTest::InitializeCommonPointers()
 ////////////////////////////////////////////////////////////////
 void EastTechRobotTest::QuickTestCode()
 {
-/*
-    // @todo_2025: Port this to the new APIs
-
-    // Rev only allows creating one motor object with a CAN ID.
-    // Disable the actual swerve object creation.
-    static CANSparkMax * m_pDriveSpark = new CANSparkMax(4, CANSparkLowLevel::MotorType::kBrushless);
-    static CANSparkMax * m_pAngleSpark = new CANSparkMax(3, CANSparkLowLevel::MotorType::kBrushless);
-    static SparkRelativeEncoder m_DriveSparkEncoder = m_pDriveSpark->GetEncoder();
-    static SparkRelativeEncoder m_AngleSparkEncoder = m_pAngleSpark->GetEncoder();
-    static SparkPIDController m_DrivePidController = m_pDriveSpark->GetPIDController();
-    static SparkPIDController m_AnglePidController = m_pAngleSpark->GetPIDController();
-    static CANcoder * m_pAngleCanCoder = new CANcoder(2, "canivore-8145");
-    static bool bInit = false;
-    
-    if (!bInit)
-    {
-        m_pAngleSpark->RestoreFactoryDefaults();
-        m_pAngleSpark->SetSmartCurrentLimit(20);
-        m_pAngleSpark->SetInverted(false);
-        m_pAngleSpark->SetIdleMode(CANSparkMax::IdleMode::kCoast);
-        m_AngleSparkEncoder.SetPositionConversionFactor(360.0 / SwerveConfig::ANGLE_GEAR_RATIO);
-        m_AnglePidController.SetP(0.028);
-        m_AnglePidController.SetI(0.000);
-        m_AnglePidController.SetD(0.0015);
-        m_AnglePidController.SetFF(0.000);
-        m_pAngleSpark->EnableVoltageCompensation(12.0);
-        m_pAngleSpark->BurnFlash();
-
-        CANcoderConfiguration canCoderConfig;
-        canCoderConfig.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue::Unsigned_0To1;
-        canCoderConfig.MagnetSensor.SensorDirection = SensorDirectionValue::CounterClockwise_Positive;
-        (void)m_pAngleCanCoder->GetConfigurator().Apply(canCoderConfig);
-        
-        bInit = true;
-        double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - 144.932;
-        SmartDashboard::PutNumber("Debug A", m_AngleSparkEncoder.GetPosition());
-        SmartDashboard::PutNumber("Debug B", absolutePositionDelta);
-        m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
-        m_AnglePidController.SetReference(0.0, CANSparkMax::ControlType::kPosition);
-    }
-
-    // 2024 Team 8145 Neo Config (Bevels Right)
-    // FL: 5-6-3, 190.459
-    // FR: 3-4-2, 144.932
-    // BL: 7-8-4, 127.178
-    // BR: 1-2-1, 191.602
-    SmartDashboard::PutNumber("Debug C", m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble());
-    SmartDashboard::PutNumber("Debug D", m_AngleSparkEncoder.GetPosition());
-*/
 }
 
 
@@ -375,8 +326,7 @@ void EastTechRobotTest::SwerveDriveTest()
     // Tests returning modules to absolute reference angles
     if (EASTTECH_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(4))
     {
-        // Not available yet
-        //EASTTECH_ROBOT_OBJ()->m_pSwerveDrive->HomeModules();
+        pSwerveDrive->HomeModules();
     }
 
     // Dynamically switch between field relative and robot centric

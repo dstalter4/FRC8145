@@ -3,10 +3,9 @@
 /// @author David Stalter
 ///
 /// @details
-/// A class designed to work with a group of CAN Talon speed controllers working
-/// in tandem.
+/// Custom functionality for easier robot programming of CTRE Talon controllers.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef EASTTECHTALON_HPP
@@ -16,13 +15,15 @@
 #include <cstdio>                               // for std::snprintf
 
 // C INCLUDES
-#include "ctre/phoenix6/TalonFX.hpp"            // for CTRE TalonFX API
 #include "frc/smartdashboard/SmartDashboard.h"  // for interacting with the smart dashboard
 
 // C++ INCLUDES
 #include "RobotUtils.hpp"                       // for ConvertCelsiusToFahrenheit
+#include "ctre/phoenix6/CANBus.hpp"             // for working with CANBus objects
+#include "ctre/phoenix6/TalonFX.hpp"            // for CTRE TalonFX API
 
 using namespace frc;
+using namespace ctre::phoenix6;
 using namespace ctre::phoenix6::configs;
 using namespace ctre::phoenix6::controls;
 using namespace ctre::phoenix6::hardware;
@@ -30,15 +31,13 @@ using namespace ctre::phoenix6::signals;
 
 
 ////////////////////////////////////////////////////////////////
-/// @namespace EastTechTalon
+/// @namespace EastTech::Talon
 ///
 /// Namespace that contains declarations for interacting with
 /// Talon speed controllers specific to East Tech.
 ///
 ////////////////////////////////////////////////////////////////
-namespace EastTech
-{
-namespace Talon
+namespace EastTech::Talon
 {
     // Represents how a motor will be controlled
     enum MotorGroupControlMode
@@ -53,26 +52,33 @@ namespace Talon
         CUSTOM                  // Motor needs to be set later to an option above
     };
 
+    // @todo: This could be templated if other Talon motor controllers are used (e.g. TalonFXS).
     // Represents a combination of objects to use with a TalonFX motor controller
-    struct TalonFxMotorController
+    class TalonFxMotorController
     {
-        // The Phoenix 6 API requires using different objects with SetControl()
-        // function calls.  Create different possible objects to the main robot
-        // code doesn't have to worry about it.
-        TalonFX * m_pTalonFx;
-        DutyCycleOut m_DutyCycleOut;
-        PositionVoltage m_PositionVoltage;
-        TalonFXConfiguration m_MotorConfiguration;
-
+      public:
         // Constructor
-        TalonFxMotorController(int canId) :
-            m_pTalonFx(new TalonFX(canId)),
+        TalonFxMotorController(uint32_t canId, CANBus & rCanBus) :
+            m_pTalonFx(new TalonFX(static_cast<int>(canId), rCanBus)),
+            m_MotorConfiguration(),
             m_DutyCycleOut(0.0),
             m_PositionVoltage(0.0_tr),
-            m_MotorConfiguration()
+            m_LastOutputValue(0.0)
         {
             m_pTalonFx->GetConfigurator().Apply(m_MotorConfiguration);
             m_pTalonFx->ClearStickyFaults();
+        }
+
+        // Retrieve a specific motor object
+        TalonFX * GetMotorObject()
+        {
+            return m_pTalonFx;
+        }
+
+        // Retrieve the configuration for a specific motor object
+        TalonFXConfiguration * GetMotorConfiguration()
+        {
+            return &m_MotorConfiguration;
         }
 
         // Applies the struct-local configuration, which may have been updated externally
@@ -95,47 +101,83 @@ namespace Talon
         // Set the output using duty cycle
         void SetDutyCycle(double dutyCycle)
         {
-            (void)m_pTalonFx->SetControl(m_DutyCycleOut.WithOutput(dutyCycle));
+            // To conserve CAN bus utilization, only send a value if it has changed
+            if (dutyCycle != m_LastOutputValue)
+            {
+                (void)m_pTalonFx->SetControl(m_DutyCycleOut.WithOutput(dutyCycle));
+                m_LastOutputValue = dutyCycle;
+            }
         }
 
         // Set the output to hold a specified position
-        void SetPositionVoltage(double angle)
+        void SetPositionVoltage(units::angle::degree_t angleToSetDegrees)
         {
-            units::angle::degree_t degrees(angle);
-            units::angle::turn_t turns(degrees);
-            (void)m_pTalonFx->SetControl(m_PositionVoltage.WithPosition(turns));
+            // To conserve CAN bus utilization, only send a value if it has changed
+            if (angleToSetDegrees.value() != m_LastOutputValue)
+            {
+                units::angle::turn_t turns(angleToSetDegrees);
+                (void)m_pTalonFx->SetControl(m_PositionVoltage.WithPosition(turns));
+                m_LastOutputValue = angleToSetDegrees.value();
+            }
         }
+
+        // Set a tone to play on the motor
+        void SetTone(MusicTone musicTone)
+        {
+            (void)m_pTalonFx->SetControl(musicTone);
+        }
+
+      private:
+        // The Phoenix 6 API requires using different objects with SetControl()
+        // function calls.  Create different possible objects so the main robot
+        // code doesn't have to worry about it.
+        TalonFX * m_pTalonFx;
+        TalonFXConfiguration m_MotorConfiguration;
+        DutyCycleOut m_DutyCycleOut;
+        PositionVoltage m_PositionVoltage;
+        double m_LastOutputValue;
     };
 
-    // A structure that doesn't create real TalonFX objects.
+
+
+    // A structure that doesn't create real motor controller objects.
     // Intended to be used to keep multiple robot configuration
-    // options available (i.e. interchange with TalonMotorGroup).
-    struct EmptyTalonFx
+    // options available (i.e. interchange within TalonMotorGroup).
+    class EmptyTalon
     {
-        EmptyTalonFx(const char *, unsigned, unsigned, MotorGroupControlMode, NeutralModeValue, bool) {}
+      public:
+        EmptyTalon(const char *, uint32_t, uint32_t, MotorGroupControlMode, NeutralModeValue, const CANBus &) {}
 
         // TalonMotorGroup stubs
-        inline void Set(double) {}
-        inline void Set(double, double) {}
+        inline void SetDutyCycle(double) {}
+        inline void SetDutyCycle(double, double) {}
         inline void DisplayStatusInformation() {}
-        inline EmptyTalonFx * GetMotorObject(unsigned) { return &m_EmptyTalonFxObj; }
+        inline EmptyTalon * GetMotorObject(uint32_t) { return &m_EmptyTalonObj; }
 
-        // TalonFX stubs
+        // CTRE stubs
         template <typename Type>
         inline void Apply(Type) {}
         inline void SetPosition(units::angle::turn_t) {}
-        inline EmptyTalonFx & GetPosition() { return m_EmptyTalonFxObj; }
-        inline EmptyTalonFx & GetConfigurator() { return m_EmptyTalonFxObj; }
-        inline EmptyTalonFx & GetValue() { return m_EmptyTalonFxObj; }
+        inline EmptyTalon & GetPosition() { return m_EmptyTalonObj; }
+        inline EmptyTalon & GetConfigurator() { return m_EmptyTalonObj; }
+        inline EmptyTalon & GetValue() { return m_EmptyTalonObj; }
         inline double value() { return 0.0; }
 
+      private:
         // Singleton
-        static EmptyTalonFx m_EmptyTalonFxObj;
+        static EmptyTalon m_EmptyTalonObj;
     };
+}
 
-    static const bool CURRENT_LIMITING_ENABLED = false;
-}
-}
+
+
+
+
+////////////////////////////////////////////////////////////////
+/// Separation of single motor and group motor code.
+////////////////////////////////////////////////////////////////
+
+
 
 
 
@@ -148,62 +190,61 @@ namespace Talon
 /// @todo: Remove template.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
+template <class TalonType, class TalonConfigurationType>
 class TalonMotorGroup
 {
 public:
 
     typedef EastTech::Talon::MotorGroupControlMode MotorGroupControlMode;
-    
+
     // Constructor
     TalonMotorGroup(
                      const char * pName,
-                     unsigned numMotors,
-                     unsigned leaderCanId,
+                     uint32_t numMotors,
+                     uint32_t leaderCanId,
                      MotorGroupControlMode nonLeaderControlMode,
                      NeutralModeValue neutralMode,
-                     bool bIsDriveMotor = false
+                     CANBus & rCanBus
                    );
 
     // Retrieve a specific motor object
-    TalonType * GetMotorObject(unsigned canId = GROUP_LEADER_CAN_ID);
+    TalonType * GetMotorObject(uint32_t canId = GROUP_LEADER_PSEUDO_CAN_ID);
 
-    // @todo: This breaks the template parameter since it assumes TalonFX.
     // Retrieve the configuration for a specific motor object
-    TalonFXConfiguration * GetMotorConfiguration(unsigned canId = GROUP_LEADER_CAN_ID);
+    TalonConfigurationType * GetMotorConfiguration(uint32_t canId = GROUP_LEADER_PSEUDO_CAN_ID);
 
     // Applies the struct-local configuration, which may have been updated externally
-    void ApplyConfiguration(unsigned canId = APPLY_TO_ALL_PSEUDO_CAN_ID);
+    void ApplyConfiguration(uint32_t canId = APPLY_TO_ALL_PSEUDO_CAN_ID);
 
     // Applies a configuration.  This will not update the struct-local
     // configuration and directly overwrites the configuration on the device.
     // Template type must match CTRE options.
     template <typename ConfigType>
-    void ApplyConfiguration(ConfigType config, unsigned canId = APPLY_TO_ALL_PSEUDO_CAN_ID);
+    void ApplyConfiguration(ConfigType config, uint32_t canId = APPLY_TO_ALL_PSEUDO_CAN_ID);
+
+    // Function to set the speed of each motor in the group
+    void SetDutyCycle(double value, double offset = 0.0);
+
+    // Function to set the motor group output to hold specified angle
+    void SetPositionVoltage(units::angle::degree_t angleToSetDegrees);
 
     // Adds a new motor to a group
-    bool AddMotorToGroup(MotorGroupControlMode controlMode, bool bIsDriveMotor = false);
-    
-    // Function to set the speed of each motor in the group
-    void Set(double value, double offset = 0.0);
-    
-    // Function to set the motor group output to hold specified angle
-    void SetAngle(double angle);
-    
+    bool AddMotorToGroup(MotorGroupControlMode controlMode);
+
     // Sets the control mode of a motor in a group (intended for use with the CUSTOM group control mode)
-    bool SetMotorInGroupControlMode(unsigned canId, MotorGroupControlMode controlMode);
-    
+    bool SetMotorInGroupControlMode(uint32_t canId, MotorGroupControlMode controlMode);
+
     // Change Talon mode between brake/coast
     void SetCoastMode();
     void SetBrakeMode();
-    
+
     // Return the value of the sensor connected to the Talon
     int GetEncoderValue();
     void TareEncoder();
 
     // Displays information to the driver station about the motor group
     void DisplayStatusInformation();
-    
+
 private:
 
     // Represents information about a single motor in a group
@@ -212,7 +253,7 @@ private:
         // Storage space for strings for the smart dashboard
         struct DisplayStrings
         {
-            static const unsigned MAX_MOTOR_DISPLAY_STRING_LENGTH = 64U;
+            static const uint32_t MAX_MOTOR_DISPLAY_STRING_LENGTH = 64U;
             char m_CurrentTemperatureString[MAX_MOTOR_DISPLAY_STRING_LENGTH];
             char m_HighestTemperatureString[MAX_MOTOR_DISPLAY_STRING_LENGTH];
             char m_ResetOccurredString[MAX_MOTOR_DISPLAY_STRING_LENGTH];
@@ -222,18 +263,17 @@ private:
         TalonType * m_pTalon;
         DutyCycleOut m_DutyCycleOut;
         PositionVoltage m_PositionVoltage;
-        TalonFXConfiguration m_MotorConfiguration;
+        TalonConfigurationType m_MotorConfiguration;
         const char * m_pName;
         MotorGroupControlMode m_ControlMode;
-        unsigned m_CanId;
+        uint32_t m_CanId;
         double m_CurrentTemperature;
         double m_HighestTemperature;
         bool m_bResetOccurred;
-        bool m_bIsDriveMotor;
         DisplayStrings m_DisplayStrings;
-        
-        MotorInfo(const char * pName, MotorGroupControlMode controlMode, NeutralModeValue neutralMode, unsigned canId, unsigned groupNumber, bool bIsDriveMotor = false) :
-            m_pTalon(new TalonType(static_cast<int>(canId))),
+
+        MotorInfo(const char * pName, MotorGroupControlMode controlMode, NeutralModeValue neutralMode, CANBus & rCanBus, uint32_t canId, uint32_t idNumberInGroup) :
+            m_pTalon(new TalonType(static_cast<int>(canId), rCanBus)),
             m_DutyCycleOut(0.0),
             m_PositionVoltage(0.0_tr),
             m_MotorConfiguration(),
@@ -242,37 +282,25 @@ private:
             m_CanId(canId),
             m_CurrentTemperature(0.0),
             m_HighestTemperature(0.0),
-            m_bResetOccurred(false),
-            m_bIsDriveMotor(bIsDriveMotor)
+            m_bResetOccurred(false)
         {
             m_MotorConfiguration.MotorOutput.NeutralMode = neutralMode;
 
-            if (controlMode == EastTech::Talon::FOLLOW_INVERSE)
+            if (controlMode == MotorGroupControlMode::FOLLOW_INVERSE)
             {
                 m_MotorConfiguration.MotorOutput.Inverted = true;
             }
 
-            // @todo: Move in sensor too?
-            if (EastTech::Talon::CURRENT_LIMITING_ENABLED && bIsDriveMotor)
-            {
-                // Limits were 40.0, 55.0, 0.1
-                m_MotorConfiguration.CurrentLimits.SupplyCurrentLowerLimit = 55.0_A;
-                m_MotorConfiguration.CurrentLimits.SupplyCurrentLimit = 60.0_A;
-                m_MotorConfiguration.CurrentLimits.SupplyCurrentLowerTime = 0.1_s;
-                m_MotorConfiguration.CurrentLimits.SupplyCurrentLimitEnable = true;
-            }
-
-            (void)m_pTalon->GetConfigurator().Apply(m_MotorConfiguration);
             m_pTalon->ClearStickyFaults();
 
             // Build the strings to use in the display method
-            std::snprintf(&m_DisplayStrings.m_CurrentTemperatureString[0], DisplayStrings::MAX_MOTOR_DISPLAY_STRING_LENGTH, "%s #%u %s", m_pName, groupNumber, "temperature (F)");
-            std::snprintf(&m_DisplayStrings.m_HighestTemperatureString[0], DisplayStrings::MAX_MOTOR_DISPLAY_STRING_LENGTH, "%s #%u %s", m_pName, groupNumber, "highest temperature (F)");
-            std::snprintf(&m_DisplayStrings.m_ResetOccurredString[0], DisplayStrings::MAX_MOTOR_DISPLAY_STRING_LENGTH, "%s #%u %s", m_pName, groupNumber, "reset occurred");
+            std::snprintf(&m_DisplayStrings.m_CurrentTemperatureString[0], DisplayStrings::MAX_MOTOR_DISPLAY_STRING_LENGTH, "%s #%u %s", m_pName, idNumberInGroup, "temperature (F)");
+            std::snprintf(&m_DisplayStrings.m_HighestTemperatureString[0], DisplayStrings::MAX_MOTOR_DISPLAY_STRING_LENGTH, "%s #%u %s", m_pName, idNumberInGroup, "highest temperature (F)");
+            std::snprintf(&m_DisplayStrings.m_ResetOccurredString[0], DisplayStrings::MAX_MOTOR_DISPLAY_STRING_LENGTH, "%s #%u %s", m_pName, idNumberInGroup, "reset occurred");
         }
 
         // Helper routine for configuring some settings on follower talons
-        void SetAsFollower(unsigned leaderCanId, bool bInvert)
+        void SetAsFollower(uint32_t leaderCanId, bool bInvert)
         {
             // Follower will honor invert control, StrictFollower ignores invert control
             Follower follower(leaderCanId, bInvert);
@@ -283,20 +311,22 @@ private:
         }
     };
 
-    static const unsigned MAX_NUMBER_OF_MOTORS = 4;
-    static const unsigned GROUP_LEADER_CAN_ID = 0xFF;
-    static const unsigned APPLY_TO_ALL_PSEUDO_CAN_ID = 0xFF;
+    static const uint32_t MAX_NUMBER_OF_MOTORS = 4;
+    static const uint32_t GROUP_LEADER_PSEUDO_CAN_ID = 0xFF;
+    static const uint32_t APPLY_TO_ALL_PSEUDO_CAN_ID = 0xFF;
 
     // Member variables
-    unsigned m_NumMotors;                                   // Number of motors in the group
-    unsigned m_LeaderCanId;                                 // Keep track of the CAN ID of the leader Talon in the group
-    // @todo: No array, linked list?
-    MotorInfo * m_pMotorsInfo[MAX_NUMBER_OF_MOTORS];        // The motor objects
-    
-    // Prevent default construction/deletion/copy/assignment
+    uint32_t m_NumMotors;                                   // Number of motors in the group
+    uint32_t m_LeaderCanId;                                 // Keep track of the CAN ID of the leader Talon in the group
+    double m_LastOutputValue;                               // Last value that the output of the group was set to
+    MotorInfo * m_pMotorsInfo[MAX_NUMBER_OF_MOTORS];        // The motor objects (@todo: No array, linked list?)
+    CANBus & m_rCanBus;                                     // The CANBus that the motors in the group are on
+
+    // Prevent default construction/deletion/copy/move/assignment
     TalonMotorGroup();
     ~TalonMotorGroup();
     TalonMotorGroup( const TalonMotorGroup& ) = delete;
+    TalonMotorGroup( const TalonMotorGroup&& ) = delete;
     TalonMotorGroup & operator=( const TalonMotorGroup& ) = delete;
 };
 
@@ -308,19 +338,19 @@ private:
 /// Retrieves a specific Talon motor object from the motor
 /// group.  By default it will return the first motor object in
 /// the group (the leader Talon).  If a CAN ID is specified, it
-/// will retrieve that object instead.  This purpose of this
+/// will retrieve that object instead.  The purpose of this
 /// function is to allow robot code to make specific calls on a
 /// motor object that may only apply to one motor in a group or
 /// a specific motor type since this is a template class.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-TalonType * TalonMotorGroup<TalonType>::GetMotorObject(unsigned canId)
+template <class TalonType, class TalonConfigurationType>
+TalonType * TalonMotorGroup<TalonType, TalonConfigurationType>::GetMotorObject(uint32_t canId)
 {
     TalonType * pTalonObject = nullptr;
 
     // By default, return the first object in the group
-    if (canId == GROUP_LEADER_CAN_ID)
+    if (canId == GROUP_LEADER_PSEUDO_CAN_ID)
     {
         pTalonObject = m_pMotorsInfo[0]->m_pTalon;
     }
@@ -328,7 +358,7 @@ TalonType * TalonMotorGroup<TalonType>::GetMotorObject(unsigned canId)
     else
     {
         // Loop through the motors
-        for (unsigned i = 0U; i < m_NumMotors; i++)
+        for (uint32_t i = 0U; i < m_NumMotors; i++)
         {
             // Check if this is the right motor
             if (m_pMotorsInfo[i]->m_CanId == canId)
@@ -357,13 +387,13 @@ TalonType * TalonMotorGroup<TalonType>::GetMotorObject(unsigned canId)
 /// since this is a template class.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-TalonFXConfiguration * TalonMotorGroup<TalonType>::GetMotorConfiguration(unsigned canId)
+template <class TalonType, class TalonConfigurationType>
+TalonConfigurationType * TalonMotorGroup<TalonType, TalonConfigurationType>::GetMotorConfiguration(uint32_t canId)
 {
-    TalonFXConfiguration * pTalonConfig = nullptr;
+    TalonConfigurationType * pTalonConfig = nullptr;
 
     // By default, return the first object in the group
-    if (canId == GROUP_LEADER_CAN_ID)
+    if (canId == GROUP_LEADER_PSEUDO_CAN_ID)
     {
         pTalonConfig = &(m_pMotorsInfo[0]->m_MotorConfiguration);
     }
@@ -371,7 +401,7 @@ TalonFXConfiguration * TalonMotorGroup<TalonType>::GetMotorConfiguration(unsigne
     else
     {
         // Loop through the motors
-        for (unsigned i = 0U; i < m_NumMotors; i++)
+        for (uint32_t i = 0U; i < m_NumMotors; i++)
         {
             // Check if this is the right motor
             if (m_pMotorsInfo[i]->m_CanId == canId)
@@ -395,13 +425,13 @@ TalonFXConfiguration * TalonMotorGroup<TalonType>::GetMotorConfiguration(unsigne
 /// the group should use the GetMotorConfiguration() function.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-void TalonMotorGroup<TalonType>::ApplyConfiguration(unsigned canId)
+template <class TalonType, class TalonConfigurationType>
+void TalonMotorGroup<TalonType, TalonConfigurationType>::ApplyConfiguration(uint32_t canId)
 {
     // Loop through the motors.  This is slightly inefficient because
     // we can't break out of the loop if we find a match since we have
     // to consider the 'apply to all' case.
-    for (unsigned i = 0U; i < m_NumMotors; i++)
+    for (uint32_t i = 0U; i < m_NumMotors; i++)
     {
         // If the config is applied to all motors in the group, or we found the CAN ID
         if ((canId == APPLY_TO_ALL_PSEUDO_CAN_ID) || (m_pMotorsInfo[i]->m_CanId == canId))
@@ -422,9 +452,9 @@ void TalonMotorGroup<TalonType>::ApplyConfiguration(unsigned canId)
 /// the group should use the GetMotorConfiguration() function.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
+template <class TalonType, class TalonConfigurationType>
 template <typename ConfigType>
-void TalonMotorGroup<TalonType>::ApplyConfiguration(ConfigType config, unsigned canId)
+void TalonMotorGroup<TalonType, TalonConfigurationType>::ApplyConfiguration(ConfigType config, uint32_t canId)
 {
     // For now, don't let this be used
     ASSERT(false);
@@ -432,12 +462,12 @@ void TalonMotorGroup<TalonType>::ApplyConfiguration(ConfigType config, unsigned 
     // Loop through the motors.  This is slightly inefficient because
     // we can't break out of the loop if we find a match since we have
     // to consider the 'apply to all' case.
-    for (unsigned i = 0U; i < m_NumMotors; i++)
+    for (uint32_t i = 0U; i < m_NumMotors; i++)
     {
         // If the config is applied to all motors in the group, or we found the CAN ID
         if ((canId == APPLY_TO_ALL_PSEUDO_CAN_ID) || (m_pMotorsInfo[i]->m_CanId == canId))
         {
-            // This doesn't update the local configuration, which can't be done with the template
+            // This doesn't update the local object configuration, which can't be done with the template
             //m_pMotorsInfo[i]->m_MotorConfiguration.<member> = config;
             (void)m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(config);
         }
@@ -453,36 +483,39 @@ void TalonMotorGroup<TalonType>::ApplyConfiguration(ConfigType config, unsigned 
 /// starting from the CAN ID passed in.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-TalonMotorGroup<TalonType>::TalonMotorGroup(const char * pName, unsigned numMotors, unsigned leaderCanId,
-                                            MotorGroupControlMode nonLeaderControlMode, NeutralModeValue neutralMode, bool bIsDriveMotor) :
+template <class TalonType, class TalonConfigurationType>
+TalonMotorGroup<TalonType, TalonConfigurationType>::TalonMotorGroup(const char * pName, uint32_t numMotors, uint32_t leaderCanId,
+                                            MotorGroupControlMode nonLeaderControlMode, NeutralModeValue neutralMode, CANBus & rCanBus) :
     m_NumMotors(numMotors),
-    m_LeaderCanId(leaderCanId)
+    m_LeaderCanId(leaderCanId),
+    m_LastOutputValue(0.0),
+    m_pMotorsInfo(),
+    m_rCanBus(rCanBus)
 {
     // Loop for each motor to create
-    for (unsigned i = 0U; (i < numMotors) && (i < MAX_NUMBER_OF_MOTORS); i++)
+    for (uint32_t i = 0U; (i < numMotors) && (i < MAX_NUMBER_OF_MOTORS); i++)
     {
-        // Group IDs are used in creating the strings and are not zero based
-        unsigned groupId = i + 1U;
+        // Group ID numbers are used in creating the strings and are not zero based
+        uint32_t idNumberInGroup = i + 1U;
 
         // The leader Talon is unique
         if (i == 0U)
         {
             // Create it
-            m_pMotorsInfo[i] = new MotorInfo(pName, EastTech::Talon::LEADER, neutralMode, leaderCanId, groupId, bIsDriveMotor);
+            m_pMotorsInfo[i] = new MotorInfo(pName, MotorGroupControlMode::LEADER, neutralMode, m_rCanBus, leaderCanId, idNumberInGroup);
         }
         // Non-leader Talons
         else
         {
             // Create it
-            m_pMotorsInfo[i] = new MotorInfo(pName, nonLeaderControlMode, neutralMode, (leaderCanId + i), groupId, bIsDriveMotor);
+            m_pMotorsInfo[i] = new MotorInfo(pName, nonLeaderControlMode, neutralMode, m_rCanBus, (leaderCanId + i), idNumberInGroup);
 
             // Only set follow for Talon groups that will be configured as
             // such.  The CTRE Phoenix library now passes the control mode in
             // the Set() method, so we only need to set the followers here.
-            if ((nonLeaderControlMode == EastTech::Talon::FOLLOW) || (nonLeaderControlMode == EastTech::Talon::FOLLOW_INVERSE))
+            if ((nonLeaderControlMode == MotorGroupControlMode::FOLLOW) || (nonLeaderControlMode == MotorGroupControlMode::FOLLOW_INVERSE))
             {
-                bool bInvert = (nonLeaderControlMode == EastTech::Talon::FOLLOW) ? false : true;
+                bool bInvert = (nonLeaderControlMode == MotorGroupControlMode::FOLLOW) ? false : true;
                 m_pMotorsInfo[i]->SetAsFollower(leaderCanId, bInvert);
             }
         }
@@ -494,11 +527,14 @@ TalonMotorGroup<TalonType>::TalonMotorGroup(const char * pName, unsigned numMoto
 ////////////////////////////////////////////////////////////////
 /// @method TalonMotorGroup::AddMotorToGroup
 ///
-/// Method to add a new motor to a motor group.
+/// Method to add a new motor to a motor group.  Only intended
+/// to be used during robot object construction for atypical
+/// motor groupings (such as three motors with varied control
+/// modes).
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-bool TalonMotorGroup<TalonType>::AddMotorToGroup(MotorGroupControlMode controlMode, bool bIsDriveMotor)
+template <class TalonType, class TalonConfigurationType>
+bool TalonMotorGroup<TalonType, TalonConfigurationType>::AddMotorToGroup(MotorGroupControlMode controlMode)
 {
     bool bResult = false;
 
@@ -506,16 +542,16 @@ bool TalonMotorGroup<TalonType>::AddMotorToGroup(MotorGroupControlMode controlMo
     if (m_NumMotors < MAX_NUMBER_OF_MOTORS)
     {
         // The new motor CAN ID is the first motor's ID + current number of group motors present
-        unsigned newMotorCanId = m_pMotorsInfo[0]->m_CanId + m_NumMotors;
+        uint32_t newMotorCanId = m_pMotorsInfo[0]->m_CanId + m_NumMotors;
 
         // m_NumMotors can be leveraged as the index, as it represents the next unused array element
         // All motors in a group have the same name, so we use the existing one.  Group ID is computed from m_NumMotors.
-        m_pMotorsInfo[m_NumMotors] = new MotorInfo(m_pMotorsInfo[0]->m_pName, controlMode, newMotorCanId, (m_NumMotors + 1), bIsDriveMotor);
-        
+        m_pMotorsInfo[m_NumMotors] = new MotorInfo(m_pMotorsInfo[0]->m_pName, controlMode, m_rCanBus, newMotorCanId, (m_NumMotors + 1));
+
         // If this Talon will be a follower, be sure to call Set() to enable it
-        if ((controlMode == EastTech::Talon::FOLLOW) || (controlMode == EastTech::Talon::FOLLOW_INVERSE))
+        if ((controlMode == MotorGroupControlMode::FOLLOW) || (controlMode == MotorGroupControlMode::FOLLOW_INVERSE))
         {
-            bool bInvert = (controlMode == EastTech::Talon::FOLLOW) ? false : true;
+            bool bInvert = (controlMode == MotorGroupControlMode::FOLLOW) ? false : true;
             m_pMotorsInfo[m_NumMotors]->SetAsFollower(m_LeaderCanId, bInvert);
         }
 
@@ -534,16 +570,19 @@ bool TalonMotorGroup<TalonType>::AddMotorToGroup(MotorGroupControlMode controlMo
 ////////////////////////////////////////////////////////////////
 /// @method TalonMotorGroup::SetMotorInGroupControlMode
 ///
-/// Method to set the control mode of a motor in a group.
+/// Method to set the control mode of a motor in a group.  Only
+/// intended to be used during robot object construction for
+/// atypical motor groupings (such as three motors with varied
+/// control modes).
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, MotorGroupControlMode controlMode)
+template <class TalonType, class TalonConfigurationType>
+bool TalonMotorGroup<TalonType, TalonConfigurationType>::SetMotorInGroupControlMode(uint32_t canId, MotorGroupControlMode controlMode)
 {
     bool bResult = false;
-    
+
     // Search for the correct motor in the group
-    for (unsigned i = 0U; i < m_NumMotors; i++)
+    for (uint32_t i = 0U; i < m_NumMotors; i++)
     {
         // If it matches...
         if (m_pMotorsInfo[i]->m_CanId == canId)
@@ -552,9 +591,9 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
             m_pMotorsInfo[i]->m_ControlMode = controlMode;
 
             // If this Talon will be a follower, be sure to call Set() to enable it
-            if ((controlMode == EastTech::Talon::FOLLOW) || (controlMode == EastTech::Talon::FOLLOW_INVERSE))
+            if ((controlMode == MotorGroupControlMode::FOLLOW) || (controlMode == MotorGroupControlMode::FOLLOW_INVERSE))
             {
-                bool bInvert = (controlMode == EastTech::Talon::FOLLOW) ? false : true;
+                bool bInvert = (controlMode == MotorGroupControlMode::FOLLOW) ? false : true;
                 m_pMotorsInfo[i]->SetAsFollower(m_LeaderCanId, bInvert);
             }
             else
@@ -565,7 +604,7 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
             }
 
             // Update the inverted status.  Only FOLLOW_INVERSE uses the built-in invert.
-            if (controlMode == EastTech::Talon::FOLLOW_INVERSE)
+            if (controlMode == MotorGroupControlMode::FOLLOW_INVERSE)
             {
                 m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput.WithInverted(true);
                 m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i].m_MotorConfiguration.MotorOutput);
@@ -575,7 +614,7 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
                 m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput.WithInverted(false);
                 m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i].m_MotorConfiguration.MotorOutput);
             }
-            
+
             // Indicate success
             bResult = true;
         }
@@ -592,10 +631,10 @@ bool TalonMotorGroup<TalonType>::SetMotorInGroupControlMode(unsigned canId, Moto
 /// Method to change a talon to coast mode.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-void TalonMotorGroup<TalonType>::SetCoastMode()
+template <class TalonType, class TalonConfigurationType>
+void TalonMotorGroup<TalonType, TalonConfigurationType>::SetCoastMode()
 {
-    for (unsigned i = 0U; i < m_NumMotors; i++)
+    for (uint32_t i = 0U; i < m_NumMotors; i++)
     {
         m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput.NeutralMode = NeutralModeValue::Coast;
         m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput);
@@ -610,10 +649,10 @@ void TalonMotorGroup<TalonType>::SetCoastMode()
 /// Method to change a talon to brake mode.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-void TalonMotorGroup<TalonType>::SetBrakeMode()
+template <class TalonType, class TalonConfigurationType>
+void TalonMotorGroup<TalonType, TalonConfigurationType>::SetBrakeMode()
 {
-    for (unsigned i = 0U; i < m_NumMotors; i++)
+    for (uint32_t i = 0U; i < m_NumMotors; i++)
     {
         m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput.NeutralMode = NeutralModeValue::Brake;
         m_pMotorsInfo[i]->m_pTalon->GetConfigurator().Apply(m_pMotorsInfo[i]->m_MotorConfiguration.MotorOutput);
@@ -623,62 +662,57 @@ void TalonMotorGroup<TalonType>::SetBrakeMode()
 
 
 ////////////////////////////////////////////////////////////////
-/// @method TalonMotorGroup::Set
+/// @method TalonMotorGroup::SetDutyCycle
 ///
 /// Method to set the speed of each motor in the group.  The
 /// offset parameter is only valid for motor groups configured
 /// as *_OFFSET.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-void TalonMotorGroup<TalonType>::Set(double value, double offset)
+template <class TalonType, class TalonConfigurationType>
+void TalonMotorGroup<TalonType, TalonConfigurationType>::SetDutyCycle(double value, double offset)
 {
-    for (unsigned i = 0U; i < m_NumMotors; i++)
+    for (uint32_t i = 0U; i < m_NumMotors; i++)
     {
-        // Setting motor values for groups assumes that the first half of
-        // motors in a group should always get the same value, and the second
-        // half of motors in a group could be different (such as inverse or offset).
-        // Keep track of which segment of the motor group this motor is in.
-        
         // Most modes wil need to call Set() later, but some won't
         bool bCallSet = true;
-        
+
         // The value that will be passed to Set()
         double valueToSet = 0.0;
-        
+
         // Check what the control mode of this motor is.  Most CAN Talons
         // will be set to follow, but some may be independent or inverse (such
         // as if they need to drive in different directions).
         switch (m_pMotorsInfo[i]->m_ControlMode)
         {
-            case EastTech::Talon::LEADER:
-            case EastTech::Talon::INDEPENDENT:
+            case MotorGroupControlMode::LEADER:
+            case MotorGroupControlMode::INDEPENDENT:
             {
                 // The leader always gets set via duty cycle, as do motors
                 // that are independently controlled (not follow or inverse).
                 valueToSet = value;
                 break;
             }
-            case EastTech::Talon::FOLLOW:
-            case EastTech::Talon::FOLLOW_INVERSE:
+            case MotorGroupControlMode::FOLLOW:
+            case MotorGroupControlMode::FOLLOW_INVERSE:
             {
                 // Nothing to do, motor had SetControl() called during object construction
                 bCallSet = false;
                 break;
             }
-            case EastTech::Talon::INVERSE:
+            case MotorGroupControlMode::INVERSE:
             {
                 // Motor is attached to drive in opposite direction of leader
                 valueToSet = -value;
                 break;
             }
-            case EastTech::Talon::INDEPENDENT_OFFSET:
+            case MotorGroupControlMode::INDEPENDENT_OFFSET:
             {
                 // The non-leader motor has a different value in this case
                 valueToSet = value + offset;
                 break;
             }
-            case EastTech::Talon::INVERSE_OFFSET:
+            case MotorGroupControlMode::INVERSE_OFFSET:
             {
                 // The non-leader motor has a different value in this case
                 valueToSet = -(value + offset);
@@ -691,11 +725,16 @@ void TalonMotorGroup<TalonType>::Set(double value, double offset)
                 break;
             }
         };
-            
+
         if (bCallSet)
         {
-            // Set the value in the Talon
-            (void)m_pMotorsInfo[i]->m_pTalon->SetControl(m_pMotorsInfo[i]->m_DutyCycleOut.WithOutput(valueToSet));
+            // To conserve CAN bus utilization, only send a value if it has changed
+            if (valueToSet != m_LastOutputValue)
+            {
+                // Set the value in the Talon
+                (void)m_pMotorsInfo[i]->m_pTalon->SetControl(m_pMotorsInfo[i]->m_DutyCycleOut.WithOutput(valueToSet));
+                m_LastOutputValue = valueToSet;
+            }
         }
     }
 }
@@ -703,14 +742,14 @@ void TalonMotorGroup<TalonType>::Set(double value, double offset)
 
 
 ////////////////////////////////////////////////////////////////
-/// @method TalonMotorGroup::SetAngle
+/// @method TalonMotorGroup::SetPositionVoltage
 ///
 /// Method to set the output of a motor to hold a specified
 /// angle.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-void TalonMotorGroup<TalonType>::SetAngle(double angle)
+template <class TalonType, class TalonConfigurationType>
+void TalonMotorGroup<TalonType, TalonConfigurationType>::SetPositionVoltage(units::angle::degree_t angleToSetDegrees)
 {
     // The first entry in the motor info array should always
     // be a leader, so that one will be the only one updated.
@@ -718,13 +757,20 @@ void TalonMotorGroup<TalonType>::SetAngle(double angle)
     // the target angles for multiple motors since it would
     // require tracking different set points based on the
     // encoders.  For a motor group to successfully hold
-    // position, one of them needs to be a follower.
-    // @todo: Check that this configuration is only applied to follower groups.
+    // position, all but the leader must be a follower (no
+    // support for independent control).  This means that a
+    // misconfigured group at object instantiation will not
+    // send a control signal to all motors in the group.  Make
+    // sure this is only called on FOLLOW OR FOLLOW_INVERSE options.
 
-    // Set the control output
-    units::angle::degree_t degrees(angle);
-    units::angle::turn_t turns(degrees);
-    (void)m_pMotorsInfo[0]->m_pTalon->SetControl(m_pMotorsInfo[0]->m_PositionVoltage.WithPosition(turns));
+    // To conserve CAN bus utilization, only send a value if it has changed
+    if (angleToSetDegrees.value() != m_LastOutputValue)
+    {
+        // Set the control output
+        units::angle::turn_t turns(angleToSetDegrees);
+        (void)m_pMotorsInfo[0]->m_pTalon->SetControl(m_pMotorsInfo[0]->m_PositionVoltage.WithPosition(turns));
+        m_LastOutputValue = angleToSetDegrees.value();
+    }
 }
 
 
@@ -735,10 +781,10 @@ void TalonMotorGroup<TalonType>::SetAngle(double angle)
 /// Sends status information to the smart dashboard.
 ///
 ////////////////////////////////////////////////////////////////
-template <class TalonType>
-void TalonMotorGroup<TalonType>::DisplayStatusInformation()
+template <class TalonType, class TalonConfigurationType>
+void TalonMotorGroup<TalonType, TalonConfigurationType>::DisplayStatusInformation()
 {
-    for (unsigned i = 0U; i < m_NumMotors; i++)
+    for (uint32_t i = 0U; i < m_NumMotors; i++)
     {
         m_pMotorsInfo[i]->m_CurrentTemperature = RobotUtils::ConvertCelsiusToFahrenheit(m_pMotorsInfo[i]->m_pTalon->GetDeviceTemp().GetValueAsDouble());
         if (m_pMotorsInfo[i]->m_CurrentTemperature > m_pMotorsInfo[i]->m_HighestTemperature)

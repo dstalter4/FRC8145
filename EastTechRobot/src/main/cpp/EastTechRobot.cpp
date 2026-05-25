@@ -8,19 +8,17 @@
 /// control routines as well as all necessary support for interacting with all
 /// motors, sensors and input/outputs on the robot.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
 #include <cstddef>                      // for nullptr
-#include <cstring>                      // for memset
 
 // C INCLUDES
 // (none)
 
 // C++ INCLUDES
 #include "EastTechRobot.hpp"            // for class declaration (and other headers)
-#include "RobotCamera.hpp"              // for interacting with cameras
 #include "RobotUtils.hpp"               // for Trim(), Limit() and DisplayMessage()
 
 // STATIC MEMBER VARIABLES
@@ -35,19 +33,19 @@ EastTechRobot * EastTechRobot::m_pThis;
 ////////////////////////////////////////////////////////////////
 EastTechRobot::EastTechRobot() :
     m_AutonomousChooser                 (),
-    m_AutoSwerveDirections              (),
     m_pDriveController                  (new DriveControllerType(DRIVE_CONTROLLER_MODEL, DRIVE_JOYSTICK_PORT)),
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
-    m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, "canivore-8145")),
-    m_pSwerveDrive                      (new SwerveDrive(m_pPigeon)),
-    m_pCandle                           (new CANdle(CANDLE_CAN_ID, "canivore-8145")),
-    m_RainbowAnimation                  ({1, 0.5, 308}),
+    m_RioCanBus                         (RIO_CAN_BUS_NAME),
+    m_CanivoreBus                       (CANIVORE_CAN_BUS_NAME),
+    m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, m_CanivoreBus)),
+    m_pSwerveDrive                      (new SwerveDrive(m_pPigeon, m_GetCanBusReferenceLambda)),
+    m_pLedController                    (new EastTechLedController(NUMBER_OF_LEDS, CANDLE_CAN_ID, m_RioCanBus, [this](){return m_AllianceColor.value();})),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pMatchModeTimer                   (new Timer()),
     m_pRobotProgramTimer                (new Timer()),
-    m_pSafetyTimer                      (new Timer()),
-    m_CameraThread                      (RobotCamera::LimelightThread),
+    m_pLimelightCamera                  (new LimelightCamera(LimelightCamera::LimelightModel::LIMELIGHT_3A, "limelight")),
+    m_bLimelightFound                   (false),
     m_RobotMode                         (ROBOT_MODE_NOT_SET),
     m_AllianceColor                     (DriverStation::GetAlliance()),
     m_bRioPinsStable                    (false),
@@ -55,34 +53,21 @@ EastTechRobot::EastTechRobot() :
     m_HeartBeat                         (0U)
 {
     RobotUtils::DisplayMessage("Robot constructor.");
-    
+
     // LiveWindow is not used
     LiveWindow::SetEnabled(false);
-    
+
+    // Signal logger is not used
+    SignalLogger::EnableAutoLogging(false);
+
     // Set the autonomous options
+    // @todo: Update these outside the constructor?
     m_AutonomousChooser.SetDefaultOption(AUTO_ROUTINE_1_STRING, AUTO_ROUTINE_1_STRING);
     m_AutonomousChooser.AddOption(AUTO_ROUTINE_2_STRING, AUTO_ROUTINE_2_STRING);
-    m_AutonomousChooser.AddOption(AUTO_ROUTINE_3_STRING, AUTO_ROUTINE_3_STRING);
     m_AutonomousChooser.AddOption(AUTO_ROUTINE_3_STRING, AUTO_ROUTINE_3_STRING);
     m_AutonomousChooser.AddOption(AUTO_NO_ROUTINE_STRING, AUTO_NO_ROUTINE_STRING);
     m_AutonomousChooser.AddOption(AUTO_TEST_ROUTINE_STRING, AUTO_TEST_ROUTINE_STRING);
     SmartDashboard::PutData("Autonomous Modes", &m_AutonomousChooser);
-    
-    RobotUtils::DisplayFormattedMessage("The drive forward axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.RIGHT_TRIGGER);
-    RobotUtils::DisplayFormattedMessage("The drive reverse axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_TRIGGER);
-    RobotUtils::DisplayFormattedMessage("The drive left/right axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_X_AXIS);
-
-    ConfigureMotorControllers();
-
-    CANdleConfiguration candleConfig;
-    candleConfig.stripType = LEDStripType::RGB;
-    m_pCandle->ConfigAllSettings(candleConfig);
-    m_pCandle->Animate(m_RainbowAnimation);
-
-    // Spawn the vision thread
-    RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
-    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
-    m_CameraThread.detach();
 
     // Start the free running timer
     m_pRobotProgramTimer->Reset();
@@ -121,6 +106,11 @@ void EastTechRobot::RobotInit()
 {
     RobotUtils::DisplayMessage("RobotInit called.");
     SetStaticThisInstance();
+
+    // Attempt to locate the limelight.  The called function has a
+    // search timeout.  If it isn't found, this will have to be
+    // called again later.
+    m_bLimelightFound = m_pLimelightCamera->FindAndSetNetworkTable();
 }
 
 
@@ -144,6 +134,7 @@ void EastTechRobot::RobotPeriodic()
     // @todo: Read and display sensor values for calibration when not enabled
     // @note: From testing, smart dashboard prints of sensor values do give real time data.
     CheckIfRioPinsAreStable();
+    UpdateSmartDashboard();
 }
 
 
@@ -197,7 +188,7 @@ void EastTechRobot::CheckIfRioPinsAreStable()
             //}
 
             // At this point we have the angle we want relative to zero
-            //(void)m_pMotor->m_pTalonFx->GetConfigurator().SetPosition(startingOffsetDegrees);
+            //(void)m_pMotor->GetMotorObject()->GetConfigurator().SetPosition(startingOffsetDegrees);
             //std::printf("encoderValue: %f\n", encoderValue);
             //std::printf("encoderValueDegrees: %f\n", encoderValueDegrees.value());
             //std::printf("startingOffsetDegrees (final): %f\n", startingOffsetDegrees.value());
@@ -234,6 +225,7 @@ void EastTechRobot::ConfigureMotorControllers()
     // BaseTalonConfiguration constructor with FeedbackDevice::IntegratedSensor.
 
     /*
+    // @todo_phoenix6: Update the example for the new API.
     // Example configuration
     TalonFXConfiguration talonConfig;
     talonConfig.slot0.kP = 0.08;
@@ -256,16 +248,15 @@ void EastTechRobot::ConfigureMotorControllers()
     */
 
     // Some notes about applying motor configurations:
-    // - The classes/structs in YtaTalon.hpp have motor configuration objects in them.
+    // - The classes/structs in EastTechTalon.hpp have motor configuration objects in them.
     // - Declaring stack local or class scope configuration objects are *separate and
-    //   distinct* from the configuration objects in the YtaTalon.hpp classes/structs.
+    //   distinct* from the configuration objects in the EastTechTalon.hpp classes/structs.
     // - If a stack local or class scope configuration is applied, it will overwrite
     //   the configuration stored in the device.
-    // - Calling the methods provided by YtaTalon.hpp *never* update the configuration
+    // - Calling the methods provided by EastTechTalon.hpp *never* update the configuration
     //   objects in the classes/structs.  To update those objects, retrieve the objects
-    //   via things like m_MotorConfiguration (for individual motors) or
-    //   GetMotorConfiguration() (for motor groups).
-    // - The classes/structs in YtaTalon.hpp provide ApplyConfiguration() routines.
+    //   via things like GetMotorConfiguration().
+    // - The classes/structs in EastTechTalon.hpp provide ApplyConfiguration() routines.
     //   These can be used to directly apply a stack local or class scope configuration,
     //   or to apply an updated configuration when the configuration objects were directly
     //   modified.  Keep the notes above in mind when calling them.
@@ -291,10 +282,10 @@ void EastTechRobot::ConfigureMotorControllers()
     //(void)m_pMotors->GetMotorObject(MOTORS_CAN_START_ID)->GetConfigurator().SetPosition(0.0_tr);
 
     // Configure a single motor
-    //(void)m_pMotor->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
-    //(void)m_pMotor->m_MotorConfiguration.Feedback.WithSensorToMechanismRatio(135.0 / 1.0);
-    //(void)m_pMotor->m_MotorConfiguration.Slot0.WithKP(50.0).WithKI(0.0).WithKD(2.0);
-    //(void)m_pMotor->m_pTalonFx->GetConfigurator().SetPosition(0.0_tr);
+    //(void)m_pMotor->GetMotorConfiguration()->MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
+    //(void)m_pMotor->GetMotorConfiguration()->Feedback.WithSensorToMechanismRatio(135.0 / 1.0);
+    //(void)m_pMotor->GetMotorConfiguration()->Slot0.WithKP(18.0).WithKI(0.0).WithKD(0.1);
+    //(void)m_pMotor->GetMotorObject()->GetConfigurator().SetPosition(0.0_tr);
     //m_pMotor->ApplyConfiguration();
 }
 
@@ -313,24 +304,25 @@ void EastTechRobot::InitialStateSetup()
     // First reset any member data
     ResetMemberData();
 
+    // Configure the motor controllers
+    ConfigureMotorControllers();
+
     // Stop/clear any timers, just in case
     // @todo: Make this a dedicated function.
     m_pMatchModeTimer->Stop();
     m_pMatchModeTimer->Reset();
-    m_pSafetyTimer->Stop();
-    m_pSafetyTimer->Reset();
-    
+
     // Just in case constructor was called before these were set (likely the case)
     m_AllianceColor = DriverStation::GetAlliance();
 
-    // Disable the rainbow animation
-    m_pCandle->ClearAnimation(0);
-
     // Set the LEDs to the alliance color
-    SetLedsToAllianceColor();
+    m_pLedController->SetLedsToAllianceColor();
 
-    // Indicate the camera thread can continue
-    RobotCamera::ReleaseThread();
+    // Set the limelight priority ID
+    if (m_bLimelightFound)
+    {
+        m_pLimelightCamera->SetPriorityId(LimelightCamera::TaggedFieldElement::ELEMENT_NONE, m_AllianceColor.value());
+    }
 
     // Clear the debug output pin
     m_pDebugOutput->Set(false);
@@ -338,15 +330,8 @@ void EastTechRobot::InitialStateSetup()
     // Reset the heartbeat
     m_HeartBeat = 0U;
 
-    // Point the swerve modules straight.  With SparkMax, this (also) addresses
-    // an issue where setting position during constructors doesn't take effect.
+    // Point the swerve modules straight
     m_pSwerveDrive->HomeModules();
-
-    // With CTRE swerve electronics, sometimes the CANcoder appears to not be
-    // ready when constructors measure the absolute position.  The issue isn't
-    // entirely understood, but recalibrating here seems to provide stability.
-    // Note: This won't work if Neo swerve is used.
-    m_pSwerveDrive->RecalibrateModules();
 }
 
 
@@ -361,15 +346,10 @@ void EastTechRobot::InitialStateSetup()
 void EastTechRobot::TeleopInit()
 {
     RobotUtils::DisplayMessage("TeleopInit called.");
-    
-    // Autonomous should have left things in a known state, but
-    // just in case clear everything.
-    InitialStateSetup();
 
-    // Tele-op won't do detailed processing of the images unless instructed to
-    RobotCamera::SetFullProcessing(false);
-    RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
-    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
+    // Autonomous should have left things in a known state, but just in case, clear everything.
+    CommandScheduler::GetInstance().CancelAll();
+    InitialStateSetup();
 
     // Start the mode timer for teleop
     m_pMatchModeTimer->Start();
@@ -391,7 +371,7 @@ void EastTechRobot::TeleopPeriodic()
 
     HeartBeat();
 
-    if (EastTech::Drive::Config::USE_SWERVE_DRIVE)
+    if (!m_bCameraAlignInProgress)
     {
         SwerveDriveSequence();
     }
@@ -399,8 +379,6 @@ void EastTechRobot::TeleopPeriodic()
     //PneumaticSequence();
     
     CameraSequence();
-
-    UpdateSmartDashboard();
 }
 
 
@@ -414,8 +392,24 @@ void EastTechRobot::TeleopPeriodic()
 void EastTechRobot::UpdateSmartDashboard()
 {
     // @todo: Check if RobotPeriodic() is called every 20ms and use static counter.
+
+    units::time::second_t matchTime = 0.0_s;
+    double batteryVoltage = DriverStation::GetBatteryVoltage();
+
+    if (DriverStation::IsFMSAttached())
+    {
+        matchTime = DriverStation::GetMatchTime();
+    }
+    else
+    {
+        matchTime = m_pMatchModeTimer->Get();
+    }
+
     // Give the drive team some state information
     SmartDashboard::PutBoolean("RIO pins stable", m_bRioPinsStable);
+    SmartDashboard::PutBoolean("Limelight found", m_bLimelightFound);
+    SmartDashboard::PutNumber("Battery voltage", batteryVoltage);
+    SmartDashboard::PutNumber("Match time", matchTime.value());
 }
 
 
@@ -439,58 +433,29 @@ void EastTechRobot::PneumaticSequence()
 /// @method EastTechRobot::CameraSequence
 ///
 /// This method handles camera related behavior.  See the
-/// RobotCamera class for full details.
+/// camera classes for full details.
 ///
 ////////////////////////////////////////////////////////////////
 void EastTechRobot::CameraSequence()
 {
+    // If the limelight wasn't found, don't attempt to do anything
+    if (!m_bLimelightFound)
+    {
+        return;
+    }
+
     if (m_pDriveController->GetButtonState(DRIVE_ALIGN_WITH_CAMERA_BUTTON))
     {
         m_bCameraAlignInProgress = true;
-        RobotCamera::SetLimelightPipeline(1);
-        RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::VISION_PROCESSOR);
-        RobotCamera::AutonomousCamera::AlignToTargetSwerve();
+        m_pLimelightCamera->AlignToTargetSwerve(m_LimelightDriveLambda, m_pPigeon->GetYaw().GetValue());
     }
     else
     {
         m_bCameraAlignInProgress = false;
-        RobotCamera::SetLimelightPipeline(0);
-        RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
     }
-    return;
 
-    // 2024: Go no further
-
-    static bool bFullProcessing = false;
-    
-    // @note: Use std::chrono if precise time control is needed.
-    
-    // Check for any change in camera
-    if (m_pDriveController->GetButtonState(SELECT_FRONT_CAMERA_BUTTON))
-    {
-        RobotCamera::SetCamera(RobotCamera::FRONT_USB);
-    }
-    else if (m_pDriveController->GetButtonState(SELECT_BACK_CAMERA_BUTTON))
-    {
-        RobotCamera::SetCamera(RobotCamera::BACK_USB);
-    }
-    else
-    {
-    }
-    
-    // Look for full processing to be enabled/disabled
-    if (m_pDriveController->DetectButtonChange(CAMERA_TOGGLE_FULL_PROCESSING_BUTTON))
-    {
-        // Change state first, because the default is set before this code runs
-        bFullProcessing = !bFullProcessing;
-        RobotCamera::SetFullProcessing(bFullProcessing);
-    }
-    
-    // Look for the displayed processed image to be changed
-    if (m_pDriveController->DetectButtonChange(CAMERA_TOGGLE_PROCESSED_IMAGE_BUTTON))
-    {
-        RobotCamera::ToggleCameraProcessedImage();
-    }
+    m_pLimelightCamera->UpdateSmartDashboard();
+    SmartDashboard::PutBoolean("Limelight align", m_bCameraAlignInProgress);
 }
 
 
@@ -521,30 +486,35 @@ void EastTechRobot::SwerveDriveSequence()
         m_pSwerveDrive->HomeModules();
     }
 
-    // The GetDriveX() and GetDriveYInput() functions refer to ***controller joystick***
+    if (m_pDriveController->DetectButtonChange(LOCK_SWERVE_WHEELS_BUTTON))
+    {
+        m_pSwerveDrive->LockWheels();
+    }
+
+    // The GetDriveX() and GetDriveY() functions refer to ***controller joystick***
     // x and y axes.  Multiply by -1.0 here to keep the joystick input retrieval code common.
-    double translationAxis = RobotUtils::Trim(m_pDriveController->GetDriveYInput() * -1.0, JOYSTICK_TRIM_UPPER_LIMIT, JOYSTICK_TRIM_LOWER_LIMIT);
-    double strafeAxis = RobotUtils::Trim(m_pDriveController->GetDriveXInput() * -1.0, JOYSTICK_TRIM_UPPER_LIMIT, JOYSTICK_TRIM_LOWER_LIMIT);
-    double rotationAxis = RobotUtils::Trim(m_pDriveController->GetDriveRotateInput() * -1.0, JOYSTICK_TRIM_UPPER_LIMIT, JOYSTICK_TRIM_LOWER_LIMIT);
+    double translationAxis = RobotUtils::Trim(m_pDriveController->GetDriveYInput() * -1.0, DRIVE_TRIM_UPPER_LIMIT, DRIVE_TRIM_LOWER_LIMIT);
+    double strafeAxis = RobotUtils::Trim(m_pDriveController->GetDriveXInput() * -1.0, DRIVE_TRIM_UPPER_LIMIT, DRIVE_TRIM_LOWER_LIMIT);
+    double rotationAxis = RobotUtils::Trim(m_pDriveController->GetDriveRotateInput() * -1.0, DRIVE_TRIM_UPPER_LIMIT, DRIVE_TRIM_LOWER_LIMIT);
 
     // Override normal control if a fine positioning request is made
     switch (m_pDriveController->GetPovAsDirection())
     {
-        case EastTech::Controller::PovDirections::POV_UP:
+        case DRIVE_CONTROLS_SWERVE_FORWARD_SLOW_POV:
         {
             translationAxis = SWERVE_DRIVE_SLOW_SPEED;
             strafeAxis = 0.0;
             rotationAxis = 0.0;
             break;
         }
-        case EastTech::Controller::PovDirections::POV_DOWN:
+        case DRIVE_CONTROLS_SWERVE_REVERSE_SLOW_POV:
         {
             translationAxis = -SWERVE_DRIVE_SLOW_SPEED;
             strafeAxis = 0.0;
             rotationAxis = 0.0;
             break;
         }
-        case EastTech::Controller::PovDirections::POV_LEFT:
+        case DRIVE_CONTROLS_SWERVE_LEFT_OR_CCW_SLOW_POV:
         {
             // Left/right POV control can either toggle strafe or rotation
             translationAxis = 0.0;
@@ -552,7 +522,7 @@ void EastTechRobot::SwerveDriveSequence()
             rotationAxis = (EastTech::Drive::Config::SWERVE_SLOW_USE_ROTATION_AXIS) ? (SWERVE_ROTATE_SLOW_SPEED) : (0.0);
             break;
         }
-        case EastTech::Controller::PovDirections::POV_RIGHT:
+        case DRIVE_CONTROLS_SWERVE_RIGHT_OR_CW_SLOW_POV:
         {
             // Left/right POV control can either toggle strafe or rotation
             translationAxis = 0.0;
@@ -581,6 +551,9 @@ void EastTechRobot::SwerveDriveSequence()
     // Update the swerve module states
     m_pSwerveDrive->SetModuleStates(translation, rotationAxis, bFieldRelative, true);
 
+    // Update the odometry
+    m_pSwerveDrive->UpdateOdometry();
+
     // Display some useful information
     m_pSwerveDrive->UpdateSmartDashboard();
 }
@@ -598,12 +571,17 @@ void EastTechRobot::DisabledInit()
 {
     RobotUtils::DisplayMessage("DisabledInit called.");
 
-    // @todo: Shut off the limelight LEDs?
-    RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
-    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
+    // The check against teleop robot mode is because it represents
+    // the last active mode before DisabledInit() was called.  Only
+    // save a capture in matches and from teleop.
+    constexpr units::time::second_t TELEOP_REWIND_TIME_S = 160.0_s;
+    if (DriverStation::IsFMSAttached() && (m_RobotMode == RobotMode::ROBOT_MODE_TELEOP) && m_bLimelightFound)
+    {
+        m_pLimelightCamera->TriggerRewindCapture(TELEOP_REWIND_TIME_S);
+    }
 
     // Turn the rainbow animation back on
-    m_pCandle->Animate(m_RainbowAnimation);
+    m_pLedController->SetAnimation(EastTechLedController::LedAnimation::LED_RAINBOW_ANIMATION);
 }
 
 

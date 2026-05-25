@@ -5,22 +5,23 @@
 /// @details
 /// Implementation of autonomous routines for EastTechRobot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
-// <none>
+#include <frc2/command/CommandScheduler.h>      // for scheduling commands
 
 // C INCLUDES
 // (none)
 
 // C++ INCLUDES
-#include "EastTechRobot.hpp"            // for robot class declaration
-#include "EastTechRobotAutonomous.hpp"  // for autonomous declarations
-#include "RobotCamera.hpp"              // for interacting with cameras
+#include "EastTechRobot.hpp"                    // for robot class declaration
+#include "EastTechRobotAutonomous.hpp"          // for autonomous declarations
+#include "RobotUtils.hpp"                       // for DisplayMessage()
 
 // NAMESPACE DATA
 bool EastTechRobotAutonomous::bAutonomousExecutionComplete;
+std::optional<CommandPtr> AutonomousCommand;
 
 
 ////////////////////////////////////////////////////////////////
@@ -39,14 +40,31 @@ void EastTechRobot::AutonomousInit()
     
     // Indicate the autonomous routine has not executed yet
     EastTechRobotAutonomous::bAutonomousExecutionComplete = false;
-    
-    m_pSafetyTimer->Stop();
-    m_pSafetyTimer->Reset();
-    
-    // Autonomous needs full camera processing
-    RobotCamera::SetFullProcessing(true);
-    RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::VISION_PROCESSOR);
-    RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::ARRAY_ON);
+
+    if (EastTechRobotAutonomous::USE_COMMAND_BASED_AUTONOMOUS)
+    {
+        RobotUtils::DisplayMessage("Autonomous init - command based.");
+
+        // Scheduled commands must have non-local scope!
+        // Otherwise the scheduler does not continue to see them.
+        AutonomousCommand = AutonomousTestCommandDashboardRoutine();
+        //AutonomousCommand = AutonomousTestCommandMotionRoutine();
+        //AutonomousCommand = AutonomousTestTrajectoryRoutine();
+
+        if (AutonomousCommand.has_value())
+        {
+            RobotUtils::DisplayMessage("Autonomous init - command scheduled.");
+            CommandScheduler::GetInstance().Schedule(AutonomousCommand.value());
+        }
+        else
+        {
+            RobotUtils::DisplayMessage("Autonomous init - command NOT scheduled.");
+        }
+    }
+    else
+    {
+        RobotUtils::DisplayMessage("Autonomous init - time based.");
+    }
 }
 
 
@@ -66,7 +84,43 @@ void EastTechRobot::AutonomousPeriodic()
 {
     // Log a mode change if one occurred
     CheckAndUpdateRobotMode(ROBOT_MODE_AUTONOMOUS);
-    
+
+    if (EastTechRobotAutonomous::USE_COMMAND_BASED_AUTONOMOUS)
+    {
+        AutonomousPeriodicCommand();
+    }
+    else
+    {
+        AutonomousPeriodicTimed();
+    }
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::AutonomousPeriodicCommand
+///
+/// Main workflow for command based autonomous routines.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::AutonomousPeriodicCommand()
+{
+    // Update the swerve odometry and run the command scheduler
+    // @todo: The odometry updates may be causing drift
+    m_pSwerveDrive->UpdateOdometry();
+    CommandScheduler::GetInstance().Run();
+}
+
+
+
+////////////////////////////////////////////////////////////////
+/// @method EastTechRobot::AutonomousPeriodicTimed
+///
+/// Main workflow for time based autonomous routines.
+///
+////////////////////////////////////////////////////////////////
+void EastTechRobot::AutonomousPeriodicTimed()
+{    
     if (EastTechRobotAutonomous::bAutonomousExecutionComplete)
     {
         return;

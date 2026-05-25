@@ -6,14 +6,16 @@
 /// A translation unit to build the required template specializations for the
 /// different types of talons used on the robot.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // Indicate the template specializations should be built
 #define BUILD_TALON_TEMPLATE_SPECIALIZATIONS
 
-// Build for the SRX talons
-#define TALON_TYPE TalonSRX
+// Note: Talon SRX is not supported in Phoenix 6.
+
+// Build for the FXS talons
+#define TALON_TYPE TalonFXS
 #include "TalonMotorGroup.cpp"
 #undef TALON_TYPE
 
