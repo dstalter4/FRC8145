@@ -22,6 +22,9 @@
 #include "EastTechRobot.hpp"                    // for GetRobotInstance()
 
 // STATIC MEMBER DATA
+int                                             RobotCamera::m_TargetAprilTagId;
+PIDController                                   RobotCamera::m_VisionPid{0.03, 0.00, 0.002};
+PIDController                                   RobotCamera::m_VisionRotatePid{0.03, 0.00, 0.002};
 std::shared_ptr<nt::NetworkTable>               RobotCamera::m_pLimelightNetworkTable;
 RobotCamera::UsbCameraStorage                   RobotCamera::m_UsbCameras;
 RobotCamera::UsbCameraInfo *                    RobotCamera::m_pCurrentUsbCamera;
@@ -174,13 +177,8 @@ bool RobotCamera::AutonomousCamera::AlignToTarget(SeekDirection seekDirection, c
 /// target based on feedback from the camera using swerve drive.
 ///
 ////////////////////////////////////////////////////////////////
-void RobotCamera::AutonomousCamera::AlignToTargetSwerve()
+void RobotCamera::AutonomousCamera::AlignToTargetSwerve(double currentYawDegrees)
 {
-    // @todo: This is 2024 code.
-
-    // Note: LimelightHelpers.h uses a series of inline functions that expands to
-    //       m_pLimelightNetworkTable->GetEntry("pipeline").SetDouble(0);
-
     // Make sure the robot object has been created (the thread will start running very early)
     EastTechRobot * pRobotObj = EastTechRobot::GetRobotInstance();
     if (pRobotObj == nullptr)
@@ -188,48 +186,48 @@ void RobotCamera::AutonomousCamera::AlignToTargetSwerve()
         return;
     }
 
-    int32_t yawAngle = static_cast<int32_t>(pRobotObj->m_pPigeon->GetYaw().GetValueAsDouble());
-    yawAngle %= 360;
-    //SmartDashboard::PutNumber("Camera yaw", yawAngle);
+    // reading limelight data from network tables
+    double targetX = m_pLimelightNetworkTable->GetNumber("tx", 0.0);
 
-    //get total camera latency and display to the dashboard for troubleshooting issues (displayed in ms)
-    //double cameraLatency = m_pLimelightNetworkTable->GetNumber("cl",0.0);
-    //SmartDashboard::PutNumber("Camera latency", cameraLatency);
+    //Grabbing active tracked ID
+    int primaryTrackedId = m_pLimelightNetworkTable->GetNumber("tid", 0.0);
 
-    //Pipeline number and camera mode were set by EastTechRobot::CameraSequence().
-    //The LEDs should be controlled by the pipeline selected.
+    // Establishing strafe as a calculated error from the target
+    double strafe = m_VisionPid.Calculate(targetX);
 
-    //Determine the rotation direction based on the location of the april tag
-    if ((yawAngle > -120) && (yawAngle < 120))  //If the robot is angled out of range, do nothing
+    //Establishing rotation as a calculated error from the ideal angle
+    double rotation = m_VisionRotatePid.Calculate(currentYawDegrees);
+
+    SmartDashboard::PutNumber("Limelight Primary Tag ID", primaryTrackedId);
+    SmartDashboard::PutNumber("Limelight targetX", targetX);
+    SmartDashboard::PutNumber("Limelight raw strafe: ", strafe);
+
+    // Clamping strafe and rotation output, strafe lowered from 0.95
+    strafe = std::clamp(strafe, -0.25,0.25);
+    rotation = std::clamp(rotation, -0.25, 0.25);
+
+    // Recommended feedforward for both rotation and strafe
+    if (std::abs(strafe) > 0.01)
     {
-        double tx = m_pLimelightNetworkTable->GetNumber("tx", 0.0);
-
-        if (tx < -5.5)
-        {
-            //Negative rotation value is CCW
-            pRobotObj->m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, -0.1, true, true);
-        }
-        else if (tx > 5.5)
-        {
-            //Positive rotation value is CW
-            pRobotObj->m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, -0.1, true, true);
-        }
-        else 
-        {
-            pRobotObj->m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, 0.0, true, true);
-        }
-    }
-    else
-    {
-        pRobotObj->m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, 0.0, true, true);
+        strafe += std::copysign(0.02, strafe);
     }
 
-    return;
+    if(std::abs(rotation) > 0.01)
+    {
+        rotation += std::copysign(0.02, rotation);
+    }
 
+    SmartDashboard::PutNumber("Limelight strafe", strafe);
+    SmartDashboard::PutNumber("Limelight rotation", rotation);
 
+    // Strafe or rotate
+    // Disable rotation until it can be tuned.
+    pRobotObj->m_pSwerveDrive->SetModuleStates({0.0_m, units::meter_t{strafe}}, 0.0, true, true);
 
-    // 2025: Go no further
+    // Utilize distance to adjust the shooter hood
+    // mainly just grabbing distance for now, this will need to be tested in increments and then a ratio or something in place 
 
+    /*
     // Get the x-axis target value
     double targetX = m_pLimelightNetworkTable->GetNumber("tx", 0.0);
 
@@ -249,6 +247,7 @@ void RobotCamera::AutonomousCamera::AlignToTargetSwerve()
         // No movement required
         pRobotObj->m_pSwerveDrive->SetModuleStates({0.0_m, 0.0_m}, 0.0, true, true);
     }
+    */
 }
 
 
@@ -337,24 +336,43 @@ void RobotCamera::LimelightThread()
     }
 
     RobotUtils::DisplayMessage("Limelight thread released.");
+    SmartDashboard::PutBoolean("Limelight released", true);
 
     // Enable port forwarding for the limelight while tethered via USB
     const int LIMELIGHT_START_PORT = 5800;
-    const int LIMELIGHT_END_PORT = 5805;
+    const int LIMELIGHT_END_PORT = 5809;
     for (int port = LIMELIGHT_START_PORT; port <= LIMELIGHT_END_PORT; port++)
     {
         wpi::PortForwarder::GetInstance().Add(port, "limelight.local", port);
     }
 
     // The limelight camera mode will be set by autonomous or teleop
-    // 2024: Set april tag priority (red speaker center is 3, blue speaker center is 7)
-    const uint32_t APRIL_TAG_PRIORITY = (EastTechRobot::GetRobotInstance()->m_AllianceColor.value() == DriverStation::Alliance::kRed) ? 4U : 7U;
-    m_pLimelightNetworkTable->PutNumber("priorityid", APRIL_TAG_PRIORITY);
+    m_TargetAprilTagId = (EastTechRobot::GetRobotInstance()->m_AllianceColor.value() == DriverStation::Alliance::kRed) ? 10U : 25U;
+    static SendableChooser<int> limelightIdChooser;
+    limelightIdChooser.SetDefaultOption("Alliance Hub", m_TargetAprilTagId);
+    limelightIdChooser.AddOption("1", 1);
+    limelightIdChooser.AddOption("5", 5);
+    limelightIdChooser.AddOption("9", 9);
+    limelightIdChooser.AddOption("26", 26);
+    SmartDashboard::PutData("Limelight Target ID", &limelightIdChooser);
+
+
+    // Setting constants for the vision strafe controller
+    m_VisionPid.SetSetpoint(0.0);                   // target centered
+    m_VisionPid.SetTolerance(1.5);                  // tolerance in degrees
+    m_VisionPid.EnableContinuousInput(-27.0, 27.0); // Limelight field of view (verify)
+
+    //Setting constants for the vision rotate controller 
+    m_VisionRotatePid.SetSetpoint(0.0);             //set up to rotate straight on, may need altered for a range 
+    m_VisionRotatePid.SetTolerance(5.0);            //Assuming this doesn't need to always be straight on 
+    m_VisionRotatePid.EnableContinuousInput(0,360); //Currently set for 0 to 360
     
     while (true)
     {
         // Be sure to relinquish the CPU when done
         std::this_thread::sleep_for(std::chrono::milliseconds(CAMERA_THREAD_SLEEP_TIME_MS));
+        SmartDashboard::PutNumber("Limelight heartbeat", m_pLimelightNetworkTable->GetNumber("hb", 0.0));
+        m_pLimelightNetworkTable->PutNumber("priorityid", limelightIdChooser.GetSelected());
     }
 }
 

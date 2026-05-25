@@ -6,7 +6,7 @@
 /// Implementation of the EastTechRobot test functions.  This keeps official
 /// stable robot code isolated.
 ///
-/// Copyright (c) 2024 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -375,8 +375,7 @@ void EastTechRobotTest::SwerveDriveTest()
     // Tests returning modules to absolute reference angles
     if (EASTTECH_ROBOT_OBJ()->m_pDriveController->DetectButtonChange(4))
     {
-        // Not available yet
-        //EASTTECH_ROBOT_OBJ()->m_pSwerveDrive->HomeModules();
+        pSwerveDrive->HomeModules();
     }
 
     // Dynamically switch between field relative and robot centric

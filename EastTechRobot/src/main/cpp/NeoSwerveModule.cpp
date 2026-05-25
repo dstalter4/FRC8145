@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a Neo swerve module on a swerve drive robot.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -41,7 +41,7 @@ uint32_t NeoSwerveModule::m_DetailedModuleDisplayIndex = 0U;
 /// 2024: Bevels facing right is 1.0 forward on the Neos.
 ///
 ////////////////////////////////////////////////////////////////
-NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo) :
+NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo, CANBus & rEncoderCanBus) :
     m_MotorGroupPosition(moduleInfo.m_Position),
     m_pDriveSpark(new SparkMax(moduleInfo.m_DriveMotorCanId, SparkMax::MotorType::kBrushless)),
     m_pAngleSpark(new SparkMax(moduleInfo.m_AngleMotorCanId, SparkMax::MotorType::kBrushless)),
@@ -49,7 +49,7 @@ NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo) :
     m_AngleSparkEncoder(m_pAngleSpark->GetEncoder()),
     m_DrivePidController(m_pDriveSpark->GetClosedLoopController()),
     m_AnglePidController(m_pAngleSpark->GetClosedLoopController()),
-    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, "canivore-120")),
+    m_pAngleCanCoder(new CANcoder(moduleInfo.m_CanCoderId, rEncoderCanBus)),
     m_LastAngle(),
     m_pFeedForward(new SimpleMotorFeedforward<units::meters>(KS, KV, KA)),
     CANCODER_REFERENCE_ABSOLUTE_OFFSET(moduleInfo.m_EncoderReferenceAbsoluteOffset)
@@ -67,11 +67,11 @@ NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo) :
     driveConfig.SetIdleMode(SparkMaxConfig::IdleMode::kBrake);
     driveConfig.encoder.PositionConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.DRIVE_GEAR_RATIO);
     driveConfig.encoder.VelocityConversionFactor(SwerveConfig::WHEEL_CIRCUMFERENCE / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.DRIVE_GEAR_RATIO / 60.0);
-    driveConfig.closedLoop.SetFeedbackSensor(ClosedLoopConfig::FeedbackSensor::kPrimaryEncoder);
+    driveConfig.closedLoop.SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder);
     driveConfig.closedLoop.Pid(0.02, 0.0, 0.0);
-    driveConfig.closedLoop.VelocityFF(0.0);
+    driveConfig.closedLoop.feedForward.kV(0.0);
     driveConfig.VoltageCompensation(12.0);
-    m_pDriveSpark->Configure(driveConfig, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+    m_pDriveSpark->Configure(driveConfig, rev::ResetMode::kResetSafeParameters, rev::PersistMode::kPersistParameters);
 
     m_DriveSparkEncoder.SetPosition(0.0);     // countsPerRev = 42
 
@@ -88,12 +88,12 @@ NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo) :
     angleConfig.Inverted(false);
     angleConfig.SetIdleMode(SparkMaxConfig::IdleMode::kCoast);
     angleConfig.encoder.PositionConversionFactor(360.0 / SwerveConfig::SELECTED_SWERVE_MODULE_CONFIG.ANGLE_GEAR_RATIO);
-    angleConfig.closedLoop.SetFeedbackSensor(ClosedLoopConfig::FeedbackSensor::kPrimaryEncoder);
+    angleConfig.closedLoop.SetFeedbackSensor(rev::spark::FeedbackSensor::kPrimaryEncoder);
     angleConfig.closedLoop.Pid(0.028, 0.0, 0.0015);
-    angleConfig.closedLoop.VelocityFF(0.000);
+    angleConfig.closedLoop.feedForward.kV(0.000);
     angleConfig.VoltageCompensation(12.0);
 
-    m_pAngleSpark->Configure(angleConfig, SparkMax::ResetMode::kResetSafeParameters, SparkMax::PersistMode::kPersistParameters);
+    m_pAngleSpark->Configure(angleConfig, rev::ResetMode::kResetSafeParameters, rev::PersistMode::kPersistParameters);
 
     // The signals retrieved by each kStatusX periodic frame are listed in SparkLowLevel.h.
     // Set a specific signal frequency using configVariable.signals.Function(value).  The
@@ -119,7 +119,7 @@ NeoSwerveModule::NeoSwerveModule(SwerveConfig::ModuleInformation moduleInfo) :
     // to have an effect.  The robot startup has to call HomeModules() to
     // get a result.  The suspicion is that the SparkMax won't respond to
     // commands while the robot is not in an enabled, which is the case
-    // when constructors run.  Calling SetReference() here won't do anything.
+    // when constructors run.  Calling SetSetpoint() here won't do anything.
 
     double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - CANCODER_REFERENCE_ABSOLUTE_OFFSET.Degrees().value();
     m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
@@ -139,7 +139,7 @@ void NeoSwerveModule::HomeModule()
 {
     double absolutePositionDelta = m_pAngleCanCoder->GetAbsolutePosition().GetValueAsDouble() - CANCODER_REFERENCE_ABSOLUTE_OFFSET.Degrees().value();
     m_AngleSparkEncoder.SetPosition(absolutePositionDelta);
-    m_AnglePidController.SetReference(0.0, SparkMax::ControlType::kPosition);
+    m_AnglePidController.SetSetpoint(0.0, SparkMax::ControlType::kPosition);
     m_LastAngle = 0.0_deg;
 }
 
@@ -198,7 +198,7 @@ void NeoSwerveModule::SetDesiredState(SwerveModuleState desiredState, bool bIsOp
     }
     else
     {
-        m_DrivePidController.SetReference(desiredState.speed.value(), SparkMax::ControlType::kVelocity, ClosedLoopSlot::kSlot0, m_pFeedForward->Calculate(desiredState.speed).value());
+        m_DrivePidController.SetSetpoint(desiredState.speed.value(), SparkMax::ControlType::kVelocity, ClosedLoopSlot::kSlot0, m_pFeedForward->Calculate(desiredState.speed).value());
     }
 
     // Update the angle motor controller
@@ -213,7 +213,7 @@ void NeoSwerveModule::SetDesiredState(SwerveModuleState desiredState, bool bIsOp
     {
         angle = desiredState.angle;
     }
-    m_AnglePidController.SetReference(angle.Degrees().value(), SparkMax::ControlType::kPosition);
+    m_AnglePidController.SetSetpoint(angle.Degrees().value(), SparkMax::ControlType::kPosition);
 
     // Save off the updated last angle
     m_LastAngle = angle;

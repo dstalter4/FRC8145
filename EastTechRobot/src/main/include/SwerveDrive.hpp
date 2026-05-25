@@ -5,7 +5,7 @@
 /// @details
 /// Implements functionality for a swerve drive robot base.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef SWERVEDRIVE_HPP
@@ -27,8 +27,10 @@
 #include "SwerveConfig.hpp"                             // for swerve configuration and constants
 #include "NeoSwerveModule.hpp"                          // for interacting with a Neo swerve module
 #include "TalonFxSwerveModule.hpp"                      // for interacting with a TalonFX swerve module
+#include "ctre/phoenix6/CANBus.hpp"                     // for CANBus
 #include "ctre/phoenix6/Pigeon2.hpp"                    // for PigeonIMU
 
+using namespace ctre::phoenix6;
 using namespace frc;
 
 
@@ -42,13 +44,28 @@ class SwerveDrive
 {
 public:
     // Constructor
-    SwerveDrive(Pigeon2 * pPigeon);
+    SwerveDrive(Pigeon2 * pPigeon, const std::function<const CANBus&(std::string_view)>& rGetCanBusReferenceLambda);
 
-    // Updates each swerve module based on the inputs
+    // Gets the current 2D pose from the swerve module states
+    Pose2d GetPose();
+
+    // Sets the swerve module states to the passed in 2D pose
+    void SetPose(Pose2d pose);
+
+    // Updates each swerve module based on specified inputs (used by autonomous)
+    void SetModuleStates(wpi::array<SwerveModuleState, SwerveConfig::NUM_SWERVE_DRIVE_MODULES> swerveModuleStates);
+
+    // Updates each swerve module based on controller inputs (used by teleop)
     void SetModuleStates(Translation2d translation, double rotation, bool bFieldRelative, bool bIsOpenLoop);
 
     // Puts useful values on the dashboard
     void UpdateSmartDashboard();
+
+    // Update the odometry
+    inline void UpdateOdometry()
+    {
+        m_Odometry.Update(m_pPigeon->GetYaw().GetValue(), GetModulePositions());
+    }
 
     // Sets the gyro yaw back to zero degrees
     inline void ZeroGyroYaw()
@@ -84,6 +101,8 @@ public:
     }
 
 private:
+    wpi::array<SwerveModulePosition, SwerveConfig::NUM_SWERVE_DRIVE_MODULES> GetModulePositions();
+
     Pigeon2 * m_pPigeon;
     SwerveConfig::SwerveModuleType m_SwerveModules[SwerveConfig::NUM_SWERVE_DRIVE_MODULES];
 
@@ -92,17 +111,6 @@ private:
     // alliance station. As your robot turns to the left, your gyroscope angle should increase. By default, WPILib
     // gyros exhibit the opposite behavior, so you should negate the gyro angle.
     SwerveDriveOdometry<SwerveConfig::NUM_SWERVE_DRIVE_MODULES> m_Odometry;
-
-    static constexpr const SwerveModulePosition INITIAL_SWERVE_MODULE_POSITION = {0_m, 0_deg};
-
-    // Note: If using the RobotTestCode routines (for Neo swerve), these objects have to be disabled (or use different CAN IDs).
-
-    // Config information on each swerve module.
-    // Fields are: Name, Position, Drive TalonFX CAN ID, Angle TalonFX CAN ID, CANCoder ID, Angle Offset
-    static constexpr const SwerveConfig::ModuleInformation FRONT_LEFT_MODULE_INFO = {"Front left", SwerveConfig::ModulePosition::FRONT_LEFT, 11, 12, 1, 0.0_deg};
-    static constexpr const SwerveConfig::ModuleInformation FRONT_RIGHT_MODULE_INFO = {"Front right", SwerveConfig::ModulePosition::FRONT_RIGHT, 13, 14, 2, 0.0_deg};
-    static constexpr const SwerveConfig::ModuleInformation BACK_LEFT_MODULE_INFO = {"Back left", SwerveConfig::ModulePosition::BACK_LEFT, 15, 16, 3, 0.0_deg};
-    static constexpr const SwerveConfig::ModuleInformation BACK_RIGHT_MODULE_INFO = {"Back right", SwerveConfig::ModulePosition::BACK_RIGHT, 17, 18, 4, 0.0_deg};
 
     SwerveDrive(const SwerveDrive &) = delete;
     SwerveDrive & operator=(const SwerveDrive &) = delete;

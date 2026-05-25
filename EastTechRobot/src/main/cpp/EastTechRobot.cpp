@@ -8,7 +8,7 @@
 /// control routines as well as all necessary support for interacting with all
 /// motors, sensors and input/outputs on the robot.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 // SYSTEM INCLUDES
@@ -38,10 +38,13 @@ EastTechRobot::EastTechRobot() :
     m_AutoSwerveDirections              (),
     m_pDriveController                  (new DriveControllerType(DRIVE_CONTROLLER_MODEL, DRIVE_JOYSTICK_PORT)),
     m_pAuxController                    (new AuxControllerType(AUX_CONTROLLER_MODEL, AUX_JOYSTICK_PORT)),
-    m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, "canivore-8145")),
-    m_pSwerveDrive                      (new SwerveDrive(m_pPigeon)),
-    m_pCandle                           (new CANdle(CANDLE_CAN_ID, "canivore-8145")),
-    m_RainbowAnimation                  ({1, 0.5, 308}),
+    m_RioCanBus                         (RIO_CAN_BUS_NAME),
+    m_CanivoreBus                       (CANIVORE_CAN_BUS_NAME),
+    m_pPigeon                           (new Pigeon2(PIGEON_CAN_ID, m_CanivoreBus)),
+    m_pSwerveDrive                      (new SwerveDrive(m_pPigeon, GetCanBusReferenceLambda)),
+    m_pCandle                           (new CANdle(CANDLE_CAN_ID, m_CanivoreBus)),
+    m_LedStripSolidColor                (0, (NUMBER_OF_LEDS - 1)),
+    m_RainbowAnimation                  (0, (NUMBER_OF_LEDS - 1)),
     m_pDebugOutput                      (new DigitalOutput(DEBUG_OUTPUT_DIO_CHANNEL)),
     m_pCompressor                       (new Compressor(PneumaticsModuleType::CTREPCM)),
     m_pMatchModeTimer                   (new Timer()),
@@ -63,7 +66,6 @@ EastTechRobot::EastTechRobot() :
     m_AutonomousChooser.SetDefaultOption(AUTO_ROUTINE_1_STRING, AUTO_ROUTINE_1_STRING);
     m_AutonomousChooser.AddOption(AUTO_ROUTINE_2_STRING, AUTO_ROUTINE_2_STRING);
     m_AutonomousChooser.AddOption(AUTO_ROUTINE_3_STRING, AUTO_ROUTINE_3_STRING);
-    m_AutonomousChooser.AddOption(AUTO_ROUTINE_3_STRING, AUTO_ROUTINE_3_STRING);
     m_AutonomousChooser.AddOption(AUTO_NO_ROUTINE_STRING, AUTO_NO_ROUTINE_STRING);
     m_AutonomousChooser.AddOption(AUTO_TEST_ROUTINE_STRING, AUTO_TEST_ROUTINE_STRING);
     SmartDashboard::PutData("Autonomous Modes", &m_AutonomousChooser);
@@ -72,12 +74,10 @@ EastTechRobot::EastTechRobot() :
     RobotUtils::DisplayFormattedMessage("The drive reverse axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_TRIGGER);
     RobotUtils::DisplayFormattedMessage("The drive left/right axis is: %d\n", EastTech::Controller::Config::GetControllerMapping(DRIVE_CONTROLLER_MODEL)->AXIS_MAPPINGS.LEFT_X_AXIS);
 
-    ConfigureMotorControllers();
-
     CANdleConfiguration candleConfig;
-    candleConfig.stripType = LEDStripType::RGB;
-    m_pCandle->ConfigAllSettings(candleConfig);
-    m_pCandle->Animate(m_RainbowAnimation);
+    candleConfig.LED.StripType = StripTypeValue::RGBW;
+    m_pCandle->GetConfigurator().Apply(candleConfig);
+    m_pCandle->SetControl(m_RainbowAnimation);
 
     // Spawn the vision thread
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
@@ -197,7 +197,7 @@ void EastTechRobot::CheckIfRioPinsAreStable()
             //}
 
             // At this point we have the angle we want relative to zero
-            //(void)m_pMotor->m_pTalonFx->GetConfigurator().SetPosition(startingOffsetDegrees);
+            //(void)m_pMotor->GetMotorObject()->GetConfigurator().SetPosition(startingOffsetDegrees);
             //std::printf("encoderValue: %f\n", encoderValue);
             //std::printf("encoderValueDegrees: %f\n", encoderValueDegrees.value());
             //std::printf("startingOffsetDegrees (final): %f\n", startingOffsetDegrees.value());
@@ -293,7 +293,7 @@ void EastTechRobot::ConfigureMotorControllers()
     // Configure a single motor
     //(void)m_pMotor->m_MotorConfiguration.MotorOutput.WithNeutralMode(NeutralModeValue::Brake);
     //(void)m_pMotor->m_MotorConfiguration.Feedback.WithSensorToMechanismRatio(135.0 / 1.0);
-    //(void)m_pMotor->m_MotorConfiguration.Slot0.WithKP(50.0).WithKI(0.0).WithKD(2.0);
+    //(void)m_pMotor->m_MotorConfiguration.Slot0.WithKP(18.0).WithKI(0.0).WithKD(0.1);
     //(void)m_pMotor->m_pTalonFx->GetConfigurator().SetPosition(0.0_tr);
     //m_pMotor->ApplyConfiguration();
 }
@@ -313,6 +313,8 @@ void EastTechRobot::InitialStateSetup()
     // First reset any member data
     ResetMemberData();
 
+    ConfigureMotorControllers();
+
     // Stop/clear any timers, just in case
     // @todo: Make this a dedicated function.
     m_pMatchModeTimer->Stop();
@@ -322,9 +324,6 @@ void EastTechRobot::InitialStateSetup()
     
     // Just in case constructor was called before these were set (likely the case)
     m_AllianceColor = DriverStation::GetAlliance();
-
-    // Disable the rainbow animation
-    m_pCandle->ClearAnimation(0);
 
     // Set the LEDs to the alliance color
     SetLedsToAllianceColor();
@@ -414,8 +413,24 @@ void EastTechRobot::TeleopPeriodic()
 void EastTechRobot::UpdateSmartDashboard()
 {
     // @todo: Check if RobotPeriodic() is called every 20ms and use static counter.
+
+    units::time::second_t matchTime = 0.0_s;
+    double batteryVoltage = DriverStation::GetBatteryVoltage();
+    std::string gameData = DriverStation::GetGameSpecificMessage();
+
+    if (DriverStation::IsFMSAttached())
+    {
+        matchTime = DriverStation::GetMatchTime();
+    }
+    else
+    {
+        matchTime = m_pMatchModeTimer->Get();
+    }
+
     // Give the drive team some state information
     SmartDashboard::PutBoolean("RIO pins stable", m_bRioPinsStable);
+    SmartDashboard::PutNumber("Battery voltage", batteryVoltage);
+    SmartDashboard::PutNumber("Match time", matchTime.value());
 }
 
 
@@ -447,49 +462,11 @@ void EastTechRobot::CameraSequence()
     if (m_pDriveController->GetButtonState(DRIVE_ALIGN_WITH_CAMERA_BUTTON))
     {
         m_bCameraAlignInProgress = true;
-        RobotCamera::SetLimelightPipeline(1);
-        RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::VISION_PROCESSOR);
-        RobotCamera::AutonomousCamera::AlignToTargetSwerve();
+        RobotCamera::AutonomousCamera::AlignToTargetSwerve(m_pPigeon->GetYaw().GetValue().value());
     }
     else
     {
         m_bCameraAlignInProgress = false;
-        RobotCamera::SetLimelightPipeline(0);
-        RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
-    }
-    return;
-
-    // 2024: Go no further
-
-    static bool bFullProcessing = false;
-    
-    // @note: Use std::chrono if precise time control is needed.
-    
-    // Check for any change in camera
-    if (m_pDriveController->GetButtonState(SELECT_FRONT_CAMERA_BUTTON))
-    {
-        RobotCamera::SetCamera(RobotCamera::FRONT_USB);
-    }
-    else if (m_pDriveController->GetButtonState(SELECT_BACK_CAMERA_BUTTON))
-    {
-        RobotCamera::SetCamera(RobotCamera::BACK_USB);
-    }
-    else
-    {
-    }
-    
-    // Look for full processing to be enabled/disabled
-    if (m_pDriveController->DetectButtonChange(CAMERA_TOGGLE_FULL_PROCESSING_BUTTON))
-    {
-        // Change state first, because the default is set before this code runs
-        bFullProcessing = !bFullProcessing;
-        RobotCamera::SetFullProcessing(bFullProcessing);
-    }
-    
-    // Look for the displayed processed image to be changed
-    if (m_pDriveController->DetectButtonChange(CAMERA_TOGGLE_PROCESSED_IMAGE_BUTTON))
-    {
-        RobotCamera::ToggleCameraProcessedImage();
     }
 }
 
@@ -519,6 +496,11 @@ void EastTechRobot::SwerveDriveSequence()
         m_pSwerveDrive->ZeroGyroYaw();
         m_pSwerveDrive->RecalibrateModules();
         m_pSwerveDrive->HomeModules();
+    }
+
+    if (m_pDriveController->DetectButtonChange(LOCK_SWERVE_WHEELS_BUTTON))
+    {
+        m_pSwerveDrive->LockWheels();
     }
 
     // The GetDriveX() and GetDriveYInput() functions refer to ***controller joystick***
@@ -581,6 +563,9 @@ void EastTechRobot::SwerveDriveSequence()
     // Update the swerve module states
     m_pSwerveDrive->SetModuleStates(translation, rotationAxis, bFieldRelative, true);
 
+    // Update the odometry
+    m_pSwerveDrive->UpdateOdometry();
+
     // Display some useful information
     m_pSwerveDrive->UpdateSmartDashboard();
 }
@@ -602,8 +587,8 @@ void EastTechRobot::DisabledInit()
     RobotCamera::SetLimelightMode(RobotCamera::LimelightMode::DRIVER_CAMERA);
     RobotCamera::SetLimelightLedMode(RobotCamera::LimelightLedMode::PIPELINE);
 
-    // Turn the rainbow animation back on
-    m_pCandle->Animate(m_RainbowAnimation);
+    // Turn the rainbow animation back on    
+    m_pCandle->SetControl(m_RainbowAnimation);
 }
 
 

@@ -9,43 +9,48 @@
 /// right time as controlled by the switches on the driver station or the field
 /// controls.
 ///
-/// Copyright (c) 2025 East Technical High School
+/// Copyright (c) 2026 East Technical High School
 ////////////////////////////////////////////////////////////////////////////////
 
 #ifndef EASTTECHROBOT_HPP
 #define EASTTECHROBOT_HPP
 
 // SYSTEM INCLUDES
-#include <cmath>                                // for M_PI
-#include <thread>                               // for std::thread
+#include <cmath>                                            // for M_PI
+#include <thread>                                           // for std::thread
 
 // C INCLUDES
-#include "frc/Compressor.h"                     // for retrieving info on the compressor
-#include "frc/DigitalInput.h"                   // for DigitalInput type
-#include "frc/DigitalOutput.h"                  // for DigitalOutput type
-#include "frc/DoubleSolenoid.h"                 // for DoubleSolenoid type
-#include "frc/DriverStation.h"                  // for interacting with the driver station
-#include "frc/DutyCycleEncoder.h"               // for interacting with PWM based encoders
-#include "frc/Relay.h"                          // for Relay type
-#include "frc/Solenoid.h"                       // for Solenoid type
-#include "frc/TimedRobot.h"                     // for base class decalartion
-#include "frc/livewindow/LiveWindow.h"          // for controlling the LiveWindow
-#include "frc/motorcontrol/Spark.h"             // for creating an object to interact with the rev blinkin
-#include "frc/smartdashboard/SendableChooser.h" // for using the smart dashboard sendable chooser functionality
-#include "frc/smartdashboard/SmartDashboard.h"  // for interacting with the smart dashboard
+#include "frc/Compressor.h"                                 // for retrieving info on the compressor
+#include "frc/DigitalInput.h"                               // for DigitalInput type
+#include "frc/DigitalOutput.h"                              // for DigitalOutput type
+#include "frc/DoubleSolenoid.h"                             // for DoubleSolenoid type
+#include "frc/DriverStation.h"                              // for interacting with the driver station
+#include "frc/DutyCycleEncoder.h"                           // for interacting with PWM based encoders
+#include "frc/Relay.h"                                      // for Relay type
+#include "frc/Solenoid.h"                                   // for Solenoid type
+#include "frc/TimedRobot.h"                                 // for base class decalartion
+#include "frc/livewindow/LiveWindow.h"                      // for controlling the LiveWindow
+#include "frc/motorcontrol/Spark.h"                         // for creating an object to interact with the rev blinkin
+#include "frc/smartdashboard/SendableChooser.h"             // for using the smart dashboard sendable chooser functionality
+#include "frc/smartdashboard/SmartDashboard.h"              // for interacting with the smart dashboard
 
 // C++ INCLUDES
-#include "DriveConfiguration.hpp"               // for information on the drive config
-#include "EastTechController.hpp"               // for controller interaction
-#include "EastTechTalon.hpp"                    // for custom Talon control
-#include "RobotUtils.hpp"                       // for ASSERT, DEBUG_PRINTS
-#include "SwerveDrive.hpp"                      // for using swerve drive
-#include "ctre/phoenix/led/CANdle.h"            // for interacting with the CANdle
-#include "ctre/phoenix/led/RainbowAnimation.h"  // for interacting with the CANdle
-#include "ctre/phoenix6/Pigeon2.hpp"            // for PigeonIMU
+#include "DriveConfiguration.hpp"                           // for information on the drive config
+#include "EastTechController.hpp"                           // for controller interaction
+#include "EastTechTalon.hpp"                                // for custom Talon control
+#include "RobotUtils.hpp"                                   // for ASSERT, DEBUG_PRINTS
+#include "SwerveDrive.hpp"                                  // for using swerve drive
+#include "ctre/phoenix6/CANBus.hpp"                         // for creating CANBus objects
+#include "ctre/phoenix6/CANdle.hpp"                         // for interacting with the CANdle
+#include "ctre/phoenix6/Pigeon2.hpp"                        // for PigeonIMU
+#include "ctre/phoenix6/controls/RainbowAnimation.hpp"      // for creating animations on the CANdle
+
 
 using namespace frc;
-using namespace ctre::phoenix::led;
+using namespace ctre::phoenix6;
+using namespace ctre::phoenix6::controls;
+using namespace ctre::phoenix6::hardware;
+using namespace ctre::phoenix6::signals;
 
 
 ////////////////////////////////////////////////////////////////
@@ -236,6 +241,27 @@ private:
     // User Controls
     DriveControllerType *           m_pDriveController;                     // Drive controller
     AuxControllerType *             m_pAuxController;                       // Auxillary input controller
+
+    // CAN Bus
+    CANBus                          m_RioCanBus;                            // CAN bus object for the RIO
+    CANBus                          m_CanivoreBus;                          // CAN bus object for the canivore
+
+    static constexpr const std::string_view RIO_CAN_BUS_NAME = "rio";
+    static constexpr const std::string_view CANIVORE_CAN_BUS_NAME = "canivore-8145";
+
+    // GetCanBusReferenceLambda
+    // Lambda to retrieve a reference to the CANBus with the specified string name.
+    std::function<const CANBus&(std::string_view)> GetCanBusReferenceLambda = [this](std::string_view canBusName) -> const CANBus&
+    {
+        if (canBusName.compare(CANIVORE_CAN_BUS_NAME) == 0)
+        {
+            return m_CanivoreBus;
+        }
+        else
+        {
+            return m_RioCanBus;
+        }
+    };
     
     // Swerve Drive
     Pigeon2 *                       m_pPigeon;                              // CTRE Pigeon2 IMU
@@ -245,8 +271,10 @@ private:
     // (none)
 
     // LEDs
-    CANdle *                        m_pCandle;
-    RainbowAnimation                m_RainbowAnimation;
+    CANdle *                        m_pCandle;                              // Controls an RGB LED strip
+    SolidColor                      m_LedStripSolidColor;                   // Used when setting the LEDs to RGB values
+    RainbowAnimation                m_RainbowAnimation;                     // Rainbow animation configuration (brightness, speed, # LEDs)
+    static constexpr const RGBWColor RGBW_OFF{0, 0, 0, 0};                  // Common RGBWColor expression representing LEDs off
 
     // Digital I/O
     DigitalOutput *                 m_pDebugOutput;                         // Debug assist output
@@ -294,13 +322,14 @@ private:
     // Driver inputs
     static const int                FIELD_RELATIVE_TOGGLE_BUTTON            = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUMPER;
     static const int                REZERO_SWERVE_BUTTON                    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_BUMPER;
-    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.RIGHT_STICK_CLICK;
+    static const int                LOCK_SWERVE_WHEELS_BUTTON               = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.LEFT_BUTTON;
+    static const int                DRIVE_ALIGN_WITH_CAMERA_BUTTON          = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.DOWN_BUTTON;
     static const int                CAMERA_TOGGLE_FULL_PROCESSING_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                CAMERA_TOGGLE_PROCESSED_IMAGE_BUTTON    = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                SELECT_FRONT_CAMERA_BUTTON              = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     static const int                SELECT_BACK_CAMERA_BUTTON               = DRIVE_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
     
-    // Aux inputs
+    // Copilot Inputs
     static const int                ESTOP_BUTTON                            = AUX_CONTROLLER_MAPPINGS->BUTTON_MAPPINGS.NO_BUTTON;
 
     // CAN Signals
@@ -308,10 +337,10 @@ private:
     // Superstructure uses IDs starting at 21
 
     // CANivore Signals
-    // Note: IDs 1-4 are used by the CANcoders (see the
+    // Note: IDs 21-24 are used by the CANcoders (see the
     //       SwerveModuleConfigs in SwerveDrive.hpp).
-    static const int                PIGEON_CAN_ID                           = 5;
-    static const int                CANDLE_CAN_ID                           = 6;
+    static const int                PIGEON_CAN_ID                           = 25;
+    static const int                CANDLE_CAN_ID                           = 26;
 
     // PWM Signals
     // (none)
@@ -349,6 +378,7 @@ private:
     static const int                SCALE_TO_PERCENT                        = 100;
     static const unsigned           SINGLE_MOTOR                            = 1;
     static const unsigned           TWO_MOTORS                              = 2;
+    static const unsigned           THREE_MOTORS                            = 3;
     static const unsigned           NUMBER_OF_LEDS                          = 8;
     static const char               NULL_CHARACTER                          = '\0';
 
@@ -458,12 +488,14 @@ inline void EastTechRobot::SetLedsToAllianceColor()
     {
         case DriverStation::Alliance::kRed:
         {
-            m_pCandle->SetLEDs(255, 0, 0, 0, 0, NUMBER_OF_LEDS);
+            constexpr const RGBWColor RGBW_RED{255, 0, 0, 0};
+            m_pCandle->SetControl(m_LedStripSolidColor.WithColor(RGBW_RED));
             break;
         }
         case DriverStation::Alliance::kBlue:
         {
-            m_pCandle->SetLEDs(0, 0, 255, 0, 0, NUMBER_OF_LEDS);
+            constexpr const RGBWColor RGBW_BLUE{0, 0, 255, 0};
+            m_pCandle->SetControl(m_LedStripSolidColor.WithColor(RGBW_BLUE));
             break;
         }
         default:
